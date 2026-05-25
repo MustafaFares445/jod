@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('donations', function (Blueprint $table) {
+        if(!Schema::hasTable('donations')) {
+               Schema::create('donations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('campaign_id')->nullable();
@@ -34,6 +35,8 @@ return new class extends Migration
             $table->index('donated_at');
             $table->index('name');
         });
+        }
+
     }
 
     public function down(): void
