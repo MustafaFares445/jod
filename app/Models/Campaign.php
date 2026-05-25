@@ -12,10 +12,27 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'category', 'status', 'location',
-    'organization_id', 'creator_id', 'goal_amount', 'raised_amount', 'beneficiaries_count',
-    'donors_count', 'applicants_count', 'start_date', 'end_date',
-    'submitted_at', 'closed_at', 'closed_reason', 'rejection_reason', 'reviewed_by'
+    'id',
+    'title',
+    'summary',
+    'content',
+    'category',
+    'status',
+    'location',
+    'organization_id',
+    'creator_id',
+    'goal_amount',
+    'raised_amount',
+    'beneficiaries_count',
+    'donors_count',
+    'applicants_count',
+    'start_date',
+    'end_date',
+    'submitted_at',
+    'closed_at',
+    'closed_reason',
+    'rejection_reason',
+    'reviewed_by'
 ])]
 class Campaign extends Model
 {
@@ -57,4 +74,3 @@ class Campaign extends Model
         return $this->belongsTo(User::class, 'creator_id');
     }
 }
-

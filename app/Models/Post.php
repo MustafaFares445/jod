@@ -11,10 +11,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'type', 'status', 'location',
-    'organization_id', 'campaign_id', 'author_id', 'rejection_reason',
-    'views_count', 'reactions_count', 'applications_count', 'published_at',
-    'reviewed_at', 'reviewed_by'
+    'id',
+    'title',
+    'summary',
+    'content',
+    'type',
+    'status',
+    'location',
+    'organization_id',
+    'campaign_id',
+    'author_id',
+    'rejection_reason',
+    'views_count',
+    'reactions_count',
+    'applications_count',
+    'published_at',
+    'reviewed_at',
+    'reviewed_by'
 ])]
 class Post extends Model
 {
@@ -52,4 +65,3 @@ class Post extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 }
-

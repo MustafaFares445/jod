@@ -11,9 +11,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'body', 'mailbox', 'status', 'category', 'recipient_scope',
-    'recipient_label', 'priority', 'reference_label', 'reference_path',
-    'organization_id', 'creator_id', 'recipient_id', 'sent_at', 'read_at'
+    'id',
+    'title',
+    'body',
+    'mailbox',
+    'status',
+    'category',
+    'recipient_scope',
+    'recipient_label',
+    'priority',
+    'reference_label',
+    'reference_path',
+    'organization_id',
+    'creator_id',
+    'recipient_id',
+    'sent_at',
+    'read_at'
 ])]
 class Notification extends Model
 {
