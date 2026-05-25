@@ -11,13 +11,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'title', 'body', 'mailbox', 'status', 'category', 'recipient_scope',
+    'id', 'title', 'body', 'mailbox', 'status', 'category', 'recipient_scope',
     'recipient_label', 'priority', 'reference_label', 'reference_path',
-    'organization_id', 'created_by', 'recipient_id', 'sent_at', 'read_at'
+    'organization_id', 'creator_id', 'recipient_id', 'sent_at', 'read_at'
 ])]
 class Notification extends Model
 {
     use HasFactory, SoftDeletes;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected function casts(): array
     {
@@ -29,7 +33,7 @@ class Notification extends Model
 
     public function createdBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'creator_id');
     }
 
     public function recipient(): BelongsTo

@@ -12,13 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone')->nullable();
-            $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->enum('user_type', ['general', 'volunteer', 'job_seeker', 'donor'])->default('general');
-            $table->unsignedBigInteger('organization_id')->nullable();
             $table->unsignedBigInteger('posts_count')->default(0);
             $table->unsignedBigInteger('reports_count')->default(0);
-            $table->timestamp('last_active_at')->nullable();
             $table->softDeletes();
         });
     }
@@ -26,7 +21,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['phone', 'status', 'user_type', 'organization_id', 'posts_count', 'reports_count', 'last_active_at']);
+            $table->dropColumn(['posts_count', 'reports_count']);
             $table->dropSoftDeletes();
         });
     }

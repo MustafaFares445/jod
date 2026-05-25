@@ -10,9 +10,12 @@ return new class extends Migration
     {
         Schema::create('organization_staff', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('organization_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('organization_role_id')->nullable()->constrained('organization_roles')->nullOnDelete();
+            $table->string('organization_id');
+            $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
+            $table->string('user_id')->nullable();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->string('organization_role_id')->nullable();
+            $table->foreign('organization_role_id')->references('id')->on('organization_roles')->nullOnDelete();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('phone')->nullable();

@@ -12,17 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('reports', function (Blueprint $table) {
-            $table->id();
+            $table->string('id')->primary();
             $table->string('title');
             $table->text('description');
+            $table->enum('category', ['fraud', 'abuse', 'inappropriate', 'spam', 'other'])->default('other');
             $table->enum('status', ['new', 'in_progress', 'waiting_response', 'closed'])->default('new');
             $table->enum('severity', ['low', 'medium', 'high', 'critical'])->default('medium');
             $table->enum('entity_type', ['post', 'campaign', 'user', 'organization'])->default('post');
-            $table->unsignedBigInteger('entity_id')->nullable();
-            $table->unsignedBigInteger('organization_id')->nullable();
-            $table->unsignedBigInteger('reporter_id')->nullable();
-            $table->unsignedBigInteger('assignee_id')->nullable();
-            $table->string('reporter_name')->nullable();
+            $table->string('entity_id')->nullable();
+            $table->string('organization_id')->nullable();
+            $table->string('reporter_id')->nullable();
+            $table->string('assignee_id')->nullable();
             $table->json('evidence')->nullable();
             $table->json('timeline')->nullable();
             $table->timestamp('closed_at')->nullable();

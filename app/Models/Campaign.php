@@ -12,14 +12,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'title', 'summary', 'description', 'category', 'status', 'location',
-    'organization_id', 'goal_amount', 'raised_amount', 'beneficiaries_count',
+    'id', 'title', 'summary', 'content', 'category', 'status', 'location',
+    'organization_id', 'creator_id', 'goal_amount', 'raised_amount', 'beneficiaries_count',
     'donors_count', 'applicants_count', 'start_date', 'end_date',
-    'submitted_at', 'closed_at', 'close_reason', 'rejection_reason', 'reviewed_by'
+    'submitted_at', 'closed_at', 'closed_reason', 'rejection_reason', 'reviewed_by'
 ])]
 class Campaign extends Model
 {
     use HasFactory, SoftDeletes;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected function casts(): array
     {
@@ -46,6 +50,11 @@ class Campaign extends Model
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_id');
     }
 }
 

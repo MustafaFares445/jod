@@ -1,0 +1,98 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use Illuminate\Database\Seeder;
+
+class UserSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Admin user
+        User::create([
+            'id' => 'user-123',
+            'name' => 'John Admin',
+            'email' => 'admin@jod.com',
+            'phone' => '+962791234567',
+            'user_type' => 'admin',
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'password' => bcrypt('Password123!'),
+            'created_at' => now()->subMonths(5),
+            'last_active_at' => now(),
+        ]);
+
+        // Organization owner
+        User::create([
+            'id' => 'user-456',
+            'name' => 'Sarah Owner',
+            'email' => 'owner@helpfoundation.org',
+            'phone' => '+962791234568',
+            'user_type' => 'general',
+            'organization_id' => 'org-001',
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'password' => bcrypt('Password123!'),
+            'created_at' => now()->subMonths(3),
+            'last_active_at' => now()->subHours(2),
+        ]);
+
+        // Volunteer user
+        User::create([
+            'id' => 'user-789',
+            'name' => 'Ahmed Mohammed',
+            'email' => 'ahmed@example.com',
+            'phone' => '+962791234569',
+            'user_type' => 'volunteer',
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'password' => bcrypt('Password123!'),
+            'created_at' => now()->subMonths(2),
+            'last_active_at' => now()->subDays(1),
+        ]);
+
+        // Donor user
+        User::create([
+            'id' => 'user-999',
+            'name' => 'Fatima Hassan',
+            'email' => 'fatima@example.com',
+            'phone' => '+962791234570',
+            'user_type' => 'donor',
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'password' => bcrypt('Password123!'),
+            'created_at' => now()->subMonths(1),
+            'last_active_at' => now(),
+        ]);
+
+        // Job seeker
+        User::create([
+            'id' => 'user-1001',
+            'name' => 'Mohammed Ali',
+            'email' => 'mohammed@example.com',
+            'phone' => '+962791234571',
+            'user_type' => 'job_seeker',
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'password' => bcrypt('Password123!'),
+            'created_at' => now()->subWeeks(3),
+            'last_active_at' => now()->subHours(5),
+        ]);
+
+        // Staff member
+        User::create([
+            'id' => 'staff-001',
+            'name' => 'Leila Manager',
+            'email' => 'manager@helpfoundation.org',
+            'phone' => '+962791234572',
+            'user_type' => 'general',
+            'organization_id' => 'org-001',
+            'status' => 'active',
+            'email_verified_at' => now(),
+            'password' => bcrypt('Password123!'),
+            'created_at' => now()->subMonths(4),
+            'last_active_at' => now()->subDays(1),
+        ]);
+    }
+}

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
+    'id',
     'organization_id',
     'name',
     'description',
@@ -22,6 +23,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class OrganizationRole extends Model
 {
     use HasFactory;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected function casts(): array
     {

@@ -11,13 +11,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'title', 'description', 'status', 'severity', 'entity_type', 'entity_id',
-    'organization_id', 'reporter_id', 'assignee_id', 'reporter_name',
+    'id', 'title', 'description', 'category', 'status', 'severity', 'entity_type', 'entity_id',
+    'organization_id', 'reporter_id', 'assignee_id',
     'evidence', 'timeline', 'closed_at'
 ])]
 class Report extends Model
 {
     use HasFactory, SoftDeletes;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected function casts(): array
     {

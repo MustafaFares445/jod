@@ -40,6 +40,10 @@ class Organization extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected function casts(): array
     {
         return [

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DefaultOrganizationRolesSeeder extends Seeder
 {
@@ -75,11 +76,12 @@ class DefaultOrganizationRolesSeeder extends Seeder
     {
         Organization::query()->each(function (Organization $organization) {
             foreach (self::DEFAULT_ROLES as $roleData) {
-                $organization->roles()->firstOrCreate(
-                    ['name' => $roleData['name']],
+                OrganizationRole::firstOrCreate(
+                    ['name' => $roleData['name'], 'organization_id' => $organization->id],
                     [
+                        'id' => Str::uuid(),
                         'description' => $roleData['description'],
-                        'permissions' => $roleData['permissions'],
+                        'permissions' => json_encode($roleData['permissions']),
                         'is_active' => true,
                         'is_system' => $roleData['is_system'],
                     ]

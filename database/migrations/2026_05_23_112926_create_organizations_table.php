@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('organizations', function (Blueprint $table) {
-            $table->id();
+            $table->string('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
             $table->string('phone')->nullable();
@@ -29,8 +29,8 @@ return new class extends Migration
             $table->string('owner_phone')->nullable();
             $table->string('website')->nullable();
             $table->json('social_media')->nullable();
-            $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->enum('verification_status', ['verified', 'unverified'])->default('unverified');
+            $table->enum('status', ['active', 'inactive', 'pending'])->default('active');
+            $table->enum('verification_status', ['verified', 'unverified', 'pending'])->default('unverified');
             $table->timestamp('accepted_at')->nullable();
             $table->unsignedBigInteger('campaigns_count')->default(0);
             $table->unsignedBigInteger('posts_count')->default(0);

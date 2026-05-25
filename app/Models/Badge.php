@@ -14,7 +14,11 @@ class Badge extends Model
     /** @use HasFactory<BadgeFactory> */
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['name', 'description', 'criteria', 'icon_name', 'is_active'];
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
+    protected $fillable = ['id', 'name', 'description', 'criteria', 'icon_name', 'is_active'];
 
     protected $casts = [
         'is_active' => 'boolean',
