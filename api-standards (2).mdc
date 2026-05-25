@@ -1,0 +1,1711 @@
+---
+description: API CRUD standards (Spatie Data, Service, Poeicy, Filters, Pest) + modular architecture
+globs: app/Http/Controllers/API/**/*.php, app/Services/**/*.php, app/Data/**/*.php, app/Policies/**/*.php, app/Http/Requests/**/*.php, app/Traits/FilterQueries/**/*.php, app/Http/Resources/**/*.php, database/seeders/Permissions/**/*.php, tests/Feature/**/*.php, Modules/**/*.php
+alwaysApply: false
+---
+
+# API CRUD Standards
+
+When adding or changing API CRUD (e.g. via `php artisan auto-crud:generate`), follow these conventions. Reference the **User**-generated files as the canonical shape.
+
+---
+
+## Modular architecture (important)
+
+This application uses a **modular architecture**. API and domain code can live in either:
+
+- **Standard Laravel** — under `app/`, `routes/api.php`, `database/seeders/`, `tests/Feature/` (e.g. User CRUD).
+- **Modules** — under `Modules/{ModuleName}/` (e.g. **Cleaning**, **Resturants**, **Supermarket**).
+
+**Before generating or editing API CRUD:**
+
+1. **Decide scope**: Is the resource part of a module or global? (e.g. `CleaningBooking` → Cleaning module; `User` → standard app.)
+2. **Module layout** (when working inside a module):
+   - **Paths**: `Modules/{ModuleName}/app/` (Models, Http/Controllers, Services, etc.), `Modules/{ModuleName}/routes/api.php`, `Modules/{ModuleName}/database/seeders/`.
+   - **Namespaces**: `Modules\{ModuleName}\...` (e.g. `Modules\Cleaning\Http\Controllers\API\CleaningBookingController`, `Modules\Cleaning\Models\CleaningBooking`).
+   - **Routes**: Registered in the module’s `routes/api.php`; often prefixed with `api` by the module’s `RouteServiceProvider`. Use the same patterns (e.g. `Route::apiResource(...)`) inside the module.
+3. **Same standards apply**: Data/DTOs, Form Requests, FilterRequest, Service, Policy, Permissions seeder, Filter trait, API Resource, Factory, Pest tests — but **place them under the chosen scope** (app vs `Modules/{ModuleName}/`) and use the correct namespace.
+4. **Cross-module references**: App models (e.g. `User`) live in `App\Models`; module models live in `Modules\{ModuleName}\Models`. Use full namespace when one references the other.
+
+When the user mentions a module name or a file under `Modules/`, always follow the module layout and namespaces above.
+
+---
+
+## 1. Routes
+
+- **Where (standard)**: `routes/api.php`. **Where (module)**: `Modules/{ModuleName}/routes/api.php`.
+- **How**: One `Route::apiResource()` per resource; no custom route names unless needed.
+
+**User example (standard Laravel):**
+```php
+Route::apiResource('/users', App\Http\Controllers\API\UserController::class);
+```
+
+**Module example (e.g. Resturants):**
+```php
+// Modules/Resturants/routes/api.php
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::apiResource('resturants', \Modules\Resturants\Http\Controllers\ResturantsController::class)->names('resturants');
+});
+```
+
+---
+
+## 2. API Controller
+
+- **Where**: `App\Http\Controllers\API\{Model}Controller`
+- **Requirements**:
+  - `declare(strict_types=1)`; explicit return types.
+  - Constructor: inject `{Model}Service` when used in more than one method.
+  - `index`: type-hint `{Model}FilterRequest`; use `Model::getQuery()->paginate($request->get('per_page', 20))` (or `perPage` if FilterRequest uses camelCase); return `Resource::collection($paginator)`.
+  - `store`: type-hint Form Request; call `$this->service->store(Data::from($request->validated()))`; return `Resource::make($model->load(...))`.
+  - `show`: type-hint `Model $model` (route binding); return `Resource::make($model->load(...))`.
+  - `update`: Form Request + `Model $model`; call `$this->service->update(Data::from($request->validated()), $model)`; return resource.
+  - `destroy`: `Model $model`; `$model->delete()`; `return response()->noContent()`.
+  - Do not put business logic in controller; keep it in Service.
+
+**User example:**
+```php
+class UserController
+{
+    public function __construct(protected UserService $userService) {}
+
+    public function index(UserFilterRequest $request): AnonymousResourceCollection
+    {
+        $users = User::getQuery()->paginate($request->get('perPage', 20));
+        return UserResource::collection($users);
+    }
+
+    public function store(UserRequest $request): UserResource
+    {
+        $user = $this->userService->store(UserData::from($request->validated()));
+        return UserResource::make($user->load('media'));
+    }
+
+    public function show(User $user): UserResource
+    {
+        return UserResource::make($user->load('media'));
+    }
+
+    public function update(UserRequest $request, User $user): UserResource
+    {
+        $updatedUser = $this->userService->update(UserData::from($request->validated()), $user);
+        return UserResource::make($updatedUser->load('media'));
+    }
+
+    public function destroy(User $user): Response
+    {
+        $user->delete();
+        return response()->noContent();
+    }
+}
+```
+
+---
+
+## 3. Data (DTO)
+
+- **Where**: `App\Data\{Model}Data`
+- **Requirements**:
+  - Extend `Spatie\LaravelData\Data`.
+  - Use `HasModelAttributes` and set `protected static string $model = Model::class`.
+  - PHPDoc: `/** @var class-string<Model> */` above `$model`.
+  - Constructor: promoted properties only; use Spatie validation attributes (`#[Max(255)]`, `#[Unique(...)]`, `#[Date]`, `#[Exists('table','column')]`, etc.).
+  - Property names: camelCase; map to model columns via the trait where names differ.
+  - Nullable types for optional fields.
+
+**User example:**
+```php
+class UserData extends Data
+{
+    use HasModelAttributes;
+
+    /** @var class-string<User> */
+    protected static string $model = User::class;
+
+    public function __construct(
+        #[Max(255)]
+        public ?string $name,
+        #[Max(255), Unique('users', 'email')]
+        public ?string $email,
+        #[Date]
+        public ?Carbon $emailVerifiedAt,
+        #[Exists('workers', 'id')]
+        public ?int $userId,
+        // ... other fields
+    ) {}
+}
+```
+
+---
+
+## 4. Form Request (store/update)
+
+- **Where**: `App\Http\Requests\{Model}Request` (or `UserRequests\UserStoreRequest` / `UserUpdateRequest` if split).
+- **Requirements**:
+  - `authorize(): bool` (or delegate to policy).
+  - `rules(): array` with string keys matching payload (camelCase if API uses it): e.g. `name`, `email`, `emailVerifiedAt`, `password`, file rules for images if any.
+
+**User example:**
+```php
+class UserRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => 'string|max:255',
+            'email' => 'string|max:255|unique:users,email',
+            'emailVerifiedAt' => 'date',
+            'password' => 'string|max:255',
+            'rememberToken' => 'string|max:100',
+            'primaryImage' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
+            'images' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp|max:2048|array',
+        ];
+    }
+}
+```
+
+---
+
+## 5. Filter Request (index)
+
+- **Where**: `App\Http\Requests\{Model}Requests\{Model}FilterRequest`
+- **Requirements**:
+  - Rules: `perPage` `sometimes|integer|min:1|max:100`; `search`; `filter.{field}` for each filterable attribute; `sort` with `in:field,-field,...` listing allowed sorts.
+
+**User example:**
+```php
+class UserFilterRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'perPage' => 'sometimes|integer|min:1|max:100',
+            'search'  => 'sometimes|string|max:255',
+            'filter.name' => 'sometimes|string|max:255',
+            'filter.email' => 'sometimes|email|max:255',
+            'filter.emailVerifiedAt' => 'sometimes|date',
+            'filter.createdAfter' => 'sometimes|date',
+            'filter.createdBefore' => 'sometimes|date|after_or_equal:filter.createdAfter',
+            'filter.search' => 'sometimes|string|max:255',
+            'sort' => 'sometimes|string|in:name,-name,email,-email,emailVerifiedAt,-emailVerifiedAt',
+        ];
+    }
+}
+```
+
+---
+
+## 6. Service
+
+- **Where**: `App\Services\{Model}Service`
+- **Requirements**:
+  - `store({Model}Data $data): Model` — inside `DB::transaction()` use `Model::create($data->onlyModelAttributes())`; return created model.
+  - `update({Model}Data $data, Model $model): Model` — inside `DB::transaction()` use `tap($model)->update($data->onlyModelAttributes())`; return updated model.
+  - No `::query()` before `create()`.
+
+**User example:**
+```php
+class UserService
+{
+    public function store(UserData $data): User
+    {
+        return DB::transaction(static function () use ($data) {
+            $user = User::create($data->onlyModelAttributes());
+            return $user;
+        });
+    }
+
+    public function update(UserData $data, User $user): User
+    {
+        return DB::transaction(static function () use ($data, $user) {
+            tap($user)->update($data->onlyModelAttributes());
+            return $user;
+        });
+    }
+}
+```
+
+---
+
+## 7. Permission Flow, Policy, Seeder, and Frontend Response
+
+Permission handling must be easy to read from backend code, safe for authorization, and easy for the frontend to render as grouped checkboxes, tabs, cards, or menus.
+
+The permission system must support both permission depths:
+
+```text
+{group}.{action}                  // 2 layers
+{module}.{section}.{action}        // 3 layers
+```
+
+Examples:
+
+```text
+users.view                         // 2 layers
+roles.update                       // 2 layers
+products.ai.menu                   // 3 layers
+products.ai.view                   // 3 layers
+products.categories.create         // 3 layers
+```
+
+The important rule is:
+
+```text
+PermissionGroup value + PermissionAction value = final permission name
+```
+
+So:
+
+```php
+PermissionGroup::PRODUCT_AI->value      // products.ai
+PermissionAction::MENU->value           // menu
+
+PermissionNameResolver::resolve(
+    PermissionGroup::PRODUCT_AI,
+    PermissionAction::MENU,
+);                                      // products.ai.menu
+```
+
+Do not create separate code paths for 2-layer and 3-layer permissions. The group key may contain one segment, like `users`, or two segments, like `products.ai`. The resolver appends the action in both cases.
+
+The flow is:
+
+```text
+PermissionModule enum
+        ↓
+PermissionAction enum
+        ↓
+PermissionGroup enum defines group key, module, labels, section, actions
+        ↓
+PermissionNameResolver builds users.view or products.ai.menu
+        ↓
+PermissionCatalog builds all permissions once from enums
+        ↓
+Seeder bulk-upserts permissions into DB
+        ↓
+Policy checks permission through AuthorizesByPermissionGroup
+        ↓
+Controller calls policy using `$this->authorize(...)`
+        ↓
+API returns grouped permissions with frontend labels and allowed map
+```
+
+---
+
+### 7.1 Permission naming convention
+
+Use these naming rules:
+
+| Type | Format | Example |
+|---|---|---|
+| 2 layers | `{group}.{action}` | `users.view` |
+| 3 layers | `{module}.{section}.{action}` | `products.ai.menu` |
+
+Rules:
+
+- Permission names must be generated only by `PermissionNameResolver`.
+- Do not hardcode permission strings in controllers, policies, seeders, tests, or frontend response builders.
+- Keep `PermissionGroup` as the resource or feature path.
+- Keep `PermissionAction` as the final action.
+- A `PermissionGroup` value may contain one or two segments only.
+- Final permission names should contain two or three segments only.
+- Avoid permission names deeper than three segments unless the project has a confirmed need.
+
+Good:
+
+```text
+users.view
+products.ai.menu
+products.categories.update
+orders.refunds.approve
+```
+
+Avoid:
+
+```text
+products.ai.menu.open.sidebar
+products.ai.menu.button.click
+```
+
+If the project later needs a different separator or naming format, update `PermissionNameResolver` only.
+
+---
+
+### 7.2 PermissionModule enum
+
+Use a module enum so the frontend can group permissions consistently without repeating raw strings.
+
+**Where**: `App\Enums\PermissionModule`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+enum PermissionModule: string
+{
+    case CORE = 'core';
+    case PRODUCTS = 'products';
+    case CLEANING = 'cleaning';
+    case RESTURANTS = 'resturants';
+    case SUPERMARKET = 'supermarket';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::CORE => 'Core',
+            self::PRODUCTS => 'Products',
+            self::CLEANING => 'Cleaning',
+            self::RESTURANTS => 'Resturants',
+            self::SUPERMARKET => 'Supermarket',
+        };
+    }
+
+    public function order(): int
+    {
+        return match ($this) {
+            self::CORE => 10,
+            self::PRODUCTS => 20,
+            self::CLEANING => 100,
+            self::RESTURANTS => 200,
+            self::SUPERMARKET => 300,
+        };
+    }
+}
+```
+
+Use `PermissionModule` only for metadata and frontend grouping. It is not directly used to authorize actions.
+
+---
+
+### 7.3 PermissionAction enum
+
+Use one enum for reusable actions. Add non-CRUD actions here only when they are actually used by at least one permission group.
+
+**Where**: `App\Enums\PermissionAction`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+enum PermissionAction: string
+{
+    case VIEW = 'view';
+    case CREATE = 'create';
+    case UPDATE = 'update';
+    case DELETE = 'delete';
+
+    case MENU = 'menu';
+    case RUN = 'run';
+    case IMPORT = 'import';
+    case EXPORT = 'export';
+    case APPROVE = 'approve';
+    case REJECT = 'reject';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::VIEW => 'View',
+            self::CREATE => 'Create',
+            self::UPDATE => 'Update',
+            self::DELETE => 'Delete',
+            self::MENU => 'Show Menu',
+            self::RUN => 'Run',
+            self::IMPORT => 'Import',
+            self::EXPORT => 'Export',
+            self::APPROVE => 'Approve',
+            self::REJECT => 'Reject',
+        };
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function crud(): array
+    {
+        return [
+            self::VIEW,
+            self::CREATE,
+            self::UPDATE,
+            self::DELETE,
+        ];
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function readOnly(): array
+    {
+        return [self::VIEW];
+    }
+}
+```
+
+Rules:
+
+- Do not duplicate actions per resource.
+- Do not write actions as raw strings like `'menu'` or `'approve'` outside this enum.
+- If a new action is required, add it once here, then reuse it from any group.
+
+---
+
+### 7.4 Permission group definition object
+
+Use a small definition object to avoid repeating metadata methods and to keep `PermissionGroup` readable.
+
+**Where**: `App\Support\Permissions\PermissionGroupDefinition`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support\Permissions;
+
+use App\Enums\PermissionAction;
+use App\Enums\PermissionModule;
+
+final readonly class PermissionGroupDefinition
+{
+    /**
+     * @param list<PermissionAction>|null $actions
+     */
+    public function __construct(
+        public string $label,
+        public PermissionModule $module,
+        public string $description,
+        public int $order,
+        public ?string $sectionLabel = null,
+        public ?array $actions = null,
+    ) {}
+}
+```
+
+Why this pattern is used:
+
+- `PermissionGroup` stays as the single catalog source.
+- Labels, module grouping, section labels, description, order, and actions are defined once.
+- Adding a new permission group does not require changing the seeder, catalog service, response service, or resolver.
+
+---
+
+### 7.5 PermissionGroup enum with 2-layer and 3-layer support
+
+`PermissionGroup` is the catalog of protected resources/features.
+
+**Where**: `App\Enums\PermissionGroup`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Enums;
+
+use App\Support\Permissions\PermissionGroupDefinition;
+
+enum PermissionGroup: string
+{
+    // 2-layer permissions: users.view, roles.create
+    case USER = 'users';
+    case ROLE = 'roles';
+
+    // 3-layer permissions: products.ai.menu, products.categories.view
+    case PRODUCT_AI = 'products.ai';
+    case PRODUCT_CATEGORY = 'products.categories';
+    case PRODUCT_IMPORT = 'products.import';
+
+    // Module examples
+    case CLEANING_BOOKING = 'cleaning-bookings';
+    case RESTURANT_ORDER = 'resturant-orders';
+    case SUPERMARKET_PRODUCT = 'supermarket-products';
+
+    public function definition(): PermissionGroupDefinition
+    {
+        return match ($this) {
+            self::USER => new PermissionGroupDefinition(
+                label: 'Users',
+                module: PermissionModule::CORE,
+                description: 'Manage application users.',
+                order: 10,
+            ),
+
+            self::ROLE => new PermissionGroupDefinition(
+                label: 'Roles',
+                module: PermissionModule::CORE,
+                description: 'Manage roles and assigned permissions.',
+                order: 20,
+            ),
+
+            self::PRODUCT_AI => new PermissionGroupDefinition(
+                label: 'Product AI',
+                module: PermissionModule::PRODUCTS,
+                description: 'Control product AI tools and menu visibility.',
+                order: 110,
+                sectionLabel: 'AI',
+                actions: [
+                    PermissionAction::MENU,
+                    PermissionAction::VIEW,
+                    PermissionAction::RUN,
+                    PermissionAction::UPDATE,
+                ],
+            ),
+
+            self::PRODUCT_CATEGORY => new PermissionGroupDefinition(
+                label: 'Product Categories',
+                module: PermissionModule::PRODUCTS,
+                description: 'Manage product categories.',
+                order: 120,
+                sectionLabel: 'Categories',
+            ),
+
+            self::PRODUCT_IMPORT => new PermissionGroupDefinition(
+                label: 'Product Import',
+                module: PermissionModule::PRODUCTS,
+                description: 'Import and review product catalog data.',
+                order: 130,
+                sectionLabel: 'Import',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::IMPORT,
+                    PermissionAction::EXPORT,
+                ],
+            ),
+
+            self::CLEANING_BOOKING => new PermissionGroupDefinition(
+                label: 'Cleaning Bookings',
+                module: PermissionModule::CLEANING,
+                description: 'Manage cleaning service bookings.',
+                order: 210,
+            ),
+
+            self::RESTURANT_ORDER => new PermissionGroupDefinition(
+                label: 'Resturant Orders',
+                module: PermissionModule::RESTURANTS,
+                description: 'Manage resturant orders.',
+                order: 310,
+            ),
+
+            self::SUPERMARKET_PRODUCT => new PermissionGroupDefinition(
+                label: 'Supermarket Products',
+                module: PermissionModule::SUPERMARKET,
+                description: 'Manage supermarket products.',
+                order: 410,
+            ),
+        };
+    }
+
+    public function label(): string
+    {
+        return $this->definition()->label;
+    }
+
+    public function module(): PermissionModule
+    {
+        return $this->definition()->module;
+    }
+
+    public function moduleKey(): string
+    {
+        return $this->module()->value;
+    }
+
+    public function moduleLabel(): string
+    {
+        return $this->module()->label();
+    }
+
+    public function sectionKey(): ?string
+    {
+        $segments = explode('.', $this->value);
+
+        return count($segments) === 2 ? $segments[1] : null;
+    }
+
+    public function sectionLabel(): ?string
+    {
+        return $this->definition()->sectionLabel;
+    }
+
+    public function description(): string
+    {
+        return $this->definition()->description;
+    }
+
+    public function order(): int
+    {
+        return $this->definition()->order;
+    }
+
+    /**
+     * @return list<PermissionAction>
+     */
+    public function actions(): array
+    {
+        return $this->definition()->actions ?? PermissionAction::crud();
+    }
+
+    public function depth(): int
+    {
+        return substr_count($this->value, '.') + 1;
+    }
+}
+```
+
+Rules:
+
+- For 2-layer permissions, use a one-segment group value: `users`, `roles`.
+- For 3-layer permissions, use a two-segment group value: `products.ai`, `products.categories`.
+- Never include the action inside `PermissionGroup` value.
+- The action is always appended by `PermissionNameResolver`.
+- `sectionLabel` is used only for 3-layer groups.
+- `actions` is optional. If omitted, the group uses full CRUD.
+
+Adding a new permission group should usually require only one new enum case and one new `definition()` entry.
+
+Example:
+
+```php
+case PRODUCT_REVIEWS = 'products.reviews';
+```
+
+```php
+self::PRODUCT_REVIEWS => new PermissionGroupDefinition(
+    label: 'Product Reviews',
+    module: PermissionModule::PRODUCTS,
+    description: 'Moderate product reviews.',
+    order: 140,
+    sectionLabel: 'Reviews',
+    actions: [
+        PermissionAction::VIEW,
+        PermissionAction::APPROVE,
+        PermissionAction::REJECT,
+        PermissionAction::DELETE,
+    ],
+),
+```
+
+No seeder, API response builder, or policy helper needs to change.
+
+---
+
+### 7.6 PermissionNameResolver
+
+Centralize permission name generation and validation.
+
+**Where**: `App\Support\Permissions\PermissionNameResolver`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support\Permissions;
+
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
+use InvalidArgumentException;
+
+final class PermissionNameResolver
+{
+    public static function resolve(
+        PermissionGroup|string $group,
+        PermissionAction|string $action,
+    ): string {
+        $groupValue = $group instanceof PermissionGroup ? $group->value : $group;
+        $actionValue = $action instanceof PermissionAction ? $action->value : $action;
+
+        $permissionName = self::normalize("{$groupValue}.{$actionValue}");
+
+        self::assertSupportedDepth($permissionName);
+
+        return $permissionName;
+    }
+
+    public static function normalize(string $permissionName): string
+    {
+        return trim(preg_replace('/\.+/', '.', strtolower($permissionName)), '.');
+    }
+
+    public static function depth(string $permissionName): int
+    {
+        return substr_count(self::normalize($permissionName), '.') + 1;
+    }
+
+    public static function assertSupportedDepth(string $permissionName): void
+    {
+        $depth = self::depth($permissionName);
+
+        if (! in_array($depth, [2, 3], true)) {
+            throw new InvalidArgumentException(
+                "Permission [{$permissionName}] must contain 2 or 3 layers."
+            );
+        }
+    }
+}
+```
+
+This supports both examples through one method:
+
+```php
+PermissionNameResolver::resolve(PermissionGroup::USER, PermissionAction::VIEW);
+// users.view
+
+PermissionNameResolver::resolve(PermissionGroup::PRODUCT_AI, PermissionAction::MENU);
+// products.ai.menu
+```
+
+---
+
+### 7.7 PermissionCatalog
+
+Use a catalog service/class to remove repeated permission-building logic from seeders, API services, tests, and role validation.
+
+**Where**: `App\Support\Permissions\PermissionCatalog`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Support\Permissions;
+
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
+use Illuminate\Support\Collection;
+
+final class PermissionCatalog
+{
+    /**
+     * @return Collection<int, array{
+     *     name: string,
+     *     group: PermissionGroup,
+     *     action: PermissionAction,
+     *     module_key: string,
+     *     module_label: string,
+     *     section_key: string|null,
+     *     section_label: string|null,
+     *     label: string,
+     *     depth: int
+     * }>
+     */
+    public static function permissions(): Collection
+    {
+        return collect(PermissionGroup::cases())
+            ->sortBy(fn (PermissionGroup $group): string => sprintf(
+                '%04d-%04d',
+                $group->module()->order(),
+                $group->order(),
+            ))
+            ->values()
+            ->flatMap(function (PermissionGroup $group): Collection {
+                return collect($group->actions())
+                    ->map(function ($action) use ($group): array {
+                        $name = PermissionNameResolver::resolve($group, $action);
+
+                        return [
+                            'name' => $name,
+                            'group' => $group,
+                            'action' => $action,
+                            'module_key' => $group->moduleKey(),
+                            'module_label' => $group->moduleLabel(),
+                            'section_key' => $group->sectionKey(),
+                            'section_label' => $group->sectionLabel(),
+                            'label' => "{$action->label()} {$group->label()}",
+                            'depth' => PermissionNameResolver::depth($name),
+                        ];
+                    });
+            })
+            ->values();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function names(): array
+    {
+        return self::permissions()
+            ->pluck('name')
+            ->values()
+            ->all();
+    }
+}
+```
+
+Benefits:
+
+- Seeder uses the catalog.
+- API response uses the catalog.
+- Tests can use the catalog.
+- Role validation can compare against the catalog if needed.
+- No duplicated loops across the codebase.
+
+---
+
+### 7.8 Permission policy flow
+
+Policies must be explicit about which permission group they protect.
+
+**Where**: `App\Policies\{Model}Policy`
+
+The policy should:
+
+- Use `AuthorizesByPermissionGroup`.
+- Define `permissionGroup()` to make the mapping obvious.
+- Map Laravel policy abilities to `PermissionAction`.
+- Avoid raw permission strings.
+
+**Trait example:**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Policies\Concerns;
+
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
+use App\Models\User;
+use App\Support\Permissions\PermissionNameResolver;
+
+trait AuthorizesByPermissionGroup
+{
+    abstract protected function permissionGroup(): PermissionGroup;
+
+    protected function authorizeAction(User $user, PermissionAction $action): bool
+    {
+        return $user->can(
+            PermissionNameResolver::resolve($this->permissionGroup(), $action)
+        );
+    }
+}
+```
+
+**2-layer policy example:**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Policies;
+
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
+use App\Models\User;
+use App\Policies\Concerns\AuthorizesByPermissionGroup;
+
+class UserPolicy
+{
+    use AuthorizesByPermissionGroup;
+
+    protected function permissionGroup(): PermissionGroup
+    {
+        return PermissionGroup::USER;
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::VIEW);
+    }
+
+    public function view(User $user, User $model): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::VIEW);
+    }
+
+    public function create(User $user): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::CREATE);
+    }
+
+    public function update(User $user, User $model): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::UPDATE);
+    }
+
+    public function delete(User $user, User $model): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::DELETE);
+    }
+}
+```
+
+**3-layer policy example:**
+
+```php
+class ProductAiPolicy
+{
+    use AuthorizesByPermissionGroup;
+
+    protected function permissionGroup(): PermissionGroup
+    {
+        return PermissionGroup::PRODUCT_AI;
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::VIEW);
+    }
+
+    public function showMenu(User $user): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::MENU);
+    }
+
+    public function run(User $user): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::RUN);
+    }
+
+    public function update(User $user): bool
+    {
+        return $this->authorizeAction($user, PermissionAction::UPDATE);
+    }
+}
+```
+
+This resolves to:
+
+```text
+products.ai.view
+products.ai.menu
+products.ai.run
+products.ai.update
+```
+
+---
+
+### 7.9 Controller authorization flow
+
+Controllers must call policy methods clearly.
+
+Do not rely on hidden authorization behavior unless the project already uses it consistently.
+
+**Recommended explicit CRUD flow:**
+
+```php
+public function index(UserFilterRequest $request): AnonymousResourceCollection
+{
+    $this->authorize('viewAny', User::class);
+
+    $users = User::getQuery()
+        ->paginate($request->get('perPage', 20));
+
+    return UserResource::collection($users);
+}
+
+public function store(StoreUserRequest $request): UserResource
+{
+    $this->authorize('create', User::class);
+
+    $user = $this->userService->store(UserData::from($request->validated()));
+
+    return UserResource::make($user);
+}
+
+public function show(User $user): UserResource
+{
+    $this->authorize('view', $user);
+
+    return UserResource::make($user);
+}
+
+public function update(UpdateUserRequest $request, User $user): UserResource
+{
+    $this->authorize('update', $user);
+
+    $user = $this->userService->update(UserData::from($request->validated()), $user);
+
+    return UserResource::make($user);
+}
+
+public function destroy(User $user): Response
+{
+    $this->authorize('delete', $user);
+
+    $user->delete();
+
+    return response()->noContent();
+}
+```
+
+Mapping:
+
+| Controller Method | Policy Ability | Permission Action |
+|---|---|---|
+| `index` | `viewAny` | `view` |
+| `show` | `view` | `view` |
+| `store` | `create` | `create` |
+| `update` | `update` | `update` |
+| `destroy` | `delete` | `delete` |
+
+**Custom action example:**
+
+```php
+public function menu(Request $request): JsonResponse
+{
+    $this->authorize('showMenu', ProductAi::class);
+
+    return response()->json([
+        'data' => $this->productAiService->menu(),
+    ]);
+}
+
+public function run(RunProductAiRequest $request): JsonResponse
+{
+    $this->authorize('run', ProductAi::class);
+
+    return response()->json([
+        'data' => $this->productAiService->run($request->validated()),
+    ]);
+}
+```
+
+---
+
+### 7.10 Permissions seeder
+
+Seed permissions from `PermissionCatalog`, not hardcoded arrays per model.
+
+Use bulk `upsert` instead of `firstOrCreate` inside nested loops. This reduces query count and makes seeding faster when the project has many modules and permissions.
+
+**Where**: `database/seeders/Permissions/PermissionsSeeder.php`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders\Permissions;
+
+use App\Support\Permissions\PermissionCatalog;
+use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
+
+class PermissionsSeeder extends Seeder
+{
+    public function run(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $now = now();
+
+        $rows = PermissionCatalog::permissions()
+            ->map(fn (array $permission): array => [
+                'name' => $permission['name'],
+                'guard_name' => 'web',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->all();
+
+        Permission::query()->upsert(
+            $rows,
+            ['name', 'guard_name'],
+            ['updated_at'],
+        );
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+}
+```
+
+Notes:
+
+- `upsert` avoids one query per permission.
+- `PermissionRegistrar::forgetCachedPermissions()` prevents stale Spatie permission cache.
+- The seeder does not need to know if a permission has 2 or 3 layers.
+- Do not create separate seeders unless a module has a special deployment requirement.
+
+---
+
+### 7.11 API response for frontend permission UI
+
+Frontend should not guess labels, sections, modules, or permission names.
+
+Recommended endpoints:
+
+```php
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/me/permissions', CurrentUserPermissionsController::class);
+    Route::get('/permission-groups', PermissionGroupsController::class);
+});
+```
+
+Use cases:
+
+- `/me/permissions`: current user granted permissions and boolean map.
+- `/permission-groups`: full permission catalog for role forms, checkbox lists, and dashboard screens.
+
+Recommended response shape:
+
+```json
+{
+  "data": {
+    "modules": [
+      {
+        "key": "core",
+        "label": "Core",
+        "order": 10,
+        "groups": [
+          {
+            "key": "users",
+            "label": "Users",
+            "sectionKey": null,
+            "sectionLabel": null,
+            "description": "Manage application users.",
+            "order": 10,
+            "depth": 2,
+            "permissions": [
+              {
+                "key": "view",
+                "name": "users.view",
+                "label": "View Users",
+                "allowed": true
+              },
+              {
+                "key": "create",
+                "name": "users.create",
+                "label": "Create Users",
+                "allowed": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "key": "products",
+        "label": "Products",
+        "order": 20,
+        "groups": [
+          {
+            "key": "products.ai",
+            "label": "Product AI",
+            "sectionKey": "ai",
+            "sectionLabel": "AI",
+            "description": "Control product AI tools and menu visibility.",
+            "order": 110,
+            "depth": 3,
+            "permissions": [
+              {
+                "key": "menu",
+                "name": "products.ai.menu",
+                "label": "Show Menu Product AI",
+                "allowed": true
+              },
+              {
+                "key": "run",
+                "name": "products.ai.run",
+                "label": "Run Product AI",
+                "allowed": false
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "flat": {
+      "users.view": true,
+      "users.create": false,
+      "products.ai.menu": true,
+      "products.ai.run": false
+    },
+    "granted": [
+      "users.view",
+      "products.ai.menu"
+    ]
+  }
+}
+```
+
+Frontend usage:
+
+- Use `modules` to render top-level tabs or sections.
+- Use `groups` to render cards or fieldsets.
+- Use `sectionKey` and `sectionLabel` for 3-layer groups like `products.ai`.
+- Use `permissions[].label` for checkbox labels.
+- Use `flat` for quick runtime checks.
+- Use `granted` when sending selected permissions back to the backend.
+
+Example frontend checks:
+
+```ts
+const canViewUsers = permissions.flat['users.view'] === true;
+const canShowProductAiMenu = permissions.flat['products.ai.menu'] === true;
+```
+
+Example role update payload:
+
+```json
+{
+  "permissions": [
+    "users.view",
+    "users.create",
+    "products.ai.menu"
+  ]
+}
+```
+
+---
+
+### 7.12 Permission response builder
+
+Use a service to build the permission response instead of writing this logic directly in the controller.
+
+Important performance rule:
+
+Do not call `$user->can($permissionName)` inside a loop for every permission when building the frontend catalog. Instead, load the user's permission names once and check against an in-memory map.
+
+**Where**: `App\Services\Permissions\PermissionCatalogService`
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Permissions;
+
+use App\Enums\PermissionGroup;
+use App\Models\User;
+use App\Support\Permissions\PermissionCatalog;
+use Illuminate\Support\Collection;
+
+class PermissionCatalogService
+{
+    public function forUser(User $user): array
+    {
+        $allowed = $user->getAllPermissions()
+            ->pluck('name')
+            ->flip();
+
+        $modules = PermissionCatalog::permissions()
+            ->groupBy('module_key')
+            ->map(fn (Collection $modulePermissions): array => $this->formatModule($modulePermissions, $allowed))
+            ->sortBy('order')
+            ->values();
+
+        $flat = PermissionCatalog::permissions()
+            ->mapWithKeys(fn (array $permission): array => [
+                $permission['name'] => $allowed->has($permission['name']),
+            ])
+            ->all();
+
+        return [
+            'modules' => $modules->all(),
+            'flat' => $flat,
+            'granted' => collect($flat)
+                ->filter()
+                ->keys()
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function formatModule(Collection $modulePermissions, Collection $allowed): array
+    {
+        /** @var PermissionGroup $firstGroup */
+        $firstGroup = $modulePermissions->first()['group'];
+        $module = $firstGroup->module();
+
+        return [
+            'key' => $module->value,
+            'label' => $module->label(),
+            'order' => $module->order(),
+            'groups' => $modulePermissions
+                ->groupBy(fn (array $permission): string => $permission['group']->value)
+                ->map(fn (Collection $groupPermissions): array => $this->formatGroup($groupPermissions, $allowed))
+                ->sortBy('order')
+                ->values()
+                ->all(),
+        ];
+    }
+
+    private function formatGroup(Collection $groupPermissions, Collection $allowed): array
+    {
+        /** @var PermissionGroup $group */
+        $group = $groupPermissions->first()['group'];
+
+        return [
+            'key' => $group->value,
+            'label' => $group->label(),
+            'sectionKey' => $group->sectionKey(),
+            'sectionLabel' => $group->sectionLabel(),
+            'description' => $group->description(),
+            'order' => $group->order(),
+            'depth' => $group->depth() + 1,
+            'permissions' => $groupPermissions
+                ->map(fn (array $permission): array => [
+                    'key' => $permission['action']->value,
+                    'name' => $permission['name'],
+                    'label' => $permission['label'],
+                    'allowed' => $allowed->has($permission['name']),
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+}
+```
+
+Why this avoids performance issues:
+
+- `getAllPermissions()` is called once.
+- Permission checks are performed against an in-memory flipped collection.
+- The catalog is generated from enums, not from repeated DB queries.
+- The frontend response builder does not call policies or gates in a loop.
+
+**Controller example:**
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\API;
+
+use App\Services\Permissions\PermissionCatalogService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class CurrentUserPermissionsController
+{
+    public function __invoke(
+        Request $request,
+        PermissionCatalogService $permissionCatalogService,
+    ): JsonResponse {
+        return response()->json([
+            'data' => $permissionCatalogService->forUser($request->user()),
+        ]);
+    }
+}
+```
+
+For `/permission-groups` without user-specific allowed values, either return `allowed: false` for every permission or create a `catalog()` method that omits `allowed`.
+
+---
+
+### 7.13 Role permissions payload rules
+
+When creating or updating roles, the frontend should send permission names only.
+
+```json
+{
+  "name": "Manager",
+  "permissions": [
+    "users.view",
+    "users.create",
+    "products.ai.menu"
+  ]
+}
+```
+
+Backend validation must ensure each permission exists:
+
+```php
+'permissions' => ['array'],
+'permissions.*' => ['string', 'exists:permissions,name'],
+```
+
+Then sync permissions:
+
+```php
+$role->syncPermissions($data->permissions);
+```
+
+Do not let frontend send labels, modules, section labels, or descriptions when saving a role. Those values are backend-owned metadata.
+
+Optional stricter validation using the catalog:
+
+```php
+use Illuminate\Validation\Rule;
+use App\Support\Permissions\PermissionCatalog;
+
+'permissions' => ['array'],
+'permissions.*' => [
+    'string',
+    Rule::in(PermissionCatalog::names()),
+],
+```
+
+Use `exists:permissions,name` when you want DB state to be the source of truth. Use `Rule::in(PermissionCatalog::names())` when enum catalog state is the source of truth.
+
+---
+
+### 7.14 Testing permission flow
+
+Every CRUD feature must test authorization.
+
+Minimum tests:
+
+- User without permission receives `403`.
+- User with `group.view` can access `index` and `show`.
+- User with `group.create` can access `store`.
+- User with `group.update` can access `update`.
+- User with `group.delete` can access `destroy`.
+- User with a 3-layer permission like `products.ai.menu` can access the custom action.
+- `/me/permissions` returns modules, groups, labels, flat map, and granted list.
+
+Example:
+
+```php
+it('allows user with users view permission to list users', function () {
+    $user = User::factory()->create();
+
+    $user->givePermissionTo(
+        PermissionNameResolver::resolve(PermissionGroup::USER, PermissionAction::VIEW)
+    );
+
+    actingAs($user)
+        ->getJson('/api/users')
+        ->assertOk();
+});
+
+it('allows user with product ai menu permission to view ai menu', function () {
+    $user = User::factory()->create();
+
+    $user->givePermissionTo(
+        PermissionNameResolver::resolve(PermissionGroup::PRODUCT_AI, PermissionAction::MENU)
+    );
+
+    actingAs($user)
+        ->getJson('/api/products/ai/menu')
+        ->assertOk();
+});
+
+it('returns grouped permissions for frontend', function () {
+    $user = User::factory()->create();
+
+    $user->givePermissionTo(
+        PermissionNameResolver::resolve(PermissionGroup::USER, PermissionAction::VIEW)
+    );
+
+    $response = actingAs($user)
+        ->getJson('/api/me/permissions')
+        ->assertOk()
+        ->assertJsonPath('data.modules.0.key', 'core');
+
+    $flat = $response->json('data.flat');
+
+    expect($flat['users.view'])->toBeTrue();
+});
+```
+
+Important test note:
+
+Because flat permission names contain dots, avoid `assertJsonPath('data.flat.users.view', true)`. That path may be interpreted as nested JSON. Read `data.flat` first, then assert using the full permission name as the array key.
+
+---
+
+### 7.15 Performance and maintainability rules
+
+Follow these rules to keep permission code fast and easy to extend:
+
+- Use `PermissionNameResolver` for all permission names.
+- Use `PermissionCatalog` for all generated permission lists.
+- Do not repeat nested `PermissionGroup::cases()` loops across seeders, controllers, and services.
+- Use `upsert` in seeders instead of `firstOrCreate` per permission.
+- Clear Spatie permission cache before and after seeding.
+- Do not call `$user->can()` repeatedly while building the frontend permission catalog.
+- Use `$user->getAllPermissions()->pluck('name')->flip()` once for API response building.
+- Keep permission metadata backend-owned. Frontend should consume labels, modules, and sections from the API.
+- Do not store labels or descriptions in role payloads.
+- Do not create permissions dynamically from frontend input.
+- For custom permissions, add a new `PermissionAction` once, then reuse it.
+- For new resources/features, add a `PermissionGroup` case and definition only.
+
+---
+
+### 7.16 Permission implementation checklist
+
+For a normal CRUD permission:
+
+- [ ] Add a `PermissionGroup` enum case.
+- [ ] Add one `definition()` entry with label, module, description, and order.
+- [ ] Keep `actions` empty if the group uses full CRUD.
+- [ ] Run the permissions seeder.
+- [ ] Add the policy with explicit `permissionGroup()`.
+- [ ] Use `PermissionAction` enum in the policy.
+- [ ] Add `$this->authorize(...)` in every controller method.
+- [ ] Add Pest tests for denied and allowed access.
+
+For a 3-layer or custom permission:
+
+- [ ] Add or reuse the needed `PermissionAction`, such as `MENU`, `RUN`, or `APPROVE`.
+- [ ] Add a `PermissionGroup` enum case with a two-segment value, such as `products.ai`.
+- [ ] Add `sectionLabel` for frontend grouping.
+- [ ] Define custom `actions` if the group does not use full CRUD.
+- [ ] Add custom policy methods, such as `showMenu()` or `run()`.
+- [ ] Add controller authorization for those custom policy methods.
+- [ ] Confirm `/me/permissions` returns the permission in `modules`, `flat`, and `granted` when allowed.
+- [ ] Add tests for the custom action.
+
+---
+
+## 8. Filter Query trait
+
+- **Where**: `App\Traits\FilterQueries\{Model}FilterQuery`
+- **Requirements**:
+  - Static method `getQuery(): QueryBuilder` returning `QueryBuilder::for(Model::class)->allowedFilters([...])->allowedSorts([...])->defaultSort('-created_at')`.
+  - Use `AllowedFilter::partial('name')`, `AllowedFilter::exact('column')`, `AllowedFilter::scope('createdAfter')`, `AllowedFilter::scope('search')`, etc.
+  - Use `AllowedSort::field('name')`, `AllowedSort::field('emailVerifiedAt', 'email_verified_at')` for snake_case columns.
+  - Define model scopes used by filters (e.g. `scopeCreatedAfter`, `scopeCreatedBefore`, `scopeSearch`) on the model; trait can define them if not on model.
+  - Model must `use {Model}FilterQuery` so `Model::getQuery()` exists.
+
+**User example:**
+```php
+trait UserFilterQuery
+{
+    public static function getQuery(): QueryBuilder
+    {
+        return QueryBuilder::for(User::class)
+            ->allowedFilters([
+                AllowedFilter::partial('name'),
+                AllowedFilter::partial('email'),
+                AllowedFilter::exact('email_verified_at'),
+                AllowedFilter::scope('createdAfter'),
+                AllowedFilter::scope('createdBefore'),
+                AllowedFilter::scope('search'),
+            ])
+            ->allowedSorts([
+                AllowedSort::field('name'),
+                AllowedSort::field('email'),
+                AllowedSort::field('emailVerifiedAt', 'email_verified_at'),
+            ])
+            ->defaultSort('-created_at');
+    }
+
+    public function scopeCreatedAfter($query, $date) { return $query->where('created_at', '>=', $date); }
+    public function scopeCreatedBefore($query, $date) { return $query->where('created_at', '<=', $date); }
+    public function scopeSearch($query, $search): Builder { /* LIKE escape logic */ return $query; }
+}
+```
+
+---
+
+## 9. API Resource
+
+- **Where**: `App\Http\Resources\{Model}Resource`
+- **Requirements**:
+  - Extend `JsonResource`; `@mixin Model` in PHPDoc.
+  - `toArray(Request $request): array` returning camelCase keys; use `$this->attribute`, `$this->whenLoaded('relation')`, nested resources for relations; `createdAt`/`updatedAt` if exposed.
+
+**User example:**
+```php
+class UserResource extends JsonResource
+{
+    /** @mixin User */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'emailVerifiedAt' => $this->email_verified_at,
+            'primaryImage' => MediaResource::make($this->whenLoaded('media', fn() => $this->getFirstMedia('primary-image'))),
+            'images' => MediaResource::collection($this->whenLoaded('media', fn() => $this->getMedia('images'))),
+            'createdAt' => $this->created_at->toDateTimeString(),
+            'updatedAt' => $this->updated_at->toDateTimeString(),
+        ];
+    }
+}
+```
+
+---
+
+## 10. Factory
+
+- **Where**: `database/factories/{Model}Factory.php`
+- **Requirements**:
+  - Use `fake()` for values; `fake()->unique()->safeEmail()` for emails; `bcrypt('password')` or hashed password if needed.
+  - Return array with model fillable columns; match types and constraints.
+
+**User example:**
+```php
+class UserFactory extends Factory
+{
+    protected $model = User::class;
+
+    public function definition(): array
+    {
+        return [
+            'name' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
+            'email_verified_at' => fake()->dateTime(),
+            'password' => bcrypt('password'),
+        ];
+    }
+}
+```
+
+---
+
+## 11. Pest tests
+
+- **Where**: `tests/Feature/{Model}/` — e.g. `UserEndpointsTest.php`, `UserValidationTest.php`, `UserAuthorizationTest.php`, `UserFiltersTest.php`, `UserPaginationTest.php`, `UserEdgeCasesTest.php`.
+- **Requirements**:
+  - `beforeEach`: create user with factory; `Sanctum::actingAs($user)`.
+  - Assert HTTP status: `assertOk()`, `assertCreated()`, `assertNoContent()`, `assertForbidden()`, `assertNotFound()`.
+  - Assert message: `assertJsonPath('message', ResponseMessages::RETRIEVED->message())` (or `CREATED`, `UPDATED`, `DELETED` from package enum).
+  - Assert structure: `expect($response->json('data'))->toHaveKey('name')`, `assertDatabaseHas('users', ['id' => $id])`.
+  - Use descriptive variable names in arrange: e.g. `$adminUser = User::factory()->create(['email' => 'admin@example.com'])`.
+
+**User example (excerpt):**
+```php
+beforeEach(function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+});
+
+it('lists users', function () {
+    User::factory()->count(3)->create();
+    $response = $this->getJson('/api/users');
+    $response->assertOk()->assertJsonPath('message', ResponseMessages::RETRIEVED->message());
+    expect($response->json('data'))->toBeArray();
+});
+
+it('creates a user', function () {
+    $payload = ['name' => 'Sample name', 'email' => 'test@example.com', 'emailVerifiedAt' => '...'];
+    $response = $this->postJson('/api/users', $payload);
+    $response->assertCreated()->assertJsonPath('message', ResponseMessages::CREATED->message());
+    $this->assertDatabaseHas('users', ['id' => $response->json('data.id')]);
+});
+```
+
+---
+
+## Checklist for a new API resource
+
+- [ ] **Scope**: Resource is standard Laravel (app/) or inside a **module** (Modules/{ModuleName}/) — use correct paths and namespaces (`Modules\{ModuleName}\...`).
+- [ ] Route: `Route::apiResource(...)` in `routes/api.php` (standard) or `Modules/{ModuleName}/routes/api.php` (module).
+- [ ] Controller in `App\Http\Controllers\API` or `Modules\{ModuleName}\Http\Controllers\API`, Service injected, index uses FilterRequest + `Model::getQuery()->paginate()`, store/update use Data + Service
+- [ ] `App\Data\{Model}Data` with HasModelAttributes, `$model`, validation attributes
+- [ ] Form Request (store/update) and FilterRequest in `{Model}Requests\`
+- [ ] Service with `store`/`update` and `DB::transaction`
+- [ ] PermissionGroup enum case with label/module/description/order/actions
+- [ ] PermissionAction enum is used instead of raw action strings
+- [ ] Policy with explicit permissionGroup(), AuthorizesByPermissionGroup, and view/create/update/delete
+- [ ] Permissions seeder uses PermissionGroup + PermissionAction + PermissionNameResolver
+- [ ] Controller methods call `$this->authorize(...)`
+- [ ] Frontend permission response returns groups, labels, flat map, and granted list
+- [ ] Filter trait with getQuery(), allowedFilters, allowedSorts, scopes; model uses trait
+- [ ] API Resource with toArray (camelCase)
+- [ ] Factory; Pest tests in `tests/Feature/{Model}/` using ResponseMessages and factories
