@@ -11,8 +11,8 @@ return new class extends Migration
         if (!Schema::hasTable('campaign_applications')) {
             Schema::create('campaign_applications', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('organization_id');
-            $table->unsignedBigInteger('campaign_id')->nullable();
+            $table->string('organization_id');
+            $table->string('campaign_id')->nullable();
             $table->string('name');
             $table->string('email');
             $table->string('phone')->nullable();
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('assigned_to')->nullable();
             $table->text('internal_notes')->nullable();
             $table->string('request_type')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->string('created_by')->nullable();
             $table->softDeletes();
             $table->timestamps();
 
