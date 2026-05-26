@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('organization_roles', function (Blueprint $table) {
+        if (!Schema::hasTable('organization_roles')) {
+            Schema::create('organization_roles', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('organization_id');
             $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
@@ -20,7 +21,8 @@ return new class extends Migration
             $table->integer('members_count')->default(0);
             $table->timestamps();
             $table->unique(['organization_id', 'name']);
-        });
+            });
+        }
     }
 
     public function down(): void

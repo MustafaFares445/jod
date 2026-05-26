@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('organization_staff', function (Blueprint $table) {
+        if (!Schema::hasTable('organization_staff')) {
+            Schema::create('organization_staff', function (Blueprint $table) {
             $table->id();
             $table->string('organization_id');
             $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
@@ -25,7 +26,8 @@ return new class extends Migration
             $table->string('invitation_token')->nullable()->unique();
             $table->timestamps();
             $table->unique(['organization_id', 'email']);
-        });
+            });
+        }
     }
 
     public function down(): void

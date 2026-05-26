@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reports', function (Blueprint $table) {
+        if (!Schema::hasTable('reports')) {
+            Schema::create('reports', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('title');
             $table->text('description');
@@ -31,7 +32,8 @@ return new class extends Migration
             $table->foreign('organization_id')->references('id')->on('organizations')->nullOnDelete();
             $table->foreign('reporter_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('assignee_id')->references('id')->on('users')->nullOnDelete();
-        });
+            });
+        }
     }
 
     /**

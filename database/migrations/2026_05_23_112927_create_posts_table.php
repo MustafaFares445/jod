@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('posts', function (Blueprint $table) {
+        if (!Schema::hasTable('posts')) {
+            Schema::create('posts', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('title');
             $table->string('summary')->nullable();
@@ -33,7 +34,8 @@ return new class extends Migration
             $table->timestamps();
             $table->foreign('author_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('reviewed_by')->references('id')->on('users')->nullOnDelete();
-        });
+            });
+        }
     }
 
     /**

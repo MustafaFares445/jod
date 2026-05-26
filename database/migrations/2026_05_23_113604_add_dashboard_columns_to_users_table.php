@@ -11,18 +11,35 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->unsignedBigInteger('posts_count')->default(0);
-            $table->unsignedBigInteger('reports_count')->default(0);
-            $table->softDeletes();
-        });
+        if (Schema::hasTable('users')) {
+            Schema::table('users', function (Blueprint $table) {
+                if (!Schema::hasColumn('users', 'posts_count')) {
+                    $table->unsignedBigInteger('posts_count')->default(0);
+                }
+                if (!Schema::hasColumn('users', 'reports_count')) {
+                    $table->unsignedBigInteger('reports_count')->default(0);
+                }
+                if (!Schema::hasColumn('users', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['posts_count', 'reports_count']);
-            $table->dropSoftDeletes();
-        });
+        if (Schema::hasTable('users')) {
+            Schema::table('users', function (Blueprint $table) {
+                if (Schema::hasColumn('users', 'posts_count')) {
+                    $table->dropColumn('posts_count');
+                }
+                if (Schema::hasColumn('users', 'reports_count')) {
+                    $table->dropColumn('reports_count');
+                }
+                if (Schema::hasColumn('users', 'deleted_at')) {
+                    $table->dropSoftDeletes();
+                }
+            });
+        }
     }
 };

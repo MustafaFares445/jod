@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('badges', function (Blueprint $table) {
+        if (!Schema::hasTable('badges')) {
+            Schema::create('badges', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('name')->unique();
             $table->text('description');
@@ -17,7 +18,8 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
-        });
+            });
+        }
     }
 
     public function down(): void

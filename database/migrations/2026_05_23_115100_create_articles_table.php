@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('articles', function (Blueprint $table) {
+        if (!Schema::hasTable('articles')) {
+            Schema::create('articles', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('title')->unique();
             $table->string('slug')->unique();
@@ -19,7 +20,8 @@ return new class extends Migration
             $table->string('author_id')->nullable();
             $table->timestamps();
             $table->foreign('author_id')->references('id')->on('users')->nullOnDelete();
-        });
+            });
+        }
     }
 
     public function down(): void

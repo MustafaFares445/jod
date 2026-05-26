@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('notifications', function (Blueprint $table) {
+        if (!Schema::hasTable('notifications')) {
+            Schema::create('notifications', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('title');
             $table->text('body');
@@ -32,7 +33,8 @@ return new class extends Migration
             $table->timestamps();
             $table->foreign('organization_id')->references('id')->on('organizations')->nullOnDelete();
             $table->foreign('creator_id')->references('id')->on('users')->nullOnDelete();
-        });
+            });
+        }
     }
 
     /**

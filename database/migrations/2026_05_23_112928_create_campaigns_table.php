@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('campaigns', function (Blueprint $table) {
+        if (!Schema::hasTable('campaigns')) {
+            Schema::create('campaigns', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('title');
             $table->string('summary')->nullable();
@@ -38,7 +39,8 @@ return new class extends Migration
             $table->foreign('organization_id')->references('id')->on('organizations')->cascadeOnDelete();
             $table->foreign('creator_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('reviewed_by')->references('id')->on('users')->nullOnDelete();
-        });
+            });
+        }
     }
 
     /**

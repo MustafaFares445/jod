@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('audit_logs', function (Blueprint $table) {
+        if (!Schema::hasTable('audit_logs')) {
+            Schema::create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->string('actor_user_id');
             $table->foreign('actor_user_id')->references('id')->on('users')->cascadeOnDelete();
@@ -22,7 +23,8 @@ return new class extends Migration
             $table->index('action');
             $table->index('entity_type');
             $table->index('at');
-        });
+            });
+        }
     }
 
     public function down(): void

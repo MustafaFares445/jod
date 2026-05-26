@@ -8,7 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('campaign_applications', function (Blueprint $table) {
+        if (!Schema::hasTable('campaign_applications')) {
+            Schema::create('campaign_applications', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('organization_id');
             $table->unsignedBigInteger('campaign_id')->nullable();
@@ -34,7 +35,8 @@ return new class extends Migration
             $table->index('applied_at');
             $table->index('name');
             $table->index('applicant_status');
-        });
+            });
+        }
     }
 
     public function down(): void

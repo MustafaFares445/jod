@@ -8,12 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('platform_settings', function (Blueprint $table) {
+        if (!Schema::hasTable('platform_settings')) {
+            Schema::create('platform_settings', function (Blueprint $table) {
             $table->id();
             $table->string('key')->unique();
             $table->longText('value');
             $table->timestamps();
-        });
+            });
+        }
     }
 
     public function down(): void
