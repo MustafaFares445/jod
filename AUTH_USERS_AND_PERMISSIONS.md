@@ -7,7 +7,7 @@ Important:
 - It does not assign permissions directly.
 - Organization staff roles are defined separately in `database/seeders/StaffSeeder.php` and `database/seeders/RoleSeeder.php`.
 - The current downstream staff seed data still uses placeholder user IDs, so those role links do not resolve cleanly to the UUID users created here.
-- Seeded login password for all users: `Password123!`
+- Seeded login password for all users: `password`
 
 ## Users
 

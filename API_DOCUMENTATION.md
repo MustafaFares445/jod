@@ -56,6 +56,11 @@ Postman collection with:
 - Integration testing
 - Frontend development/mocking
 
+### Authentication Endpoints
+- `POST /api/v1/auth/login` - Obtain a Sanctum bearer token
+- `POST /api/v1/auth/logout` - Revoke the current bearer token
+- `GET /api/v1/me` - Fetch the authenticated user profile
+
 ---
 
 ## 🔑 KEY ENUMS QUICK REFERENCE
@@ -146,6 +151,14 @@ viewer      Read-only access
 - `PATCH /admin/badges/{badgeId}` - Update badge
 - `PATCH /admin/badges/{badgeId}/status` - Activate/deactivate
 - `DELETE /admin/badges/{badgeId}` - Delete badge
+
+### Admin Categories (6 endpoints)
+- `GET /admin/categories` - List categories
+- `POST /admin/categories` - Create category
+- `GET /admin/categories/{categoryId}` - Get category details
+- `PATCH /admin/categories/{categoryId}` - Update category
+- `PATCH /admin/categories/{categoryId}/status` - Toggle active/inactive
+- `DELETE /admin/categories/{categoryId}` - Delete category
 
 ### Admin Articles (4 endpoints)
 - `GET /admin/articles` - List articles
@@ -291,7 +304,7 @@ Accept: application/json
 Content-Type: application/json (for POST/PATCH)
 ```
 
-Tokens obtained from authentication endpoint (not included in this documentation).
+Tokens are obtained from `POST /api/v1/auth/login`.
 
 ---
 
@@ -368,4 +381,3 @@ c:\laragon\www\JOD\jod-backend\
 ✅ Error response examples  
 ✅ HTTP status codes  
 ✅ Validation constraints  
-

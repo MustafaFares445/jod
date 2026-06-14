@@ -4,12 +4,14 @@ use App\Http\Controllers\API\Admin\AnalyticsController;
 use App\Http\Controllers\API\Admin\ArticleController;
 use App\Http\Controllers\API\Admin\AuditLogController;
 use App\Http\Controllers\API\Admin\BadgeController;
+use App\Http\Controllers\API\Admin\CategoryController;
 use App\Http\Controllers\API\Admin\NotificationController;
 use App\Http\Controllers\API\Admin\OrganizationController;
 use App\Http\Controllers\API\Admin\OverviewController;
 use App\Http\Controllers\API\Admin\ReportController;
 use App\Http\Controllers\API\Admin\SettingsController;
 use App\Http\Controllers\API\Admin\UserController;
+use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\Me\DashboardContextController;
 use App\Http\Controllers\API\Me\PermissionsController;
 use App\Http\Controllers\API\Me\ProfileController;
@@ -20,6 +22,14 @@ use App\Http\Controllers\API\Org\PostController;
 use App\Http\Controllers\API\Org\RoleController;
 use App\Http\Controllers\API\Org\StaffController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('v1/auth')->group(function () {
+    Route::post('login', [AuthController::class, 'login']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout']);
+    });
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('v1/me')->group(function () {
@@ -68,6 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('badges/{badge}/status', BadgeController::class.'@updateStatus');
 
         Route::apiResource('articles', ArticleController::class);
+        Route::apiResource('categories', CategoryController::class);
+        Route::patch('categories/{category}/status', CategoryController::class.'@updateStatus');
 
         Route::get('overview', OverviewController::class);
         Route::get('analytics/kpis', AnalyticsController::class.'@kpis');

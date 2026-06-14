@@ -61,7 +61,7 @@ curl -X POST http://localhost/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@jod.com",
-    "password": "Password123!"
+    "password": "password"
   }'
 ```
 
@@ -236,17 +236,17 @@ token: (leave empty, will be set after login)
 
 **Admin User**:
 - Email: `admin@jod.com`
-- Password: `Password123!`
+- Password: `password`
 - Role: `admin`
 
 **Organization Owner**:
 - Email: `owner@helpfoundation.org`
-- Password: `Password123!`
+- Password: `password`
 - Organization: Help Foundation (org-001)
 
 **Volunteer**:
 - Email: `ahmed@example.com`
-- Password: `Password123!`
+- Password: `password`
 - Role: `volunteer`
 
 ---
@@ -342,4 +342,3 @@ For endpoint specifications, see: `DASHBOARD_API_ENDPOINTS_PLAN.md`
 For enum values, see: `API_ENUMS.md`
 For example data, see: `SEED_DATA_REFERENCE.md`
 For seeder details, see: `SEEDER_DATA_MAPPING.md`
-

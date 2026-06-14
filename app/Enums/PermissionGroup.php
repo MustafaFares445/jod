@@ -17,6 +17,7 @@ enum PermissionGroup: string
     case NOTIFICATION = 'notifications';
     case BADGE = 'badges';
     case ARTICLE = 'articles';
+    case CATEGORY = 'categories';
     case AUDIT_LOG = 'audit_logs';
     case PLATFORM_SETTINGS = 'platform_settings';
     case ORG_CAMPAIGN = 'org.campaigns';
@@ -134,6 +135,13 @@ enum PermissionGroup: string
                 module: PermissionModule::ADMIN,
                 description: 'Manage knowledge base articles.',
                 order: 90,
+            ),
+
+            self::CATEGORY => new PermissionGroupDefinition(
+                label: 'Categories',
+                module: PermissionModule::ADMIN,
+                description: 'Manage content categories.',
+                order: 95,
             ),
 
             self::AUDIT_LOG => new PermissionGroupDefinition(

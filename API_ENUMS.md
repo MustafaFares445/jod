@@ -297,6 +297,7 @@ campaigns.review.view|approve|reject
 reports.view|claim|request_info|close
 notifications.view|create|update|delete|resend
 badges.view|create|update|delete
+categories.view|create|update|delete
 articles.view|create|update|delete
 analytics.view
 audit_logs.view

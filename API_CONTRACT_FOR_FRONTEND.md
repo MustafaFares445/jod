@@ -38,8 +38,53 @@ AUTH_SCHEME = Bearer
 
 ## Authentication & Authorization
 
-### Login Flow (Assumed)
-The token obtained from authentication endpoint should be stored and included in all subsequent requests.
+### Auth Endpoints
+
+#### Login
+`POST /auth/login`
+
+Request:
+```json
+{
+  "email": "admin@jod.com",
+  "password": "password"
+}
+```
+
+Response:
+```json
+{
+  "data": {
+    "token": "1|plain-text-token",
+    "tokenType": "Bearer",
+    "user": {
+      "id": "uuid",
+      "name": "John Admin",
+      "email": "admin@jod.com"
+    }
+  },
+  "message": "Logged in successfully"
+}
+```
+
+#### Logout
+`POST /auth/logout`
+
+Headers:
+```http
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+Response:
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+### Login Flow
+The token obtained from `POST /auth/login` should be stored and included in all subsequent requests.
 
 **Store token in:**
 - Local storage (with expiration handling)
@@ -54,6 +99,7 @@ The token obtained from authentication endpoint should be stored and included in
 ### Permission-Based Access
 After authentication, frontend fetches permissions to gate features:
 - **GET `/me/permissions`** - Get permission set for current user
+- **POST `/auth/logout`** - Revoke the current token
 - Use `permissions.flat` object to check: `userPermissions['dashboard.view']`
 - Render menu items, buttons, and features based on granted permissions
 
@@ -821,7 +867,86 @@ sort=createdAt|-createdAt|name|-name
 
 ---
 
-### Flow 9: Articles/Content (Admin)
+### Flow 9: Categories (Admin)
+
+**Frontend Location:** `categories-management/categories-management-page.tsx`
+
+#### 9a. List Categories
+**Sequence:**
+1. **GET `/admin/categories?page=1&perPage=20&sort=-createdAt`**
+
+**Query Parameters:**
+```
+filter.target=post|campaign
+filter.status=active|inactive
+filter.search=string
+sort=createdAt|-createdAt|name|-name
+```
+
+**Table Columns:**
+- name → Name
+- target → Target
+- description → Description
+- usageCount → Usage count
+- status → Status
+- createdAt → Created
+
+#### 9b. Create Category
+**Sequence:**
+1. Click "Create Category" button
+2. Form fields:
+   - name (required)
+   - target (required: post|campaign)
+   - description (required)
+   - status (optional, defaults to active)
+3. **POST `/admin/categories`**
+```json
+{
+  "name": "Emergency Relief",
+  "target": "campaign",
+  "description": "Categories for emergency response campaigns",
+  "status": "active"
+}
+```
+4. Success: show notification, refresh list
+
+#### 9c. Edit Category
+**Sequence:**
+1. Click category row
+2. **GET `/admin/categories/{categoryId}`**
+3. Form pre-fills with the current values
+4. User edits and clicks "Save"
+5. **PATCH `/admin/categories/{categoryId}`**
+```json
+{
+  "name": "Emergency Response",
+  "target": "campaign",
+  "description": "Updated category description",
+  "status": "inactive"
+}
+```
+6. Refresh list
+
+#### 9d. Toggle Category Status
+**Sequence:**
+1. Click status toggle
+2. **PATCH `/admin/categories/{categoryId}/status`**
+```json
+{
+  "status": "inactive"
+}
+```
+
+#### 9e. Delete Category
+**Sequence:**
+1. Click delete action
+2. Confirm
+3. **DELETE `/admin/categories/{categoryId}`**
+4. Remove from list
+
+---
+
+### Flow 10: Articles/Content (Admin)
 
 **Frontend Location:** `content-management/content-management-page.tsx`
 
@@ -906,7 +1031,7 @@ sort=createdAt|-createdAt|publishedAt|-publishedAt|title|-title
 
 ---
 
-### Flow 10: Analytics & Audit Logs (Admin)
+### Flow 11: Analytics & Audit Logs (Admin)
 
 **Frontend Location:** `analytics-dashboard/analytics-dashboard-page.tsx`, `audit-log/audit-log-page.tsx`
 
@@ -1657,7 +1782,7 @@ Content-Type: application/json (for POST/PATCH)
 ```
 
 **Token Management:**
-- Tokens issued by auth endpoint (assumed to exist)
+- Tokens issued by `POST /auth/login`
 - Store in localStorage with expiration time
 - Refresh token before expiration (add 5 min buffer)
 - On 401 response: clear token and redirect to login

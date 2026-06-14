@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\Badge;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
+use App\Models\Category;
 use App\Models\Donation;
 use App\Models\Notification;
 use App\Models\Organization;
@@ -23,6 +24,7 @@ use App\Policies\AuditLogPolicy;
 use App\Policies\BadgePolicy;
 use App\Policies\CampaignApplicationPolicy;
 use App\Policies\CampaignReviewPolicy;
+use App\Policies\CategoryPolicy;
 use App\Policies\DonationPolicy;
 use App\Policies\NotificationPolicy;
 use App\Policies\OrganizationPolicy;
@@ -49,6 +51,7 @@ class AuthServiceProvider extends ServiceProvider
         CampaignApplication::class => CampaignApplicationPolicy::class,
         Article::class => ArticlePolicy::class,
         Badge::class => BadgePolicy::class,
+        Category::class => CategoryPolicy::class,
         AuditLog::class => AuditLogPolicy::class,
         PlatformSetting::class => SettingsPolicy::class,
         OrganizationStaff::class => OrganizationStaffPolicy::class,

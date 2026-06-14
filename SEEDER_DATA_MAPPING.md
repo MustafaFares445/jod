@@ -184,6 +184,7 @@ These roles are catalog-backed and are used by:
 - `GET /api/v1/admin/reports`
 - `GET /api/v1/admin/notifications`
 - `GET /api/v1/admin/badges`
+- `GET /api/v1/admin/categories`
 - `GET /api/v1/admin/articles`
 - `GET /api/v1/admin/audit-logs`
 - `GET /api/v1/admin/platform-settings`
