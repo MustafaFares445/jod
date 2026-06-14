@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Org;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
+use App\Models\Organization;
 use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
-use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -16,7 +18,9 @@ class StaffManagementTest extends TestCase
     use RefreshDatabase;
 
     private User $owner;
+
     private Organization $organization;
+
     private OrganizationRole $managerRole;
 
     protected function setUp(): void
@@ -28,6 +32,13 @@ class StaffManagementTest extends TestCase
         $this->managerRole = OrganizationRole::factory()->create([
             'organization_id' => $this->organization->id,
             'name' => 'Manager',
+        ]);
+
+        $this->grantPermissions($this->owner, [
+            [PermissionGroup::ORG_STAFF, PermissionAction::VIEW],
+            [PermissionGroup::ORG_STAFF, PermissionAction::CREATE],
+            [PermissionGroup::ORG_STAFF, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_STAFF, PermissionAction::DELETE],
         ]);
     }
 

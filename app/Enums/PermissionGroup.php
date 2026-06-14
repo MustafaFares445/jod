@@ -23,7 +23,11 @@ enum PermissionGroup: string
     case ORG_POST = 'org.posts';
     case ORG_DONOR = 'org.donors';
     case ORG_APPLICANT = 'org.applicants';
+    case ORG_STAFF = 'org.staff';
+    case ORG_ROLE = 'org.roles';
     case ORG_NOTIFICATION = 'org.notifications';
+    case ORG_REPORT = 'org.reports';
+    case ORG_SETTINGS = 'org.settings';
 
     public function definition(): PermissionGroupDefinition
     {
@@ -31,15 +35,25 @@ enum PermissionGroup: string
             self::DASHBOARD => new PermissionGroupDefinition(
                 label: 'Dashboard',
                 module: PermissionModule::CORE,
-                description: 'Access to dashboard.',
+                description: 'Access the dashboard.',
                 order: 10,
+                actions: [
+                    PermissionAction::VIEW,
+                ],
             ),
 
             self::USER => new PermissionGroupDefinition(
                 label: 'Users',
-                module: PermissionModule::ADMIN,
-                description: 'Manage users.',
+                module: PermissionModule::CORE,
+                description: 'Manage application users.',
                 order: 20,
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::RESET_PASSWORD,
+                ],
             ),
 
             self::ORGANIZATION => new PermissionGroupDefinition(
@@ -49,6 +63,7 @@ enum PermissionGroup: string
                 order: 30,
                 actions: [
                     PermissionAction::VIEW,
+                    PermissionAction::CREATE,
                     PermissionAction::UPDATE,
                     PermissionAction::DELETE,
                     PermissionAction::VERIFY,
@@ -61,7 +76,6 @@ enum PermissionGroup: string
                 module: PermissionModule::ADMIN,
                 description: 'Review and moderate posts.',
                 order: 40,
-                sectionLabel: 'Posts',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::APPROVE,
@@ -74,7 +88,6 @@ enum PermissionGroup: string
                 module: PermissionModule::ADMIN,
                 description: 'Review and moderate campaigns.',
                 order: 50,
-                sectionLabel: 'Campaigns',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::APPROVE,
@@ -100,6 +113,13 @@ enum PermissionGroup: string
                 module: PermissionModule::ADMIN,
                 description: 'Manage notifications.',
                 order: 70,
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::RESEND,
+                ],
             ),
 
             self::BADGE => new PermissionGroupDefinition(
@@ -142,7 +162,13 @@ enum PermissionGroup: string
                 module: PermissionModule::ORGANIZATION,
                 description: 'Manage organization campaigns.',
                 order: 210,
-                sectionLabel: 'Campaigns',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::CLOSE,
+                ],
             ),
 
             self::ORG_POST => new PermissionGroupDefinition(
@@ -150,7 +176,15 @@ enum PermissionGroup: string
                 module: PermissionModule::ORGANIZATION,
                 description: 'Manage organization posts.',
                 order: 220,
-                sectionLabel: 'Posts',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::PUBLISH,
+                    PermissionAction::ARCHIVE,
+                    PermissionAction::RESTORE,
+                ],
             ),
 
             self::ORG_DONOR => new PermissionGroupDefinition(
@@ -158,7 +192,13 @@ enum PermissionGroup: string
                 module: PermissionModule::ORGANIZATION,
                 description: 'Manage organization donors.',
                 order: 230,
-                sectionLabel: 'Donors',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::MANAGE,
+                ],
             ),
 
             self::ORG_APPLICANT => new PermissionGroupDefinition(
@@ -166,15 +206,70 @@ enum PermissionGroup: string
                 module: PermissionModule::ORGANIZATION,
                 description: 'Manage organization applicants.',
                 order: 240,
-                sectionLabel: 'Applicants',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::MANAGE,
+                ],
+            ),
+
+            self::ORG_STAFF => new PermissionGroupDefinition(
+                label: 'Staff',
+                module: PermissionModule::ORGANIZATION,
+                description: 'Manage organization staff.',
+                order: 250,
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::MANAGE,
+                ],
+            ),
+
+            self::ORG_ROLE => new PermissionGroupDefinition(
+                label: 'Roles',
+                module: PermissionModule::ORGANIZATION,
+                description: 'Manage organization roles.',
+                order: 260,
             ),
 
             self::ORG_NOTIFICATION => new PermissionGroupDefinition(
                 label: 'Notifications',
                 module: PermissionModule::ORGANIZATION,
                 description: 'Manage organization notifications.',
-                order: 250,
-                sectionLabel: 'Notifications',
+                order: 270,
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::CREATE,
+                    PermissionAction::UPDATE,
+                    PermissionAction::DELETE,
+                    PermissionAction::SEND,
+                    PermissionAction::RESEND,
+                ],
+            ),
+
+            self::ORG_REPORT => new PermissionGroupDefinition(
+                label: 'Reports',
+                module: PermissionModule::ORGANIZATION,
+                description: 'View organization reports.',
+                order: 280,
+                actions: [
+                    PermissionAction::VIEW,
+                ],
+            ),
+
+            self::ORG_SETTINGS => new PermissionGroupDefinition(
+                label: 'Settings',
+                module: PermissionModule::ORGANIZATION,
+                description: 'Manage organization settings.',
+                order: 290,
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::UPDATE,
+                ],
             ),
         };
     }
@@ -221,6 +316,9 @@ enum PermissionGroup: string
         return $this->definition()->order;
     }
 
+    /**
+     * @return list<PermissionAction>
+     */
     public function actions(): array
     {
         return $this->definition()->actions ?? PermissionAction::crud();

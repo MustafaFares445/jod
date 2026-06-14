@@ -15,7 +15,7 @@ class RoleResource extends JsonResource
             'id' => $this->id,
             'role' => $this->name,
             'description' => $this->description,
-            'permissions' => $this->permissions ?? [],
+            'permissions' => array_values($this->permissions ?? []),
             'isActive' => $this->is_active,
             'isSystem' => $this->is_system,
             'membersCount' => $this->members_count,

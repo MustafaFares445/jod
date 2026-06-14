@@ -9,6 +9,7 @@ use App\Http\Requests\Org\RoleRequest;
 use App\Http\Resources\Org\RoleResource;
 use App\Models\OrganizationRole;
 use App\Services\OrganizationRoleService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -19,14 +20,14 @@ class RoleController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        if (!$user || !$user->organization_id) {
+        if (! $user || ! $user->organization_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $this->authorize('viewAny', OrganizationRole::class);
 
         $organization = $user->organization;
-        if (!$organization) {
+        if (! $organization) {
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
@@ -43,18 +44,22 @@ class RoleController extends Controller
     public function store(RoleRequest $request): RoleResource
     {
         $user = auth()->user();
-        if (!$user || !$user->organization_id) {
+        if (! $user || ! $user->organization_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $this->authorize('create', OrganizationRole::class);
 
         $organization = $user->organization;
-        if (!$organization) {
+        if (! $organization) {
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
-        $role = $this->service->createRole($organization, $request->validated());
+        $role = $this->service->createRole(
+            $organization,
+            $request->validated(),
+            (string) $request->user()->id,
+        );
 
         return RoleResource::make($role);
     }
@@ -70,16 +75,20 @@ class RoleController extends Controller
     {
         $this->authorize('update', $role);
 
-        $updated = $this->service->updateRole($role, $request->validated());
+        $updated = $this->service->updateRole(
+            $role,
+            $request->validated(),
+            (string) $request->user()->id,
+        );
 
         return RoleResource::make($updated);
     }
 
-    public function destroy(OrganizationRole $role): Response
+    public function destroy(Request $request, OrganizationRole $role): Response|JsonResponse
     {
         $this->authorize('delete', $role);
 
-        if (!$this->service->deleteRole($role)) {
+        if (! $this->service->deleteRole($role, (string) $request->user()->id)) {
             return response()->json(['message' => 'Cannot delete system role'], 422);
         }
 

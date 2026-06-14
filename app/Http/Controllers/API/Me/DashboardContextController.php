@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\API\Me;
 
 use App\Http\Controllers\Controller;
+use App\Models\Campaign;
+use App\Models\Notification;
+use App\Models\Post;
+use App\Models\Report;
 use App\Services\Permissions\PermissionCatalogService;
 use Illuminate\Http\Request;
 
@@ -32,9 +36,21 @@ class DashboardContextController extends Controller
                 ],
                 'permissions' => $permissions,
                 'counters' => [
-                    'unreadNotifications' => 0,
-                    'pendingReviews' => 0,
-                    'openReports' => 0,
+                    'unreadNotifications' => Notification::query()
+                        ->where('status', 'unread')
+                        ->where(function ($query) use ($user): void {
+                            $query->where('recipient_id', $user->id);
+
+                            if ($user->organization_id) {
+                                $query->orWhere('organization_id', $user->organization_id);
+                            }
+                        })
+                        ->count(),
+                    'pendingReviews' => Post::query()->where('status', 'pending')->count()
+                        + Campaign::query()->where('status', 'pending')->count(),
+                    'openReports' => Report::query()
+                        ->whereIn('status', ['new', 'in_progress'])
+                        ->count(),
                 ],
             ],
         ];

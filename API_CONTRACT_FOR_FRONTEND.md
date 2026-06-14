@@ -208,6 +208,23 @@ Admin Overview Page
 
 ---
 
+## Dashboard API Gap Closure
+
+The dashboard bootstrap gap is closed against the current backend surface. The verified contract is:
+
+- `GET /me` returns the authenticated user profile with `id`, `name`, `email`, `phone`, `userType`, `organizationId`, `organizationName`, `status`, `createdAt`, and `lastActiveAt`.
+- `GET /me/permissions` returns the nested permission catalog for the current user, with `modules`, `flat`, and `granted`.
+- `GET /me/dashboard-context` returns `profile`, `permissions`, and `counters` in one payload.
+- `GET /admin/overview` returns `data.stats` and `data.activity`.
+- `GET /admin/analytics/kpis` returns `data.kpis`.
+- `GET /admin/analytics/weekly` returns `data.rows`.
+- `GET /org/overview` returns `data.stats` and `data.activity` for the organization workspace.
+- `GET /org/permissions/catalog` is sourced from the shared permission catalog and should stay in sync with the enum catalog.
+
+The remaining plan work is normalization, not route invention: preserve these response envelopes, keep `sortBy` aliases accepted during migration, and keep the permission catalog the single source of truth.
+
+---
+
 ### Flow 2: Users Management (Admin)
 
 **Frontend Location:** `users-management/users-management-page.tsx`
@@ -611,7 +628,7 @@ sort=createdAt|-createdAt
 3. **POST `/admin/reports/{reportId}/claim`**
 ```json
 {
-  "assigneeId": "user-456"
+  "assigneeId": "uuid-string"
 }
 ```
 4. Status changes to "in_progress"
@@ -1767,6 +1784,7 @@ Content-Type: application/json (for POST/PATCH)
 - [ ] Implement `/admin/overview` for KPI cards
 - [ ] Implement `/admin/analytics/kpis` for chart data
 - [ ] Implement `/admin/analytics/weekly` for weekly chart
+- [ ] Close the dashboard API gap with `GET /me/dashboard-context` and `GET /org/overview`
 
 #### Phase 3: Admin Users
 - [ ] List users with pagination, filters, sorting

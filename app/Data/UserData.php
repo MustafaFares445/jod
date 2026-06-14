@@ -15,7 +15,7 @@ class UserData extends Data
         public ?string $password = null,
         public ?string $userType = null,
         public ?string $status = null,
-        public ?int $organizationId = null,
+        public ?string $organizationId = null,
     ) {}
 
     public function onlyModelAttributes(): array

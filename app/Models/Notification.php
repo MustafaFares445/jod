@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasStringPrimaryKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,11 +27,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'creator_id',
     'recipient_id',
     'sent_at',
-    'read_at'
+    'read_at',
 ])]
 class Notification extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasStringPrimaryKey, SoftDeletes;
 
     public $incrementing = false;
 

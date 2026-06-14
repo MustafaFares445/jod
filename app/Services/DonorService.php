@@ -11,14 +11,14 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class DonorService
 {
-    public function paginate(array $params, int $organizationId): LengthAwarePaginator
+    public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeSort($params);
 
         $query = Donation::query()
             ->where('organization_id', $organizationId)
-            ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', (int) $campaignId))
+            ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', $campaignId))
             ->when(($city = $this->param($params, 'filter.city')) && $city !== 'all', fn (Builder $builder) => $builder->where('city', $city))
             ->when(($search = $this->param($params, 'filter.search')) && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
@@ -39,7 +39,7 @@ class DonorService
         return $query->paginate($perPage);
     }
 
-    public function create(array $attributes, int $organizationId, int $userId): Donation
+    public function create(array $attributes, string $organizationId, string $userId): Donation
     {
         return Donation::create([
             'organization_id' => $organizationId,
@@ -60,7 +60,7 @@ class DonorService
         ]);
     }
 
-    public function update(Donation $donation, array $attributes, int $organizationId): Donation
+    public function update(Donation $donation, array $attributes, string $organizationId): Donation
     {
         $donation->update([
             'campaign_id' => $this->resolveCampaignId($attributes['campaignTitle'], $organizationId),
@@ -81,7 +81,7 @@ class DonorService
         return $donation;
     }
 
-    private function resolveCampaignId(string $campaignTitle, int $organizationId): ?int
+    private function resolveCampaignId(string $campaignTitle, string $organizationId): ?string
     {
         return Campaign::query()
             ->where('organization_id', $organizationId)

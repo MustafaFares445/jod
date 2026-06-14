@@ -11,7 +11,6 @@ use App\Http\Requests\Org\NotificationRequest;
 use App\Http\Resources\OrgNotificationResource;
 use App\Models\Notification;
 use App\Services\OrgNotificationService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -22,7 +21,7 @@ class NotificationController extends Controller
 
     public function index(NotificationFilterRequest $request): AnonymousResourceCollection
     {
-        $this->authorizeOrgPermission('org.notifications.view');
+        $this->authorize('viewAnyOrganization', Notification::class);
 
         $notifications = $this->service->paginate($request->query(), $this->organizationId());
 
@@ -31,29 +30,27 @@ class NotificationController extends Controller
 
     public function store(NotificationRequest $request): OrgNotificationResource
     {
-        $this->authorizeOrgPermission('org.notifications.create');
+        $this->authorize('createOrganization', Notification::class);
 
         $notification = $this->service->create(
             $request->validated(),
             $this->organizationId(),
-            (int) auth()->id(),
+            (string) auth()->id(),
         );
 
-        return OrgNotificationResource::make($notification);
+        return OrgNotificationResource::make($notification->loadMissing('createdBy'));
     }
 
     public function show(Notification $notification): OrgNotificationResource
     {
-        $this->authorizeOrgPermission('org.notifications.view');
-        $this->assertSameOrganization((int) $notification->organization_id);
+        $this->authorize('viewOrganization', $notification);
 
         return OrgNotificationResource::make($notification->loadMissing('createdBy'));
     }
 
     public function update(NotificationRequest $request, Notification $notification): OrgNotificationResource
     {
-        $this->authorizeOrgPermission('org.notifications.update');
-        $this->assertSameOrganization((int) $notification->organization_id);
+        $this->authorize('updateOrganization', $notification);
 
         $notification->update([
             'title' => $request->validated('title'),
@@ -71,8 +68,7 @@ class NotificationController extends Controller
 
     public function destroy(Notification $notification): Response
     {
-        $this->authorizeOrgPermission('org.notifications.delete');
-        $this->assertSameOrganization((int) $notification->organization_id);
+        $this->authorize('deleteOrganization', $notification);
 
         $notification->delete();
 
@@ -81,55 +77,34 @@ class NotificationController extends Controller
 
     public function updateReadState(NotificationReadStateRequest $request, Notification $notification): OrgNotificationResource
     {
-        $this->authorizeOrgPermission('org.notifications.update');
-        $this->assertSameOrganization((int) $notification->organization_id);
+        $this->authorize('updateReadStateOrganization', $notification);
 
-        $status = $request->validated('status');
-        $notification->update([
-            'status' => $status,
-            'read_at' => $status === 'read' ? now() : null,
-        ]);
+        $notification = $this->service->updateReadState(
+            $notification,
+            $request->validated('status'),
+        );
 
         return OrgNotificationResource::make($notification->refresh()->loadMissing('createdBy'));
     }
 
     public function resend(Notification $notification): OrgNotificationResource
     {
-        $this->authorizeOrgPermission('org.notifications.update');
-        $this->assertSameOrganization((int) $notification->organization_id);
+        $this->authorize('resendOrganization', $notification);
 
-        $notification->update([
-            'mailbox' => 'sent',
-            'status' => 'sent',
-            'sent_at' => now(),
-        ]);
+        $notification = $this->service->resend($notification);
 
         return OrgNotificationResource::make($notification->refresh()->loadMissing('createdBy'));
     }
 
-    private function organizationId(): int
+    private function organizationId(): string
     {
-        $organizationId = (int) auth()->user()?->organization_id;
-        if ($organizationId <= 0) {
+        $organizationId = (string) auth()->user()?->organization_id;
+        if ($organizationId === '') {
             throw ValidationException::withMessages([
                 'organizationId' => ['Authenticated user is not linked to an organization.'],
             ]);
         }
 
         return $organizationId;
-    }
-
-    private function authorizeOrgPermission(string $permission): void
-    {
-        if (!auth()->user()?->can($permission)) {
-            throw new AuthorizationException();
-        }
-    }
-
-    private function assertSameOrganization(int $organizationId): void
-    {
-        if ($organizationId !== $this->organizationId()) {
-            throw new AuthorizationException();
-        }
     }
 }

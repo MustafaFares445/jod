@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
-use App\Models\OrganizationStaff;
-use App\Models\AuditLog;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class OrganizationRoleService
 {
@@ -27,56 +27,64 @@ class OrganizationRoleService
         return $query->paginate($perPage);
     }
 
-    public function createRole(Organization $organization, array $data): OrganizationRole
+    public function createRole(Organization $organization, array $data, string $actorUserId): OrganizationRole
     {
-        $role = $organization->roles()->create([
-            'name' => $data['name'],
-            'description' => $data['description'] ?? null,
-            'permissions' => $data['permissions'] ?? [],
-            'is_active' => $data['is_active'] ?? true,
-        ]);
+        $role = DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationRole {
+            $role = $organization->roles()->create([
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'permissions' => array_values(array_unique($data['permissions'] ?? [])),
+                'is_active' => $data['is_active'] ?? true,
+            ]);
 
-        $this->logAudit('role.created', 'OrganizationRole', $role->id, ['name' => $role->name]);
+            $this->logAudit($actorUserId, 'role.created', 'OrganizationRole', (string) $role->id, ['name' => $role->name]);
+
+            return $role;
+        });
 
         return $role;
     }
 
-    public function updateRole(OrganizationRole $role, array $data): OrganizationRole
+    public function updateRole(OrganizationRole $role, array $data, string $actorUserId): OrganizationRole
     {
-        $originalData = $role->only(['name', 'description', 'permissions', 'is_active']);
+        return DB::transaction(function () use ($role, $data, $actorUserId): OrganizationRole {
+            $originalData = $role->only(['name', 'description', 'permissions', 'is_active']);
 
-        $role->update([
-            'name' => $data['name'] ?? $role->name,
-            'description' => $data['description'] ?? $role->description,
-            'permissions' => $data['permissions'] ?? $role->permissions,
-            'is_active' => $data['is_active'] ?? $role->is_active,
-        ]);
+            $role->update([
+                'name' => $data['name'] ?? $role->name,
+                'description' => $data['description'] ?? $role->description,
+                'permissions' => array_values(array_unique($data['permissions'] ?? $role->permissions ?? [])),
+                'is_active' => $data['is_active'] ?? $role->is_active,
+            ]);
 
-        $this->logAudit('role.updated', 'OrganizationRole', $role->id, [
-            'from' => $originalData,
-            'to' => $role->only(['name', 'description', 'permissions', 'is_active']),
-        ]);
+            $this->logAudit($actorUserId, 'role.updated', 'OrganizationRole', (string) $role->id, [
+                'from' => $originalData,
+                'to' => $role->only(['name', 'description', 'permissions', 'is_active']),
+            ]);
 
-        return $role;
+            return $role;
+        });
     }
 
-    public function deleteRole(OrganizationRole $role): bool
+    public function deleteRole(OrganizationRole $role, string $actorUserId): bool
     {
-        if ($role->is_system) {
-            return false;
-        }
-
-        $staffWithRole = $role->staff()->count();
-        if ($staffWithRole > 0) {
-            $defaultRole = $role->organization->roles()->where('name', 'Viewer')->first();
-            if ($defaultRole) {
-                $role->staff()->update(['organization_role_id' => $defaultRole->id]);
+        return DB::transaction(function () use ($role, $actorUserId): bool {
+            if ($role->is_system) {
+                return false;
             }
-        }
 
-        $this->logAudit('role.deleted', 'OrganizationRole', $role->id, ['name' => $role->name]);
+            $staffWithRole = $role->staff()->count();
+            if ($staffWithRole > 0) {
+                $defaultRole = $role->organization->roles()->where('name', 'Viewer')->first();
+                if ($defaultRole) {
+                    $role->staff()->update(['organization_role_id' => $defaultRole->id]);
+                }
+            }
 
-        return $role->delete();
+            $this->logAudit($actorUserId, 'role.deleted', 'OrganizationRole', (string) $role->id, ['name' => $role->name]);
+
+            return $role->delete();
+        });
     }
 
     private function applySorting($query, string $sort): void
@@ -94,17 +102,17 @@ class OrganizationRoleService
 
         if (isset($fieldMap[$field])) {
             if ($field === 'permissionsCount') {
-                $query->orderByRaw('JSON_LENGTH(' . $fieldMap[$field] . ') ' . $direction);
+                $query->orderByRaw('JSON_LENGTH('.$fieldMap[$field].') '.$direction);
             } else {
                 $query->orderBy($fieldMap[$field], $direction);
             }
         }
     }
 
-    private function logAudit(string $action, string $entityType, int $entityId, array $metadata = []): void
+    private function logAudit(string $actorUserId, string $action, string $entityType, string $entityId, array $metadata = []): void
     {
         AuditLog::create([
-            'actor_user_id' => auth()->id(),
+            'actor_user_id' => $actorUserId,
             'action' => $action,
             'entity_type' => $entityType,
             'entity_id' => $entityId,

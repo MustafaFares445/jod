@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Org;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Donation;
@@ -13,8 +15,6 @@ use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class OrganizationWorkspaceEndpointsTest extends TestCase
@@ -22,6 +22,7 @@ class OrganizationWorkspaceEndpointsTest extends TestCase
     use RefreshDatabase;
 
     private Organization $organization;
+
     private User $user;
 
     protected function setUp(): void
@@ -39,21 +40,32 @@ class OrganizationWorkspaceEndpointsTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $permissions = [
-            'org.campaigns.view', 'org.campaigns.create', 'org.campaigns.update', 'org.campaigns.delete',
-            'org.posts.view', 'org.posts.create', 'org.posts.update', 'org.posts.delete',
-            'org.donors.view', 'org.donors.create', 'org.donors.update', 'org.donors.delete',
-            'org.applicants.view', 'org.applicants.create', 'org.applicants.update', 'org.applicants.delete',
-            'org.notifications.view', 'org.notifications.create', 'org.notifications.update', 'org.notifications.delete',
-        ];
-
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-        $guard = 'web';
-        foreach ($permissions as $permission) {
-            Permission::findOrCreate($permission, $guard);
-        }
-
-        $this->user->givePermissionTo($permissions);
+        $this->grantPermissions($this->user, [
+            [PermissionGroup::ORG_CAMPAIGN, PermissionAction::VIEW],
+            [PermissionGroup::ORG_CAMPAIGN, PermissionAction::CREATE],
+            [PermissionGroup::ORG_CAMPAIGN, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_CAMPAIGN, PermissionAction::DELETE],
+            [PermissionGroup::ORG_CAMPAIGN, PermissionAction::CLOSE],
+            [PermissionGroup::ORG_POST, PermissionAction::VIEW],
+            [PermissionGroup::ORG_POST, PermissionAction::CREATE],
+            [PermissionGroup::ORG_POST, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_POST, PermissionAction::DELETE],
+            [PermissionGroup::ORG_POST, PermissionAction::PUBLISH],
+            [PermissionGroup::ORG_POST, PermissionAction::ARCHIVE],
+            [PermissionGroup::ORG_POST, PermissionAction::RESTORE],
+            [PermissionGroup::ORG_DONOR, PermissionAction::VIEW],
+            [PermissionGroup::ORG_DONOR, PermissionAction::CREATE],
+            [PermissionGroup::ORG_DONOR, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_DONOR, PermissionAction::DELETE],
+            [PermissionGroup::ORG_APPLICANT, PermissionAction::VIEW],
+            [PermissionGroup::ORG_APPLICANT, PermissionAction::CREATE],
+            [PermissionGroup::ORG_APPLICANT, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_APPLICANT, PermissionAction::DELETE],
+            [PermissionGroup::ORG_NOTIFICATION, PermissionAction::VIEW],
+            [PermissionGroup::ORG_NOTIFICATION, PermissionAction::CREATE],
+            [PermissionGroup::ORG_NOTIFICATION, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_NOTIFICATION, PermissionAction::DELETE],
+        ]);
         Sanctum::actingAs($this->user);
     }
 

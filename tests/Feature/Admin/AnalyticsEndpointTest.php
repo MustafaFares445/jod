@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\Campaign;
 use App\Models\Organization;
 use App\Models\Post;
@@ -23,7 +25,9 @@ class AnalyticsEndpointTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create();
-        $this->grantPermissions($this->user, ['users.view']);
+        $this->grantPermissions($this->user, [
+            [PermissionGroup::USER, PermissionAction::VIEW],
+        ]);
         Sanctum::actingAs($this->user);
     }
 
@@ -31,7 +35,7 @@ class AnalyticsEndpointTest extends TestCase
     {
         User::factory()->count(5)->create();
         Organization::factory()->count(3)->create();
-        $organizationId = (int) Organization::query()->value('id');
+        $organizationId = Organization::query()->value('id');
 
         Post::query()->create(['title' => 'Pending post 1', 'status' => 'pending']);
         Post::query()->create(['title' => 'Pending post 2', 'status' => 'pending']);

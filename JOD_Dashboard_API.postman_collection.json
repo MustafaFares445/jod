@@ -62,7 +62,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"user-123\",\n    \"name\": \"John Admin\",\n    \"email\": \"admin@jod.com\",\n    \"phone\": \"+962791234567\",\n    \"userType\": \"admin\",\n    \"status\": \"active\",\n    \"createdAt\": \"2024-01-15T10:30:00Z\",\n    \"lastActiveAt\": \"2025-05-25T14:22:00Z\"\n  },\n  \"message\": \"User profile retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"uuid-string\",\n    \"name\": \"John Admin\",\n    \"email\": \"admin@jod.com\",\n    \"phone\": \"+962791234567\",\n    \"userType\": \"admin\",\n    \"organizationId\": null,\n    \"organizationName\": null,\n    \"status\": \"active\",\n    \"createdAt\": \"2024-01-15T10:30:00Z\",\n    \"lastActiveAt\": \"2025-05-25T14:22:00Z\"\n  }\n}"
             }
           ]
         },
@@ -122,7 +122,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"modules\": [\n      {\n        \"name\": \"Dashboard\",\n        \"permissions\": [\n          \"dashboard.view\"\n        ]\n      },\n      {\n        \"name\": \"Users Management\",\n        \"permissions\": [\n          \"users.view\",\n          \"users.create\",\n          \"users.update\",\n          \"users.delete\",\n          \"users.reset_password\"\n        ]\n      }\n    ],\n    \"flat\": {\n      \"dashboard.view\": true,\n      \"users.view\": true,\n      \"users.create\": true\n    },\n    \"granted\": [\n      \"dashboard.view\",\n      \"users.view\",\n      \"users.create\"\n    ]\n  },\n  \"message\": \"Permissions retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"modules\": [\n      {\n        \"key\": \"core\",\n        \"label\": \"Core\",\n        \"order\": 10,\n        \"groups\": [\n          {\n            \"key\": \"dashboard\",\n            \"label\": \"Dashboard\",\n            \"sectionKey\": null,\n            \"sectionLabel\": null,\n            \"description\": \"Access the dashboard.\",\n            \"order\": 10,\n            \"depth\": 2,\n            \"permissions\": [\n              {\n                \"key\": \"view\",\n                \"name\": \"dashboard.view\",\n                \"label\": \"View Dashboard\",\n                \"allowed\": true\n              }\n            ]\n          }\n        ]\n      }\n    ],\n    \"flat\": {\n      \"dashboard.view\": true\n    },\n    \"granted\": [\n      \"dashboard.view\"\n    ]\n  }\n}"
             }
           ]
         },
@@ -182,7 +182,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"profile\": {\n      \"id\": \"user-123\",\n      \"name\": \"John Admin\",\n      \"email\": \"admin@jod.com\",\n      \"userType\": \"admin\",\n      \"status\": \"active\"\n    },\n    \"permissions\": {\n      \"dashboard.view\": true,\n      \"users.view\": true\n    },\n    \"counters\": {\n      \"unreadNotifications\": 5,\n      \"pendingReviews\": 12,\n      \"openReports\": 3\n    }\n  },\n  \"message\": \"Dashboard context loaded\"\n}"
+              "body": "{\n  \"data\": {\n    \"profile\": {\n      \"id\": \"uuid-string\",\n      \"name\": \"John Admin\",\n      \"email\": \"admin@jod.com\",\n      \"phone\": \"+962791234567\",\n      \"userType\": \"admin\",\n      \"organizationId\": null,\n      \"organizationName\": null,\n      \"status\": \"active\",\n      \"createdAt\": \"2024-01-15T10:30:00Z\",\n      \"lastActiveAt\": \"2025-05-25T14:22:00Z\"\n    },\n    \"permissions\": {\n      \"modules\": [\n        {\n          \"key\": \"core\",\n          \"label\": \"Core\",\n          \"order\": 10,\n          \"groups\": [\n            {\n              \"key\": \"dashboard\",\n              \"label\": \"Dashboard\",\n              \"sectionKey\": null,\n              \"sectionLabel\": null,\n              \"description\": \"Access the dashboard.\",\n              \"order\": 10,\n              \"depth\": 2,\n              \"permissions\": [\n                {\n                  \"key\": \"view\",\n                  \"name\": \"dashboard.view\",\n                  \"label\": \"View Dashboard\",\n                  \"allowed\": true\n                }\n              ]\n            }\n          ]\n        }\n      ],\n      \"flat\": {\n        \"dashboard.view\": true\n      },\n      \"granted\": [\n        \"dashboard.view\"\n      ]\n    },\n    \"counters\": {\n      \"unreadNotifications\": 5,\n      \"pendingReviews\": 12,\n      \"openReports\": 3\n    }\n  }\n}"
             }
           ]
         },
@@ -242,7 +242,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"user-1\",\n    \"name\": \"John Admin\",\n    \"email\": \"admin@jod.com\",\n    \"phone\": \"+962791234567\",\n    \"status\": \"active\",\n    \"createdAt\": \"2024-01-15T10:30:00Z\"\n  },\n  \"message\": \"Profile retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"uuid-string\",\n    \"name\": \"John Admin\",\n    \"email\": \"admin@jod.com\",\n    \"phone\": \"+962791234567\",\n    \"userType\": \"admin\",\n    \"organizationId\": null,\n    \"organizationName\": null,\n    \"status\": \"active\",\n    \"createdAt\": \"2024-01-15T10:30:00Z\",\n    \"lastActiveAt\": \"2025-05-25T14:22:00Z\"\n  }\n}"
             }
           ]
         },
@@ -320,7 +320,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"resource-id\",\n    \"name\": \"Updated Resource\",\n    \"status\": \"active\",\n    \"updatedAt\": \"2024-05-25T10:00:00Z\"\n  },\n  \"message\": \"Resource updated successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"siteName\": \"JOD - Jordanian Opportunity & Development\",\n    \"allowNewPosts\": true,\n    \"requirePostReview\": true\n  },\n  \"message\": \"Platform settings updated successfully\"\n}"
             }
           ]
         }
@@ -386,7 +386,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"stats\": [\n      {\n        \"id\": \"total-users\",\n        \"label\": \"Total Users\",\n        \"value\": 15420,\n        \"subLabel\": \"+234 this week\",\n        \"icon\": \"users\"\n      }\n    ],\n    \"activity\": [\n      {\n        \"id\": \"activity-1\",\n        \"title\": \"New organization registered\",\n        \"detail\": \"Tech for Good Foundation started their profile\",\n        \"at\": \"2025-05-25T14:22:00Z\"\n      }\n    ]\n  },\n  \"message\": \"Overview data retrieved\"\n}"
+              "body": "{\n  \"data\": {\n    \"stats\": [\n      {\n        \"id\": \"total_users\",\n        \"label\": \"Total Users\",\n        \"value\": 15420,\n        \"subLabel\": \"Active users\",\n        \"icon\": \"users\"\n      }\n    ],\n    \"activity\": [\n      {\n        \"id\": \"activity-1\",\n        \"title\": \"New organization registered\",\n        \"detail\": \"Tech for Good Foundation started their profile\",\n        \"at\": \"2025-05-25T14:22:00Z\"\n      }\n    ]\n  },\n  \"message\": \"Overview retrieved successfully\"\n}"
             }
           ]
         },
@@ -462,7 +462,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"kpis\": [\n      {\n        \"name\": \"Users\",\n        \"value\": 250\n      },\n      {\n        \"name\": \"Campaigns\",\n        \"value\": 45\n      }\n    ],\n    \"timeline\": []\n  },\n  \"message\": \"Analytics data retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"kpis\": [\n      {\n        \"id\": \"new_users\",\n        \"label\": \"New Users\",\n        \"value\": 250,\n        \"changeVsLastMonth\": 18\n      },\n      {\n        \"id\": \"new_campaigns\",\n        \"label\": \"New Campaigns\",\n        \"value\": 45,\n        \"changeVsLastMonth\": 4\n      }\n    ]\n  },\n  \"message\": \"KPIs retrieved successfully\"\n}"
             }
           ]
         },
@@ -538,7 +538,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"kpis\": [\n      {\n        \"name\": \"Users\",\n        \"value\": 250\n      },\n      {\n        \"name\": \"Campaigns\",\n        \"value\": 45\n      }\n    ],\n    \"timeline\": []\n  },\n  \"message\": \"Analytics data retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"rows\": [\n      {\n        \"weekLabel\": \"May 05 - May 11\",\n        \"visits\": 120,\n        \"newUsers\": 14,\n        \"donations\": 8\n      },\n      {\n        \"weekLabel\": \"May 12 - May 18\",\n        \"visits\": 160,\n        \"newUsers\": 20,\n        \"donations\": 11\n      }\n    ]\n  },\n  \"message\": \"Weekly stats retrieved successfully\"\n}"
             }
           ]
         },
@@ -573,7 +573,7 @@
                 },
                 {
                   "key": "filter.actorUserId",
-                  "value": "user-123",
+                  "value": "uuid-string-1",
                   "disabled": true
                 },
                 {
@@ -632,7 +632,7 @@
                     },
                     {
                       "key": "filter.actorUserId",
-                      "value": "user-123",
+                      "value": "uuid-string-1",
                       "disabled": true
                     },
                     {
@@ -745,7 +745,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": [\n    {\n      \"id\": \"user-123\",\n      \"name\": \"John Admin\",\n      \"email\": \"admin@jod.com\",\n      \"phone\": \"+962791234567\",\n      \"role\": \"admin\",\n      \"status\": \"active\",\n      \"postsCount\": 0,\n      \"reportsCount\": 5,\n      \"createdAt\": \"2024-01-15T10:30:00Z\",\n      \"lastActiveAt\": \"2025-05-25T14:22:00Z\"\n    },\n    {\n      \"id\": \"user-456\",\n      \"name\": \"Sarah Owner\",\n      \"email\": \"owner@helpfoundation.org\",\n      \"phone\": \"+962791234568\",\n      \"role\": \"general\",\n      \"status\": \"active\",\n      \"postsCount\": 12,\n      \"reportsCount\": 1,\n      \"createdAt\": \"2025-02-10T09:15:00Z\",\n      \"lastActiveAt\": \"2025-05-24T16:45:00Z\"\n    },\n    {\n      \"id\": \"user-789\",\n      \"name\": \"Ahmed Mohammed\",\n      \"email\": \"ahmed@example.com\",\n      \"phone\": \"+962791234569\",\n      \"role\": \"volunteer\",\n      \"status\": \"active\",\n      \"postsCount\": 8,\n      \"reportsCount\": 2,\n      \"createdAt\": \"2025-03-05T14:20:00Z\",\n      \"lastActiveAt\": \"2025-05-25T10:30:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"currentPage\": 1,\n    \"perPage\": 20,\n    \"total\": 5,\n    \"lastPage\": 1\n  },\n  \"message\": \"Users retrieved successfully\"\n}"
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"uuid-string-1\",\n      \"name\": \"John Admin\",\n      \"email\": \"admin@jod.com\",\n      \"phone\": \"+962791234567\",\n      \"role\": \"admin\",\n      \"status\": \"active\",\n      \"postsCount\": 0,\n      \"reportsCount\": 5,\n      \"createdAt\": \"2024-01-15T10:30:00Z\",\n      \"lastActiveAt\": \"2025-05-25T14:22:00Z\"\n    },\n    {\n      \"id\": \"uuid-string-2\",\n      \"name\": \"Sarah Owner\",\n      \"email\": \"owner@helpfoundation.org\",\n      \"phone\": \"+962791234568\",\n      \"role\": \"general\",\n      \"status\": \"active\",\n      \"postsCount\": 12,\n      \"reportsCount\": 1,\n      \"createdAt\": \"2025-02-10T09:15:00Z\",\n      \"lastActiveAt\": \"2025-05-24T16:45:00Z\"\n    },\n    {\n      \"id\": \"uuid-string-3\",\n      \"name\": \"Ahmed Mohammed\",\n      \"email\": \"ahmed@example.com\",\n      \"phone\": \"+962791234569\",\n      \"role\": \"volunteer\",\n      \"status\": \"active\",\n      \"postsCount\": 8,\n      \"reportsCount\": 2,\n      \"createdAt\": \"2025-03-05T14:20:00Z\",\n      \"lastActiveAt\": \"2025-05-25T10:30:00Z\"\n    }\n  ],\n  \"meta\": {\n    \"currentPage\": 1,\n    \"perPage\": 20,\n    \"total\": 5,\n    \"lastPage\": 1\n  },\n  \"message\": \"Users retrieved successfully\"\n}"
             }
           ]
         },
@@ -823,7 +823,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"user-999\",\n    \"name\": \"New User\",\n    \"email\": \"newuser@example.com\",\n    \"phone\": \"+962791234570\",\n    \"role\": \"volunteer\",\n    \"status\": \"active\",\n    \"createdAt\": \"2025-05-25T15:00:00Z\"\n  },\n  \"message\": \"User created successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"uuid-string-4\",\n    \"name\": \"New User\",\n    \"email\": \"newuser@example.com\",\n    \"phone\": \"+962791234570\",\n    \"role\": \"volunteer\",\n    \"status\": \"active\",\n    \"createdAt\": \"2025-05-25T15:00:00Z\"\n  },\n  \"message\": \"User created successfully\"\n}"
             }
           ]
         },
@@ -839,14 +839,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/user-123",
+              "raw": "{{base_url}}/admin/users/uuid-string-1",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                "user-123"
+                "uuid-string-1"
               ]
             },
             "description": "Get full details of a specific user."
@@ -864,14 +864,14 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/admin/users/user-123",
+                  "raw": "{{base_url}}/admin/users/uuid-string-1",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "users",
-                    "user-123"
+                    "uuid-string-1"
                   ]
                 },
                 "description": "Get full details of a specific user."
@@ -910,14 +910,14 @@
               "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@example.com\",\n  \"phone\": \"+962791234567\",\n  \"status\": \"active\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/users/user-123",
+              "raw": "{{base_url}}/admin/users/uuid-string-1",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                "user-123"
+                "uuid-string-1"
               ]
             },
             "description": "Update user information.\n\n**Body fields**: `name, email, phone, role, status` (all optional)"
@@ -944,14 +944,14 @@
                   "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@example.com\",\n  \"phone\": \"+962791234567\",\n  \"status\": \"active\"\n}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/admin/users/user-123",
+                  "raw": "{{base_url}}/admin/users/uuid-string-1",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "users",
-                    "user-123"
+                    "uuid-string-1"
                   ]
                 },
                 "description": "Update user information.\n\n**Body fields**: `name, email, phone, role, status` (all optional)"
@@ -965,7 +965,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"user-123\",\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\",\n    \"phone\": \"+962791234567\",\n    \"status\": \"active\"\n  },\n  \"message\": \"User updated successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"uuid-string-1\",\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\",\n    \"phone\": \"+962791234567\",\n    \"status\": \"active\"\n  },\n  \"message\": \"User updated successfully\"\n}"
             }
           ]
         },
@@ -990,14 +990,14 @@
               "raw": "{\n  \"status\": \"inactive\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/users/user-123/status",
+              "raw": "{{base_url}}/admin/users/uuid-string-1/status",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                "user-123",
+                "uuid-string-1",
                 "status"
               ]
             },
@@ -1025,14 +1025,14 @@
                   "raw": "{\n  \"status\": \"inactive\"\n}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/admin/users/user-123/status",
+                  "raw": "{{base_url}}/admin/users/uuid-string-1/status",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "users",
-                    "user-123",
+                    "uuid-string-1",
                     "status"
                   ]
                 },
@@ -1047,7 +1047,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"user-123\",\n    \"status\": \"inactive\"\n  },\n  \"message\": \"User status updated\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"uuid-string-1\",\n    \"status\": \"inactive\"\n  },\n  \"message\": \"User status updated\"\n}"
             }
           ]
         },
@@ -1072,14 +1072,14 @@
               "raw": "{\n  \"newPassword\": \"NewSecurePass123\",\n  \"confirmPassword\": \"NewSecurePass123\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/admin/users/user-123/password",
+              "raw": "{{base_url}}/admin/users/uuid-string-1/password",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                "user-123",
+                "uuid-string-1",
                 "password"
               ]
             },
@@ -1107,14 +1107,14 @@
                   "raw": "{\n  \"newPassword\": \"NewSecurePass123\",\n  \"confirmPassword\": \"NewSecurePass123\"\n}"
                 },
                 "url": {
-                  "raw": "{{base_url}}/admin/users/user-123/password",
+                  "raw": "{{base_url}}/admin/users/uuid-string-1/password",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "users",
-                    "user-123",
+                    "uuid-string-1",
                     "password"
                   ]
                 },
@@ -1145,14 +1145,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/user-123",
+              "raw": "{{base_url}}/admin/users/uuid-string-1",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                "user-123"
+                "uuid-string-1"
               ]
             },
             "description": "Soft delete a user (status set to deleted, not removed from DB)."
@@ -1170,14 +1170,14 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/admin/users/user-123",
+                  "raw": "{{base_url}}/admin/users/uuid-string-1",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "admin",
                     "users",
-                    "user-123"
+                    "uuid-string-1"
                   ]
                 },
                 "description": "Soft delete a user (status set to deleted, not removed from DB)."
@@ -2760,7 +2760,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"assigneeId\": \"user-456\"\n}"
+              "raw": "{\n  \"assigneeId\": \"uuid-string-2\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/admin/reports/report-123/claim",
@@ -2795,7 +2795,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"assigneeId\": \"user-456\"\n}"
+                  "raw": "{\n  \"assigneeId\": \"uuid-string-2\"\n}"
                 },
                 "url": {
                   "raw": "{{base_url}}/admin/reports/report-123/claim",
@@ -4425,7 +4425,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"siteName\": \"JOD\",\n    \"maintenanceMode\": false,\n    \"settings\": {}\n  },\n  \"message\": \"Settings retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"siteName\": \"JOD\",\n    \"allowNewPosts\": true,\n    \"requirePostReview\": true\n  },\n  \"message\": \"Platform settings retrieved successfully\"\n}"
             }
           ]
         },
@@ -4585,7 +4585,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"stats\": [\n      {\n        \"id\": \"stat-1\",\n        \"label\": \"Total Users\",\n        \"value\": 250,\n        \"icon\": \"users\"\n      },\n      {\n        \"id\": \"stat-2\",\n        \"label\": \"Active Campaigns\",\n        \"value\": 12,\n        \"icon\": \"campaign\"\n      }\n    ],\n    \"activity\": []\n  },\n  \"message\": \"Overview retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"stats\": [\n      {\n        \"id\": \"campaigns\",\n        \"label\": \"Active Campaigns\",\n        \"value\": 5,\n        \"hint\": \"2 closed\"\n      },\n      {\n        \"id\": \"posts\",\n        \"label\": \"Published Posts\",\n        \"value\": 23,\n        \"hint\": \"+3 this week\"\n      }\n    ],\n    \"activity\": [\n      {\n        \"id\": 1,\n        \"title\": \"Campaign Approved\",\n        \"detail\": \"Health Initiative 2024\",\n        \"at\": \"2025-05-25T14:22:00Z\"\n      }\n    ]\n  }\n}"
             }
           ]
         },
@@ -7303,7 +7303,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": [\n    {\n      \"name\": \"users.view\",\n      \"description\": \"View users\"\n    },\n    {\n      \"name\": \"users.create\",\n      \"description\": \"Create users\"\n    }\n  ],\n  \"message\": \"Permissions retrieved successfully\"\n}"
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"org.campaigns.view\",\n      \"name\": \"View Campaigns\",\n      \"group\": \"Campaigns\"\n    },\n    {\n      \"id\": \"org.posts.create\",\n      \"name\": \"Create Posts\",\n      \"group\": \"Posts\"\n    }\n  ]\n}"
             }
           ]
         }
@@ -7766,7 +7766,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"siteName\": \"JOD\",\n    \"maintenanceMode\": false,\n    \"settings\": {}\n  },\n  \"message\": \"Settings retrieved successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"bankName\": \"Arab Bank\",\n    \"iban\": \"JO94CBJO0010000000000131000302\"\n  }\n}"
             }
           ]
         },
@@ -7846,7 +7846,7 @@
                   "type": "text"
                 }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": \"resource-id\",\n    \"name\": \"Updated Resource\",\n    \"status\": \"active\",\n    \"updatedAt\": \"2024-05-25T10:00:00Z\"\n  },\n  \"message\": \"Resource updated successfully\"\n}"
+              "body": "{\n  \"data\": {\n    \"bankName\": \"Arab Bank\",\n    \"iban\": \"JO94CBJO0010000000000131000302\"\n  }\n}"
             }
           ]
         }
@@ -7867,3 +7867,4 @@
     }
   ]
 }
+

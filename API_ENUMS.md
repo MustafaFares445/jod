@@ -286,15 +286,30 @@ contributor        Contributor (can submit content)
 ---
 
 ### Permission Groups
+The shared permission catalog in `app/Support/Permissions/PermissionCatalog.php` is the source of truth.
+
 ```
-org.campaigns.*           Campaign management permissions
-org.posts.*              Post management permissions
-org.staff.*              Staff management permissions
-org.donors.*             Donor management permissions
-org.applicants.*         Applicant management permissions
-org.notifications.*      Notification permissions
-org.reports.view         Report viewing permission
-org.settings.*           Settings permissions
+dashboard.view                    Dashboard bootstrap access
+users.view|create|update|delete|reset_password
+organizations.view|create|update|delete|verify|accept
+posts.review.view|approve|reject
+campaigns.review.view|approve|reject
+reports.view|claim|request_info|close
+notifications.view|create|update|delete|resend
+badges.view|create|update|delete
+articles.view|create|update|delete
+analytics.view
+audit_logs.view
+platform_settings.view|update
+org.campaigns.view|create|update|delete|close
+org.posts.view|create|update|delete|publish|archive|restore
+org.donors.view|create|update|delete|manage
+org.applicants.view|create|update|delete|manage
+org.staff.view|create|update|delete|manage
+org.roles.view|create|update|delete
+org.notifications.view|create|update|delete|send|resend
+org.reports.view
+org.settings.view|update
 ```
 
 ---
@@ -530,4 +545,3 @@ pending            Verification pending
 | 422 | Unprocessable Entity | Validation failed or invalid transition |
 | 429 | Too Many Requests | Rate limited |
 | 500 | Server Error | Server error |
-

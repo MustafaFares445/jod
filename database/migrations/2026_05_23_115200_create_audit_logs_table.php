@@ -8,21 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasTable('audit_logs')) {
+        if (! Schema::hasTable('audit_logs')) {
             Schema::create('audit_logs', function (Blueprint $table) {
-            $table->id();
-            $table->string('actor_user_id');
-            $table->foreign('actor_user_id')->references('id')->on('users')->cascadeOnDelete();
-            $table->string('action');
-            $table->string('entity_type');
-            $table->unsignedBigInteger('entity_id');
-            $table->json('metadata')->nullable();
-            $table->timestamp('at');
+                $table->id();
+                $table->string('actor_user_id');
+                $table->foreign('actor_user_id')->references('id')->on('users')->cascadeOnDelete();
+                $table->string('action');
+                $table->string('entity_type');
+                $table->string('entity_id');
+                $table->json('metadata')->nullable();
+                $table->timestamp('at');
 
-            $table->index('actor_user_id');
-            $table->index('action');
-            $table->index('entity_type');
-            $table->index('at');
+                $table->index('actor_user_id');
+                $table->index('action');
+                $table->index('entity_type');
+                $table->index('at');
             });
         }
     }

@@ -10,7 +10,6 @@ use App\Http\Requests\Org\ApplicantRequest;
 use App\Http\Resources\ApplicantResource;
 use App\Models\CampaignApplication;
 use App\Services\ApplicantService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +20,7 @@ class ApplicantController extends Controller
 
     public function index(ApplicantFilterRequest $request): AnonymousResourceCollection
     {
-        $this->authorizeOrgPermission('org.applicants.view');
+        $this->authorize('viewAny', CampaignApplication::class);
 
         $applicants = $this->service->paginate($request->query(), $this->organizationId());
 
@@ -30,12 +29,12 @@ class ApplicantController extends Controller
 
     public function store(ApplicantRequest $request): ApplicantResource
     {
-        $this->authorizeOrgPermission('org.applicants.create');
+        $this->authorize('create', CampaignApplication::class);
 
         $applicant = $this->service->create(
             $request->validated(),
             $this->organizationId(),
-            (int) auth()->id(),
+            (string) auth()->id(),
         );
 
         return ApplicantResource::make($applicant);
@@ -43,16 +42,14 @@ class ApplicantController extends Controller
 
     public function show(CampaignApplication $applicant): ApplicantResource
     {
-        $this->authorizeOrgPermission('org.applicants.view');
-        $this->assertSameOrganization((int) $applicant->organization_id);
+        $this->authorize('view', $applicant);
 
         return ApplicantResource::make($applicant);
     }
 
     public function update(ApplicantRequest $request, CampaignApplication $applicant): ApplicantResource
     {
-        $this->authorizeOrgPermission('org.applicants.update');
-        $this->assertSameOrganization((int) $applicant->organization_id);
+        $this->authorize('update', $applicant);
 
         $applicant = $this->service->update(
             $applicant,
@@ -65,37 +62,22 @@ class ApplicantController extends Controller
 
     public function destroy(CampaignApplication $applicant): Response
     {
-        $this->authorizeOrgPermission('org.applicants.delete');
-        $this->assertSameOrganization((int) $applicant->organization_id);
+        $this->authorize('delete', $applicant);
 
         $applicant->delete();
 
         return response()->noContent();
     }
 
-    private function organizationId(): int
+    private function organizationId(): string
     {
-        $organizationId = (int) auth()->user()?->organization_id;
-        if ($organizationId <= 0) {
+        $organizationId = (string) auth()->user()?->organization_id;
+        if ($organizationId === '') {
             throw ValidationException::withMessages([
                 'organizationId' => ['Authenticated user is not linked to an organization.'],
             ]);
         }
 
         return $organizationId;
-    }
-
-    private function authorizeOrgPermission(string $permission): void
-    {
-        if (!auth()->user()?->can($permission)) {
-            throw new AuthorizationException();
-        }
-    }
-
-    private function assertSameOrganization(int $organizationId): void
-    {
-        if ($organizationId !== $this->organizationId()) {
-            throw new AuthorizationException();
-        }
     }
 }

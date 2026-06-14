@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\Badge;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,10 +23,10 @@ class BadgeEndpointsTest extends TestCase
         parent::setUp();
         $this->user = User::factory()->create();
         $this->grantPermissions($this->user, [
-            'badges.view',
-            'badges.create',
-            'badges.update',
-            'badges.delete',
+            [PermissionGroup::BADGE, PermissionAction::VIEW],
+            [PermissionGroup::BADGE, PermissionAction::CREATE],
+            [PermissionGroup::BADGE, PermissionAction::UPDATE],
+            [PermissionGroup::BADGE, PermissionAction::DELETE],
         ]);
         Sanctum::actingAs($this->user);
     }

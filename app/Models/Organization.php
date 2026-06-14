@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasStringPrimaryKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'owner_phone',
     'website',
     'social_media',
+    'bank_name',
+    'iban',
     'status',
     'verification_status',
     'accepted_at',
@@ -34,11 +37,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'posts_count',
     'active_volunteers_count',
     'activity_score',
-    'last_active_at'
+    'last_active_at',
 ])]
 class Organization extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasStringPrimaryKey, SoftDeletes;
 
     public $incrementing = false;
 

@@ -10,7 +10,6 @@ use App\Http\Requests\Org\PostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
 use App\Services\PostService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +20,7 @@ class PostController extends Controller
 
     public function index(): AnonymousResourceCollection
     {
-        $this->authorizeOrgPermission('org.posts.view');
+        $this->authorize('viewAnyOrganization', Post::class);
 
         $posts = $this->service->paginate(request()->all(), $this->organizationId());
 
@@ -30,7 +29,7 @@ class PostController extends Controller
 
     public function store(PostRequest $request): PostResource
     {
-        $this->authorizeOrgPermission('org.posts.create');
+        $this->authorize('createOrganization', Post::class);
 
         $post = $this->service->create(
             PostData::from($request->validated()),
@@ -42,16 +41,14 @@ class PostController extends Controller
 
     public function show(Post $post): PostResource
     {
-        $this->authorizeOrgPermission('org.posts.view');
-        $this->assertSameOrganization((int) $post->organization_id);
+        $this->authorize('viewOrganization', $post);
 
         return PostResource::make($post);
     }
 
     public function update(PostRequest $request, Post $post): PostResource
     {
-        $this->authorizeOrgPermission('org.posts.update');
-        $this->assertSameOrganization((int) $post->organization_id);
+        $this->authorize('updateOrganization', $post);
 
         $post = $this->service->update(
             $post,
@@ -64,8 +61,7 @@ class PostController extends Controller
 
     public function publish(Post $post): PostResource
     {
-        $this->authorizeOrgPermission('org.posts.update');
-        $this->assertSameOrganization((int) $post->organization_id);
+        $this->authorize('publishOrganization', $post);
 
         $post = $this->service->publish($post);
 
@@ -74,8 +70,7 @@ class PostController extends Controller
 
     public function archive(Post $post): PostResource
     {
-        $this->authorizeOrgPermission('org.posts.update');
-        $this->assertSameOrganization((int) $post->organization_id);
+        $this->authorize('archiveOrganization', $post);
 
         $post = $this->service->archive($post);
 
@@ -84,8 +79,7 @@ class PostController extends Controller
 
     public function restore(Post $post): PostResource
     {
-        $this->authorizeOrgPermission('org.posts.update');
-        $this->assertSameOrganization((int) $post->organization_id);
+        $this->authorize('restoreOrganization', $post);
 
         $post = $this->service->restore($post);
 
@@ -94,37 +88,22 @@ class PostController extends Controller
 
     public function destroy(Post $post): Response
     {
-        $this->authorizeOrgPermission('org.posts.delete');
-        $this->assertSameOrganization((int) $post->organization_id);
+        $this->authorize('deleteOrganization', $post);
 
         $this->service->delete($post);
 
         return response()->noContent();
     }
 
-    private function organizationId(): int
+    private function organizationId(): string
     {
-        $organizationId = (int) auth()->user()?->organization_id;
-        if ($organizationId <= 0) {
+        $organizationId = (string) auth()->user()?->organization_id;
+        if ($organizationId === '') {
             throw ValidationException::withMessages([
                 'organizationId' => ['Authenticated user is not linked to an organization.'],
             ]);
         }
 
         return $organizationId;
-    }
-
-    private function authorizeOrgPermission(string $permission): void
-    {
-        if (!auth()->user()?->can($permission)) {
-            throw new AuthorizationException();
-        }
-    }
-
-    private function assertSameOrganization(int $organizationId): void
-    {
-        if ($organizationId !== $this->organizationId()) {
-            throw new AuthorizationException();
-        }
     }
 }

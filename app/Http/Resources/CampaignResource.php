@@ -17,6 +17,8 @@ class CampaignResource extends JsonResource
             'summary' => $this->summary,
             'category' => $this->category,
             'status' => $this->status,
+            'organizationName' => $this->organization?->name,
+            'managerName' => $this->creator?->name,
             'location' => $this->location,
             'goalAmount' => (float) $this->goal_amount,
             'raisedAmount' => (float) $this->raised_amount,
@@ -25,10 +27,13 @@ class CampaignResource extends JsonResource
             'applicantsCount' => (int) $this->applicants_count,
             'startDate' => $this->start_date?->toDateString(),
             'endDate' => $this->end_date?->toDateString(),
+            'submittedAt' => $this->submitted_at?->toIso8601String() ?? $this->created_at?->toIso8601String(),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
             'closedAt' => $this->closed_at?->toIso8601String(),
             'closedReason' => $this->close_reason,
+            'reviewedBy' => $this->whenLoaded('reviewedBy', fn () => $this->reviewedBy?->name),
+            'rejectionReason' => $this->rejection_reason,
         ];
     }
 }

@@ -19,14 +19,14 @@ class StaffController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        if (!$user || !$user->organization_id) {
+        if (! $user || ! $user->organization_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $this->authorize('viewAny', OrganizationStaff::class);
 
         $organization = $user->organization;
-        if (!$organization) {
+        if (! $organization) {
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
@@ -43,18 +43,22 @@ class StaffController extends Controller
     public function store(StaffRequest $request): StaffResource
     {
         $user = auth()->user();
-        if (!$user || !$user->organization_id) {
+        if (! $user || ! $user->organization_id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $this->authorize('create', OrganizationStaff::class);
 
         $organization = $user->organization;
-        if (!$organization) {
+        if (! $organization) {
             return response()->json(['message' => 'Organization not found'], 404);
         }
 
-        $staff = $this->service->inviteStaff($organization, $request->validated());
+        $staff = $this->service->inviteStaff(
+            $organization,
+            $request->validated(),
+            (string) $request->user()->id,
+        );
 
         return StaffResource::make($staff->load('role'));
     }
@@ -70,16 +74,20 @@ class StaffController extends Controller
     {
         $this->authorize('update', $staff);
 
-        $updated = $this->service->updateStaff($staff, $request->validated());
+        $updated = $this->service->updateStaff(
+            $staff,
+            $request->validated(),
+            (string) $request->user()->id,
+        );
 
         return StaffResource::make($updated->load('role'));
     }
 
-    public function destroy(OrganizationStaff $staff): Response
+    public function destroy(Request $request, OrganizationStaff $staff): Response
     {
         $this->authorize('delete', $staff);
 
-        $this->service->removeStaff($staff);
+        $this->service->removeStaff($staff, (string) $request->user()->id);
 
         return response()->noContent();
     }

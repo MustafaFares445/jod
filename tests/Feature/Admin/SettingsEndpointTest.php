@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\PlatformSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,8 +23,8 @@ class SettingsEndpointTest extends TestCase
         parent::setUp();
         $this->user = User::factory()->create();
         $this->grantPermissions($this->user, [
-            'platform_settings.view',
-            'platform_settings.update',
+            [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::VIEW],
+            [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::UPDATE],
         ]);
         Sanctum::actingAs($this->user);
         PlatformSetting::truncate();
@@ -94,7 +96,7 @@ class SettingsEndpointTest extends TestCase
     public function test_validates_settings_update(): void
     {
         $response = $this->patchJson('/api/v1/admin/platform-settings', [
-            'siteName' => str_repeat('a', 256), // exceeds max length
+            'siteName' => str_repeat('a', 256),
         ]);
 
         $response->assertUnprocessable();

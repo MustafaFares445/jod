@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Permissions;
 
+use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use Illuminate\Support\Collection;
 
@@ -13,7 +14,7 @@ final class PermissionCatalog
      * @return Collection<int, array{
      *     name: string,
      *     group: PermissionGroup,
-     *     action: mixed,
+     *     action: PermissionAction,
      *     module_key: string,
      *     module_label: string,
      *     section_key: string|null,

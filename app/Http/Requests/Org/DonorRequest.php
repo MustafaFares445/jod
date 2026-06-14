@@ -14,7 +14,7 @@ class DonorRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'campaignId' => ['nullable', 'integer', 'exists:campaigns,id'],
+            'campaignId' => ['nullable', 'string', 'exists:campaigns,id'],
             'campaignTitle' => ['required', 'string', 'max:255'],
             'amountOrType' => ['required', 'string', 'max:255'],
             'donatedAt' => ['required', 'date'],

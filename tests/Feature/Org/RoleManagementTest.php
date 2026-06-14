@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Org;
 
-use App\Models\OrganizationRole;
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\Organization;
+use App\Models\OrganizationRole;
 use App\Models\User;
+use App\Support\Permissions\PermissionNameResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,6 +18,7 @@ class RoleManagementTest extends TestCase
     use RefreshDatabase;
 
     private User $owner;
+
     private Organization $organization;
 
     protected function setUp(): void
@@ -23,6 +27,12 @@ class RoleManagementTest extends TestCase
 
         $this->organization = Organization::factory()->create();
         $this->owner = User::factory()->create(['organization_id' => $this->organization->id]);
+        $this->grantPermissions($this->owner, [
+            [PermissionGroup::ORG_ROLE, PermissionAction::VIEW],
+            [PermissionGroup::ORG_ROLE, PermissionAction::CREATE],
+            [PermissionGroup::ORG_ROLE, PermissionAction::UPDATE],
+            [PermissionGroup::ORG_ROLE, PermissionAction::DELETE],
+        ]);
     }
 
     public function test_list_organization_roles(): void
@@ -44,7 +54,10 @@ class RoleManagementTest extends TestCase
         $data = [
             'name' => 'Custom Role',
             'description' => 'A custom role for testing',
-            'permissions' => ['org.campaigns.view', 'org.posts.view'],
+            'permissions' => [
+                PermissionNameResolver::resolve(PermissionGroup::ORG_CAMPAIGN, PermissionAction::VIEW),
+                PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::VIEW),
+            ],
             'is_active' => true,
         ];
 
@@ -70,7 +83,10 @@ class RoleManagementTest extends TestCase
             ->patchJson("/api/v1/org/roles/{$role->id}", [
                 'name' => 'Advanced Editor',
                 'description' => 'Updated description',
-                'permissions' => ['org.posts.create', 'org.posts.update'],
+                'permissions' => [
+                    PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::CREATE),
+                    PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::UPDATE),
+                ],
                 'is_active' => true,
             ]);
 

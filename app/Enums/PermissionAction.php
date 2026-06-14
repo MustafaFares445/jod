@@ -18,6 +18,11 @@ enum PermissionAction: string
     case CLAIM = 'claim';
     case REQUEST_INFO = 'request_info';
     case CLOSE = 'close';
+    case MANAGE = 'manage';
+    case PUBLISH = 'publish';
+    case ARCHIVE = 'archive';
+    case RESTORE = 'restore';
+    case SEND = 'send';
     case RESEND = 'resend';
 
     public function label(): string
@@ -35,6 +40,11 @@ enum PermissionAction: string
             self::CLAIM => 'Claim',
             self::REQUEST_INFO => 'Request Info',
             self::CLOSE => 'Close',
+            self::MANAGE => 'Manage',
+            self::PUBLISH => 'Publish',
+            self::ARCHIVE => 'Archive',
+            self::RESTORE => 'Restore',
+            self::SEND => 'Send',
             self::RESEND => 'Resend',
         };
     }

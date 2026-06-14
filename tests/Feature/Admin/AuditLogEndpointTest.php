@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,7 +22,9 @@ class AuditLogEndpointTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create();
-        $this->grantPermissions($this->user, ['audit_logs.view']);
+        $this->grantPermissions($this->user, [
+            [PermissionGroup::AUDIT_LOG, PermissionAction::VIEW],
+        ]);
         Sanctum::actingAs($this->user);
     }
 

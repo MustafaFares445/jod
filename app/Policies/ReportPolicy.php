@@ -9,6 +9,7 @@ use App\Enums\PermissionGroup;
 use App\Models\Report;
 use App\Models\User;
 use App\Policies\Concerns\AuthorizesByPermissionGroup;
+use App\Support\Permissions\PermissionNameResolver;
 
 class ReportPolicy
 {
@@ -29,6 +30,18 @@ class ReportPolicy
         return $this->authorizeAction($user, PermissionAction::VIEW);
     }
 
+    public function viewAnyOrganization(User $user): bool
+    {
+        return $user->organization_id !== null
+            && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
+    }
+
+    public function viewOrganization(User $user, Report $model): bool
+    {
+        return $this->sameOrganization($user, $model)
+            && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
+    }
+
     public function claim(User $user, Report $model): bool
     {
         return $this->authorizeAction($user, PermissionAction::CLAIM);
@@ -42,5 +55,18 @@ class ReportPolicy
     public function close(User $user, Report $model): bool
     {
         return $this->authorizeAction($user, PermissionAction::CLOSE);
+    }
+
+    private function authorizeOrganizationAction(User $user, PermissionAction $action): bool
+    {
+        return $user->can(
+            PermissionNameResolver::resolve(PermissionGroup::ORG_REPORT, $action)
+        );
+    }
+
+    private function sameOrganization(User $user, Report $model): bool
+    {
+        return $user->organization_id !== null
+            && (string) $user->organization_id === (string) $model->organization_id;
     }
 }

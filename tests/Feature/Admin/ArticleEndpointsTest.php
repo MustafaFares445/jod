@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\Article;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,10 +23,10 @@ class ArticleEndpointsTest extends TestCase
         parent::setUp();
         $this->user = User::factory()->create();
         $this->grantPermissions($this->user, [
-            'articles.view',
-            'articles.create',
-            'articles.update',
-            'articles.delete',
+            [PermissionGroup::ARTICLE, PermissionAction::VIEW],
+            [PermissionGroup::ARTICLE, PermissionAction::CREATE],
+            [PermissionGroup::ARTICLE, PermissionAction::UPDATE],
+            [PermissionGroup::ARTICLE, PermissionAction::DELETE],
         ]);
         Sanctum::actingAs($this->user);
     }

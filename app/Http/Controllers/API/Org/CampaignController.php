@@ -11,7 +11,6 @@ use App\Http\Requests\Org\CloseCampaignRequest;
 use App\Http\Resources\CampaignResource;
 use App\Models\Campaign;
 use App\Services\CampaignService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -22,7 +21,7 @@ class CampaignController extends Controller
 
     public function index(): AnonymousResourceCollection
     {
-        $this->authorizeOrgPermission('org.campaigns.view');
+        $this->authorize('viewAnyOrganization', Campaign::class);
 
         $campaigns = $this->service->paginate(request()->all(), $this->organizationId());
 
@@ -31,7 +30,7 @@ class CampaignController extends Controller
 
     public function store(CampaignRequest $request): CampaignResource
     {
-        $this->authorizeOrgPermission('org.campaigns.create');
+        $this->authorize('createOrganization', Campaign::class);
 
         $campaign = $this->service->create(
             CampaignData::from($request->validated()),
@@ -43,16 +42,14 @@ class CampaignController extends Controller
 
     public function show(Campaign $campaign): CampaignResource
     {
-        $this->authorizeOrgPermission('org.campaigns.view');
-        $this->assertSameOrganization((int) $campaign->organization_id);
+        $this->authorize('viewOrganization', $campaign);
 
         return CampaignResource::make($campaign);
     }
 
     public function update(CampaignRequest $request, Campaign $campaign): CampaignResource
     {
-        $this->authorizeOrgPermission('org.campaigns.update');
-        $this->assertSameOrganization((int) $campaign->organization_id);
+        $this->authorize('updateOrganization', $campaign);
 
         $campaign = $this->service->update(
             $campaign,
@@ -64,8 +61,7 @@ class CampaignController extends Controller
 
     public function close(CloseCampaignRequest $request, Campaign $campaign): CampaignResource
     {
-        $this->authorizeOrgPermission('org.campaigns.update');
-        $this->assertSameOrganization((int) $campaign->organization_id);
+        $this->authorize('closeOrganization', $campaign);
 
         $campaign = $this->service->close(
             $campaign,
@@ -77,37 +73,22 @@ class CampaignController extends Controller
 
     public function destroy(Campaign $campaign): Response
     {
-        $this->authorizeOrgPermission('org.campaigns.delete');
-        $this->assertSameOrganization((int) $campaign->organization_id);
+        $this->authorize('deleteOrganization', $campaign);
 
         $this->service->delete($campaign);
 
         return response()->noContent();
     }
 
-    private function organizationId(): int
+    private function organizationId(): string
     {
-        $organizationId = (int) auth()->user()?->organization_id;
-        if ($organizationId <= 0) {
+        $organizationId = (string) auth()->user()?->organization_id;
+        if ($organizationId === '') {
             throw ValidationException::withMessages([
                 'organizationId' => ['Authenticated user is not linked to an organization.'],
             ]);
         }
 
         return $organizationId;
-    }
-
-    private function authorizeOrgPermission(string $permission): void
-    {
-        if (!auth()->user()?->can($permission)) {
-            throw new AuthorizationException();
-        }
-    }
-
-    private function assertSameOrganization(int $organizationId): void
-    {
-        if ($organizationId !== $this->organizationId()) {
-            throw new AuthorizationException();
-        }
     }
 }

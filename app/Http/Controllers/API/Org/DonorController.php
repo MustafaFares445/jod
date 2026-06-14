@@ -10,7 +10,6 @@ use App\Http\Requests\Org\DonorRequest;
 use App\Http\Resources\DonorResource;
 use App\Models\Donation;
 use App\Services\DonorService;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +20,7 @@ class DonorController extends Controller
 
     public function index(DonorFilterRequest $request): AnonymousResourceCollection
     {
-        $this->authorizeOrgPermission('org.donors.view');
+        $this->authorize('viewAny', Donation::class);
 
         $donors = $this->service->paginate($request->query(), $this->organizationId());
 
@@ -30,12 +29,12 @@ class DonorController extends Controller
 
     public function store(DonorRequest $request): DonorResource
     {
-        $this->authorizeOrgPermission('org.donors.create');
+        $this->authorize('create', Donation::class);
 
         $donor = $this->service->create(
             $request->validated(),
             $this->organizationId(),
-            (int) auth()->id(),
+            (string) auth()->id(),
         );
 
         return DonorResource::make($donor);
@@ -43,16 +42,14 @@ class DonorController extends Controller
 
     public function show(Donation $donor): DonorResource
     {
-        $this->authorizeOrgPermission('org.donors.view');
-        $this->assertSameOrganization((int) $donor->organization_id);
+        $this->authorize('view', $donor);
 
         return DonorResource::make($donor);
     }
 
     public function update(DonorRequest $request, Donation $donor): DonorResource
     {
-        $this->authorizeOrgPermission('org.donors.update');
-        $this->assertSameOrganization((int) $donor->organization_id);
+        $this->authorize('update', $donor);
 
         $donor = $this->service->update(
             $donor,
@@ -65,37 +62,22 @@ class DonorController extends Controller
 
     public function destroy(Donation $donor): Response
     {
-        $this->authorizeOrgPermission('org.donors.delete');
-        $this->assertSameOrganization((int) $donor->organization_id);
+        $this->authorize('delete', $donor);
 
         $donor->delete();
 
         return response()->noContent();
     }
 
-    private function organizationId(): int
+    private function organizationId(): string
     {
-        $organizationId = (int) auth()->user()?->organization_id;
-        if ($organizationId <= 0) {
+        $organizationId = (string) auth()->user()?->organization_id;
+        if ($organizationId === '') {
             throw ValidationException::withMessages([
                 'organizationId' => ['Authenticated user is not linked to an organization.'],
             ]);
         }
 
         return $organizationId;
-    }
-
-    private function authorizeOrgPermission(string $permission): void
-    {
-        if (!auth()->user()?->can($permission)) {
-            throw new AuthorizationException();
-        }
-    }
-
-    private function assertSameOrganization(int $organizationId): void
-    {
-        if ($organizationId !== $this->organizationId()) {
-            throw new AuthorizationException();
-        }
     }
 }

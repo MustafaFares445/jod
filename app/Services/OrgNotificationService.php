@@ -25,6 +25,7 @@ class OrgNotificationService
             ->when(($date = $this->param($params, 'filter.date')) && $date !== 'all', function (Builder $builder) use ($date): void {
                 if ($date === 'today') {
                     $builder->whereDate('created_at', now()->toDateString());
+
                     return;
                 }
 
@@ -59,6 +60,27 @@ class OrgNotificationService
             'created_by' => $userId,
             'sent_at' => now(),
         ]);
+    }
+
+    public function updateReadState(Notification $notification, string $status): Notification
+    {
+        $notification->update([
+            'status' => $status,
+            'read_at' => $status === 'read' ? now() : null,
+        ]);
+
+        return $notification;
+    }
+
+    public function resend(Notification $notification): Notification
+    {
+        $notification->update([
+            'mailbox' => 'sent',
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        return $notification;
     }
 
     private function param(array $params, string $key): mixed

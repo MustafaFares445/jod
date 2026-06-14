@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class CampaignService
 {
-    public function paginate(array $params, int $organizationId): LengthAwarePaginator
+    public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeSort($params);
@@ -34,7 +34,7 @@ class CampaignService
         return $query->paginate($perPage);
     }
 
-    public function create(CampaignData $data, int $organizationId): Campaign
+    public function create(CampaignData $data, string $organizationId): Campaign
     {
         return Campaign::create([
             'title' => $data->title,

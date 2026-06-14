@@ -31,7 +31,7 @@ class UserRequest extends FormRequest
             'password_confirmation' => ['nullable'],
             'userType' => ['nullable', 'string', Rule::in('general', 'volunteer', 'job_seeker', 'donor')],
             'status' => ['nullable', 'string', Rule::in('active', 'inactive')],
-            'organizationId' => ['nullable', 'integer', 'exists:organizations,id'],
+            'organizationId' => ['nullable', 'string', 'exists:organizations,id'],
         ];
     }
 }

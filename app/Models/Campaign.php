@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\HasStringPrimaryKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,11 +33,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'closed_at',
     'closed_reason',
     'rejection_reason',
-    'reviewed_by'
+    'reviewed_by',
 ])]
 class Campaign extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasStringPrimaryKey, SoftDeletes;
 
     public $incrementing = false;
 
