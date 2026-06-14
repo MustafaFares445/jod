@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
@@ -12,9 +11,12 @@ class UserSeeder extends Seeder
     {
         $password = 'password';
 
+        // Stable fixture IDs used by downstream seeders.
+        // Keep these in sync with the seeded organizations, roles, and content rows.
+
         // Admin user
         User::create([
-            'id' => Str::uuid()->toString(),
+            'id' => 'user-123',
             'name' => 'John Admin',
             'email' => 'admin@jod.com',
             'phone' => '+962791234567',
@@ -28,9 +30,9 @@ class UserSeeder extends Seeder
 
         // Organization owner
         User::create([
-            'id' => Str::uuid()->toString(),
-            'name' => 'Sarah Owner',
-            'email' => 'owner@helpfoundation.org',
+            'id' => 'user-456',
+            'name' => 'Sarah Ahmed',
+            'email' => 'sarah@helpfoundation.org',
             'phone' => '+962791234568',
             'user_type' => 'general',
             'organization_id' => 'org-001',
@@ -43,7 +45,7 @@ class UserSeeder extends Seeder
 
         // Volunteer user
         User::create([
-            'id' => Str::uuid()->toString(),
+            'id' => 'user-789',
             'name' => 'Ahmed Mohammed',
             'email' => 'ahmed@example.com',
             'phone' => '+962791234569',
@@ -57,7 +59,7 @@ class UserSeeder extends Seeder
 
         // Donor user
         User::create([
-            'id' => Str::uuid()->toString(),
+            'id' => 'user-1001',
             'name' => 'Fatima Hassan',
             'email' => 'fatima@example.com',
             'phone' => '+962791234570',
@@ -71,7 +73,7 @@ class UserSeeder extends Seeder
 
         // Job seeker
         User::create([
-            'id' => Str::uuid()->toString(),
+            'id' => 'user-999',
             'name' => 'Mohammed Ali',
             'email' => 'mohammed@example.com',
             'phone' => '+962791234571',
@@ -85,7 +87,7 @@ class UserSeeder extends Seeder
 
         // Staff member
         User::create([
-            'id' => Str::uuid()->toString(),
+            'id' => 'staff-001',
             'name' => 'Leila Manager',
             'email' => 'manager@helpfoundation.org',
             'phone' => '+962791234572',

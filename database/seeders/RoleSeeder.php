@@ -109,7 +109,7 @@ class RoleSeeder extends Seeder
                     ]);
 
                     if (! $role->exists) {
-                        $role->id = (string) Str::uuid();
+                        $role->id = $this->roleId($organization->id, $roleData['name']);
                     }
 
                     $role->fill([
@@ -132,6 +132,41 @@ class RoleSeeder extends Seeder
             ->pluck('name')
             ->values()
             ->all();
+    }
+
+    private function roleId(string $organizationId, string $roleName): string
+    {
+        return match ($organizationId) {
+            'org-001' => match ($roleName) {
+                'Owner' => 'role-001',
+                'Manager' => 'role-002',
+                'Editor' => 'role-003',
+                'Viewer' => 'role-004',
+                default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
+            },
+            'org-002' => match ($roleName) {
+                'Owner' => 'role-006',
+                'Manager' => 'role-007',
+                'Editor' => 'role-008',
+                'Viewer' => 'role-009',
+                default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
+            },
+            'org-003' => match ($roleName) {
+                'Owner' => 'role-010',
+                'Manager' => 'role-011',
+                'Editor' => 'role-012',
+                'Viewer' => 'role-013',
+                default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
+            },
+            'org-004' => match ($roleName) {
+                'Owner' => 'role-014',
+                'Manager' => 'role-015',
+                'Editor' => 'role-016',
+                'Viewer' => 'role-017',
+                default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
+            },
+            default => (string) Str::uuid(),
+        };
     }
 
     /**
