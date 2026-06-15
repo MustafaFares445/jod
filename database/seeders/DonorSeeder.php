@@ -11,9 +11,9 @@ class DonorSeeder extends Seeder
     {
         // Donor 1
         Donor::create([
-            'id' => 'donor-001',
-            'organization_id' => 'org-001',
-            'campaign_id' => 'campaign-001',
+            'id' => SeedIds::id('donors.ahmedMohammed'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'name' => 'Ahmed Mohammed',
             'email' => 'ahmed@example.com',
             'phone' => '+962791234567',
@@ -24,15 +24,15 @@ class DonorSeeder extends Seeder
             'source' => 'website',
             'payment_method' => 'credit_card',
             'campaign_ref' => 'REF-2025-001',
-            'assigned_to' => 'user-456',
+            'assigned_to' => SeedIds::id('users.sarahAhmed'),
             'internal_notes' => 'VIP donor - send thank you gift',
         ]);
 
         // Donor 2
         Donor::create([
-            'id' => 'donor-002',
-            'organization_id' => 'org-001',
-            'campaign_id' => 'campaign-001',
+            'id' => SeedIds::id('donors.fatimaHassan'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'name' => 'Fatima Hassan',
             'email' => 'fatima@example.com',
             'phone' => '+962791234568',
@@ -43,15 +43,15 @@ class DonorSeeder extends Seeder
             'source' => 'website',
             'payment_method' => 'bank_transfer',
             'campaign_ref' => 'REF-2025-002',
-            'assigned_to' => 'user-456',
+            'assigned_to' => SeedIds::id('users.sarahAhmed'),
             'internal_notes' => 'Large donor - personal follow-up needed',
         ]);
 
         // Donor 3
         Donor::create([
-            'id' => 'donor-003',
-            'organization_id' => 'org-002',
-            'campaign_id' => 'campaign-002',
+            'id' => SeedIds::id('donors.mohammadHassan'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
             'name' => 'Mohammad Hassan',
             'email' => 'mohammad@example.com',
             'phone' => '+962791234569',
@@ -68,9 +68,9 @@ class DonorSeeder extends Seeder
 
         // Donor 4
         Donor::create([
-            'id' => 'donor-004',
-            'organization_id' => 'org-001',
-            'campaign_id' => 'campaign-001',
+            'id' => SeedIds::id('donors.sarahWilliams'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'name' => 'Sarah Williams',
             'email' => 'sarah@example.com',
             'phone' => '+962791234570',
@@ -81,15 +81,15 @@ class DonorSeeder extends Seeder
             'source' => 'social_media',
             'payment_method' => 'credit_card',
             'campaign_ref' => 'REF-2025-004',
-            'assigned_to' => 'user-456',
+            'assigned_to' => SeedIds::id('users.sarahAhmed'),
             'internal_notes' => 'International donor - send international receipt',
         ]);
 
         // Donor 5
         Donor::create([
-            'id' => 'donor-005',
-            'organization_id' => 'org-002',
-            'campaign_id' => 'campaign-002',
+            'id' => SeedIds::id('donors.aliAbdullah'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
             'name' => 'Ali Abdullah',
             'email' => 'ali@example.com',
             'phone' => '+962791234571',

@@ -11,9 +11,9 @@ class PostSeeder extends Seeder
     {
         // Published post
         Post::create([
-            'id' => 'post-001',
-            'organization_id' => 'org-001',
-            'author_id' => 'user-456',
+            'id' => SeedIds::id('posts.emergencyFloodRelief'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'author_id' => SeedIds::id('users.sarahAhmed'),
             'title' => 'Emergency flood relief needed',
             'summary' => 'Our area has been hit by severe flooding. We urgently need supplies and volunteers.',
             'content' => 'Detailed content about flood relief efforts...',
@@ -31,16 +31,16 @@ class PostSeeder extends Seeder
 
         // Pending post for review
         Post::create([
-            'id' => 'post-002',
-            'organization_id' => 'org-002',
-            'author_id' => 'staff-001',
+            'id' => SeedIds::id('posts.volunteerOpportunityTeacherNeeded'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'author_id' => SeedIds::id('users.leilaManager'),
             'title' => 'Volunteer opportunity: Teacher needed',
             'summary' => 'We are looking for volunteer teachers for our summer program',
             'content' => 'Detailed content about teaching opportunity...',
             'type' => 'job_opportunity',
             'status' => 'pending',
             'location' => 'Zarqa',
-            'campaign_id' => 'campaign-002',
+            'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
             'views_count' => 0,
             'reactions_count' => 0,
             'applications_count' => 0,
@@ -51,16 +51,16 @@ class PostSeeder extends Seeder
 
         // Approved post
         Post::create([
-            'id' => 'post-003',
-            'organization_id' => 'org-001',
-            'author_id' => 'user-456',
+            'id' => SeedIds::id('posts.medicalFundUpdate'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'author_id' => SeedIds::id('users.sarahAhmed'),
             'title' => 'Medical Fund Update',
             'summary' => 'Update on how funds are being used for medical treatment',
             'content' => 'Detailed update on medical fund usage...',
             'type' => 'campaign_update',
             'status' => 'published',
             'location' => 'Amman',
-            'campaign_id' => 'campaign-001',
+            'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'views_count' => 2340,
             'reactions_count' => 156,
             'applications_count' => 34,
@@ -71,9 +71,9 @@ class PostSeeder extends Seeder
 
         // Archived post
         Post::create([
-            'id' => 'post-004',
-            'organization_id' => 'org-002',
-            'author_id' => 'staff-001',
+            'id' => SeedIds::id('posts.archivedCampaignAnnouncement'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'author_id' => SeedIds::id('users.leilaManager'),
             'title' => 'Archived campaign announcement',
             'summary' => 'This is an old post that has been archived',
             'content' => 'Archived content...',
@@ -91,9 +91,9 @@ class PostSeeder extends Seeder
 
         // Draft post
         Post::create([
-            'id' => 'post-005',
-            'organization_id' => 'org-003',
-            'author_id' => 'user-999',
+            'id' => SeedIds::id('posts.draftPostNotPublished'),
+            'organization_id' => SeedIds::id('organizations.techForGood'),
+            'author_id' => SeedIds::id('users.mohammedAli'),
             'title' => 'Draft post not yet published',
             'summary' => 'This post is still being prepared',
             'content' => 'Draft content...',

@@ -11,9 +11,9 @@ class ApplicantSeeder extends Seeder
     {
         // Applicant 1
         Applicant::create([
-            'id' => 'applicant-001',
-            'organization_id' => 'org-002',
-            'campaign_id' => 'campaign-002',
+            'id' => SeedIds::id('applicants.leilaMohammed'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
             'name' => 'Leila Mohammed',
             'email' => 'leila@example.com',
             'phone' => '+962791234572',
@@ -24,15 +24,15 @@ class ApplicantSeeder extends Seeder
             'source' => 'internal',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-001',
-            'assigned_to' => 'user-1001',
+            'assigned_to' => SeedIds::id('users.fatimaHassan'),
             'internal_notes' => 'Pending documents verification',
         ]);
 
         // Applicant 2
         Applicant::create([
-            'id' => 'applicant-002',
-            'organization_id' => 'org-002',
-            'campaign_id' => 'campaign-002',
+            'id' => SeedIds::id('applicants.noorHassan'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
             'name' => 'Noor Hassan',
             'email' => 'noor@example.com',
             'phone' => '+962791234573',
@@ -49,9 +49,9 @@ class ApplicantSeeder extends Seeder
 
         // Applicant 3
         Applicant::create([
-            'id' => 'applicant-003',
-            'organization_id' => 'org-001',
-            'campaign_id' => 'campaign-001',
+            'id' => SeedIds::id('applicants.omarSalem'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'name' => 'Omar Salem',
             'email' => 'omar@example.com',
             'phone' => '+962791234574',
@@ -62,15 +62,15 @@ class ApplicantSeeder extends Seeder
             'source' => 'phone',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-003',
-            'assigned_to' => 'user-456',
+            'assigned_to' => SeedIds::id('users.sarahAhmed'),
             'internal_notes' => 'Urgent case - high priority',
         ]);
 
         // Applicant 4
         Applicant::create([
-            'id' => 'applicant-004',
-            'organization_id' => 'org-002',
-            'campaign_id' => 'campaign-002',
+            'id' => SeedIds::id('applicants.zainabAhmed'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
             'name' => 'Zainab Ahmed',
             'email' => 'zainab@example.com',
             'phone' => '+962791234575',
@@ -81,15 +81,15 @@ class ApplicantSeeder extends Seeder
             'source' => 'social_media',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-004',
-            'assigned_to' => 'user-1001',
+            'assigned_to' => SeedIds::id('users.fatimaHassan'),
             'internal_notes' => 'Does not meet criteria for this campaign',
         ]);
 
         // Applicant 5
         Applicant::create([
-            'id' => 'applicant-005',
-            'organization_id' => 'org-001',
-            'campaign_id' => 'campaign-001',
+            'id' => SeedIds::id('applicants.raniaHassan'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'name' => 'Rania Hassan',
             'email' => 'rania@example.com',
             'phone' => '+962791234576',

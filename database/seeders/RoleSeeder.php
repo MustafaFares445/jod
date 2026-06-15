@@ -137,32 +137,32 @@ class RoleSeeder extends Seeder
     private function roleId(string $organizationId, string $roleName): string
     {
         return match ($organizationId) {
-            'org-001' => match ($roleName) {
-                'Owner' => 'role-001',
-                'Manager' => 'role-002',
-                'Editor' => 'role-003',
-                'Viewer' => 'role-004',
+            SeedIds::id('organizations.helpFoundation') => match ($roleName) {
+                'Owner' => SeedIds::id('roles.org1.owner'),
+                'Manager' => SeedIds::id('roles.org1.manager'),
+                'Editor' => SeedIds::id('roles.org1.editor'),
+                'Viewer' => SeedIds::id('roles.org1.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
-            'org-002' => match ($roleName) {
-                'Owner' => 'role-006',
-                'Manager' => 'role-007',
-                'Editor' => 'role-008',
-                'Viewer' => 'role-009',
+            SeedIds::id('organizations.educationInitiative') => match ($roleName) {
+                'Owner' => SeedIds::id('roles.org2.owner'),
+                'Manager' => SeedIds::id('roles.org2.manager'),
+                'Editor' => SeedIds::id('roles.org2.editor'),
+                'Viewer' => SeedIds::id('roles.org2.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
-            'org-003' => match ($roleName) {
-                'Owner' => 'role-010',
-                'Manager' => 'role-011',
-                'Editor' => 'role-012',
-                'Viewer' => 'role-013',
+            SeedIds::id('organizations.techForGood') => match ($roleName) {
+                'Owner' => SeedIds::id('roles.org3.owner'),
+                'Manager' => SeedIds::id('roles.org3.manager'),
+                'Editor' => SeedIds::id('roles.org3.editor'),
+                'Viewer' => SeedIds::id('roles.org3.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
-            'org-004' => match ($roleName) {
-                'Owner' => 'role-014',
-                'Manager' => 'role-015',
-                'Editor' => 'role-016',
-                'Viewer' => 'role-017',
+            SeedIds::id('organizations.ammanCommunityGroup') => match ($roleName) {
+                'Owner' => SeedIds::id('roles.org4.owner'),
+                'Manager' => SeedIds::id('roles.org4.manager'),
+                'Editor' => SeedIds::id('roles.org4.editor'),
+                'Viewer' => SeedIds::id('roles.org4.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
             default => (string) Str::uuid(),

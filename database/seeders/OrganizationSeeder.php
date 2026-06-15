@@ -11,7 +11,7 @@ class OrganizationSeeder extends Seeder
     {
         // Organization 1: Help Foundation
         Organization::create([
-            'id' => 'org-001',
+            'id' => SeedIds::id('organizations.helpFoundation'),
             'name' => 'Help Foundation',
             'email' => 'contact@helpfoundation.org',
             'phone' => '+962796543210',
@@ -41,7 +41,7 @@ class OrganizationSeeder extends Seeder
 
         // Organization 2: Education Initiative
         Organization::create([
-            'id' => 'org-002',
+            'id' => SeedIds::id('organizations.educationInitiative'),
             'name' => 'Education Initiative',
             'email' => 'info@educationinitiative.org',
             'phone' => '+962796543211',
@@ -71,7 +71,7 @@ class OrganizationSeeder extends Seeder
 
         // Organization 3: Tech for Good (unverified)
         Organization::create([
-            'id' => 'org-003',
+            'id' => SeedIds::id('organizations.techForGood'),
             'name' => 'Tech for Good',
             'email' => 'hello@techforgood.org',
             'phone' => '+962796543212',
@@ -100,7 +100,7 @@ class OrganizationSeeder extends Seeder
 
         // Organization 4: Community Group
         Organization::create([
-            'id' => 'org-004',
+            'id' => SeedIds::id('organizations.ammanCommunityGroup'),
             'name' => 'Amman Community Group',
             'email' => 'contact@ammangroup.org',
             'phone' => '+962796543213',

@@ -11,15 +11,15 @@ class ReportSeeder extends Seeder
     {
         // New report
         Report::create([
-            'id' => 'report-001',
-            'reporter_id' => 'user-789',
+            'id' => SeedIds::id('reports.suspiciousCampaignActivity'),
+            'reporter_id' => SeedIds::id('users.ahmedMohammed'),
             'assignee_id' => null,
             'title' => 'Suspicious campaign activity',
             'description' => 'Campaign claims are not matching actual activities on ground',
             'category' => 'fraud',
             'severity' => 'high',
             'entity_type' => 'campaign',
-            'entity_id' => 'campaign-789',
+            'entity_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'status' => 'new',
             'evidence' => json_encode([
                 ['type' => 'url', 'content' => 'https://example.com/campaign-update'],
@@ -34,15 +34,15 @@ class ReportSeeder extends Seeder
 
         // In progress report
         Report::create([
-            'id' => 'report-002',
-            'reporter_id' => 'user-456',
-            'assignee_id' => 'user-123',
+            'id' => SeedIds::id('reports.inappropriatePostContent'),
+            'reporter_id' => SeedIds::id('users.sarahAhmed'),
+            'assignee_id' => SeedIds::id('users.johnAdmin'),
             'title' => 'Inappropriate post content',
             'description' => 'Post contains offensive language and inappropriate imagery',
             'category' => 'inappropriate',
             'severity' => 'high',
             'entity_type' => 'post',
-            'entity_id' => 'post-567',
+            'entity_id' => SeedIds::id('posts.volunteerOpportunityTeacherNeeded'),
             'status' => 'in_progress',
             'evidence' => json_encode([
                 ['type' => 'screenshot', 'content' => 'screenshot_001.jpg'],
@@ -57,15 +57,15 @@ class ReportSeeder extends Seeder
 
         // Waiting response
         Report::create([
-            'id' => 'report-003',
-            'reporter_id' => 'user-999',
-            'assignee_id' => 'user-123',
+            'id' => SeedIds::id('reports.userImpersonationAttempt'),
+            'reporter_id' => SeedIds::id('users.mohammedAli'),
+            'assignee_id' => SeedIds::id('users.johnAdmin'),
             'title' => 'User impersonation attempt',
             'description' => 'User account appears to be impersonating another person',
             'category' => 'fraud',
             'severity' => 'critical',
             'entity_type' => 'user',
-            'entity_id' => 'user-8888',
+            'entity_id' => SeedIds::id('users.fatimaHassan'),
             'status' => 'waiting_response',
             'evidence' => json_encode([]),
             'timeline' => json_encode([
@@ -79,15 +79,15 @@ class ReportSeeder extends Seeder
 
         // Closed report
         Report::create([
-            'id' => 'report-004',
-            'reporter_id' => 'user-456',
-            'assignee_id' => 'user-123',
+            'id' => SeedIds::id('reports.spamPostReported'),
+            'reporter_id' => SeedIds::id('users.sarahAhmed'),
+            'assignee_id' => SeedIds::id('users.johnAdmin'),
             'title' => 'Spam post reported',
             'description' => 'Multiple spam posts from same user',
             'category' => 'spam',
             'severity' => 'medium',
             'entity_type' => 'post',
-            'entity_id' => 'post-9999',
+            'entity_id' => SeedIds::id('posts.draftPostNotPublished'),
             'status' => 'closed',
             'evidence' => json_encode([]),
             'timeline' => json_encode([
@@ -101,15 +101,15 @@ class ReportSeeder extends Seeder
 
         // Low severity report
         Report::create([
-            'id' => 'report-005',
-            'reporter_id' => 'user-789',
+            'id' => SeedIds::id('reports.typoInCampaignDescription'),
+            'reporter_id' => SeedIds::id('users.ahmedMohammed'),
             'assignee_id' => null,
             'title' => 'Typo in campaign description',
             'description' => 'Campaign has a spelling error in its description',
             'category' => 'other',
             'severity' => 'low',
             'entity_type' => 'campaign',
-            'entity_id' => 'campaign-111',
+            'entity_id' => SeedIds::id('campaigns.foodSecurityProgram'),
             'status' => 'new',
             'evidence' => json_encode([]),
             'timeline' => json_encode([

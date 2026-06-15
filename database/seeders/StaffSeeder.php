@@ -11,9 +11,9 @@ class StaffSeeder extends Seeder
     {
         // Owner - org-001
         OrganizationStaff::create([
-            'organization_id' => 'org-001',
-            'user_id' => 'user-456',
-            'organization_role_id' => 'role-001',
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'user_id' => SeedIds::id('users.sarahAhmed'),
+            'organization_role_id' => SeedIds::id('roles.org1.owner'),
             'name' => 'Sarah Ahmed',
             'email' => 'sarah@helpfoundation.org',
             'status' => 'active',
@@ -23,9 +23,9 @@ class StaffSeeder extends Seeder
 
         // Manager - org-001
         OrganizationStaff::create([
-            'organization_id' => 'org-001',
-            'user_id' => 'staff-001',
-            'organization_role_id' => 'role-002',
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'user_id' => SeedIds::id('users.leilaManager'),
+            'organization_role_id' => SeedIds::id('roles.org1.manager'),
             'name' => 'Leila Manager',
             'email' => 'manager@helpfoundation.org',
             'status' => 'active',
@@ -35,9 +35,9 @@ class StaffSeeder extends Seeder
 
         // Editor - org-001
         OrganizationStaff::create([
-            'organization_id' => 'org-001',
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'user_id' => null,
-            'organization_role_id' => 'role-003',
+            'organization_role_id' => SeedIds::id('roles.org1.editor'),
             'name' => 'Ahmed Hassan',
             'email' => 'ahmed@helpfoundation.org',
             'status' => 'invited',
@@ -46,9 +46,9 @@ class StaffSeeder extends Seeder
 
         // Viewer - org-001
         OrganizationStaff::create([
-            'organization_id' => 'org-001',
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'user_id' => null,
-            'organization_role_id' => 'role-004',
+            'organization_role_id' => SeedIds::id('roles.org1.viewer'),
             'name' => 'Noor Khalil',
             'email' => 'noor@helpfoundation.org',
             'status' => 'invited',
@@ -57,9 +57,9 @@ class StaffSeeder extends Seeder
 
         // Owner - org-002
         OrganizationStaff::create([
-            'organization_id' => 'org-002',
-            'user_id' => 'user-1001',
-            'organization_role_id' => 'role-006',
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'user_id' => SeedIds::id('users.fatimaHassan'),
+            'organization_role_id' => SeedIds::id('roles.org2.owner'),
             'name' => 'Fatima Mohammed',
             'email' => 'fatima@educationinitiative.org',
             'status' => 'active',
@@ -69,9 +69,9 @@ class StaffSeeder extends Seeder
 
         // Manager - org-002
         OrganizationStaff::create([
-            'organization_id' => 'org-002',
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
             'user_id' => null,
-            'organization_role_id' => 'role-007',
+            'organization_role_id' => SeedIds::id('roles.org2.manager'),
             'name' => 'Rania Salem',
             'email' => 'rania@educationinitiative.org',
             'status' => 'invited',
@@ -80,8 +80,8 @@ class StaffSeeder extends Seeder
 
         // Owner - org-003
         OrganizationStaff::create([
-            'organization_id' => 'org-003',
-            'user_id' => 'user-999',
+            'organization_id' => SeedIds::id('organizations.techForGood'),
+            'user_id' => SeedIds::id('users.mohammedAli'),
             'organization_role_id' => null,
             'name' => 'Hassan Ahmed',
             'email' => 'hassan@techforgood.org',

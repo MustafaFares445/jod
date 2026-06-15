@@ -16,7 +16,7 @@ class UserSeeder extends Seeder
 
         // Admin user
         User::create([
-            'id' => 'user-123',
+            'id' => SeedIds::id('users.johnAdmin'),
             'name' => 'John Admin',
             'email' => 'admin@jod.com',
             'phone' => '+962791234567',
@@ -30,12 +30,12 @@ class UserSeeder extends Seeder
 
         // Organization owner
         User::create([
-            'id' => 'user-456',
+            'id' => SeedIds::id('users.sarahAhmed'),
             'name' => 'Sarah Ahmed',
             'email' => 'sarah@helpfoundation.org',
             'phone' => '+962791234568',
             'user_type' => 'general',
-            'organization_id' => 'org-001',
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'status' => 'active',
             'email_verified_at' => now(),
             'password' => bcrypt($password),
@@ -45,7 +45,7 @@ class UserSeeder extends Seeder
 
         // Volunteer user
         User::create([
-            'id' => 'user-789',
+            'id' => SeedIds::id('users.ahmedMohammed'),
             'name' => 'Ahmed Mohammed',
             'email' => 'ahmed@example.com',
             'phone' => '+962791234569',
@@ -59,7 +59,7 @@ class UserSeeder extends Seeder
 
         // Donor user
         User::create([
-            'id' => 'user-1001',
+            'id' => SeedIds::id('users.fatimaHassan'),
             'name' => 'Fatima Hassan',
             'email' => 'fatima@example.com',
             'phone' => '+962791234570',
@@ -73,7 +73,7 @@ class UserSeeder extends Seeder
 
         // Job seeker
         User::create([
-            'id' => 'user-999',
+            'id' => SeedIds::id('users.mohammedAli'),
             'name' => 'Mohammed Ali',
             'email' => 'mohammed@example.com',
             'phone' => '+962791234571',
@@ -87,12 +87,12 @@ class UserSeeder extends Seeder
 
         // Staff member
         User::create([
-            'id' => 'staff-001',
+            'id' => SeedIds::id('users.leilaManager'),
             'name' => 'Leila Manager',
             'email' => 'manager@helpfoundation.org',
             'phone' => '+962791234572',
             'user_type' => 'general',
-            'organization_id' => 'org-001',
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'status' => 'active',
             'email_verified_at' => now(),
             'password' => bcrypt($password),

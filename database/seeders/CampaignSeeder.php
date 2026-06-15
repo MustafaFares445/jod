@@ -11,9 +11,9 @@ class CampaignSeeder extends Seeder
     {
         // Active campaign
         Campaign::create([
-            'id' => 'campaign-001',
-            'organization_id' => 'org-001',
-            'creator_id' => 'user-456',
+            'id' => SeedIds::id('campaigns.emergencyMedicalFund'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'creator_id' => SeedIds::id('users.sarahAhmed'),
             'title' => 'Emergency Medical Fund',
             'summary' => 'Raising funds for emergency medical treatment for underprivileged children',
             'content' => 'Detailed content about medical fund campaign...',
@@ -35,9 +35,9 @@ class CampaignSeeder extends Seeder
 
         // Active campaign 2
         Campaign::create([
-            'id' => 'campaign-002',
-            'organization_id' => 'org-002',
-            'creator_id' => 'user-1001',
+            'id' => SeedIds::id('campaigns.backToSchoolInitiative'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'creator_id' => SeedIds::id('users.fatimaHassan'),
             'title' => 'Back to School Initiative',
             'summary' => 'Providing school supplies and uniforms for 500 students',
             'content' => 'Detailed content about back to school campaign...',
@@ -59,9 +59,9 @@ class CampaignSeeder extends Seeder
 
         // Draft campaign
         Campaign::create([
-            'id' => 'campaign-003',
-            'organization_id' => 'org-001',
-            'creator_id' => 'user-456',
+            'id' => SeedIds::id('campaigns.foodSecurityProgram'),
+            'organization_id' => SeedIds::id('organizations.helpFoundation'),
+            'creator_id' => SeedIds::id('users.sarahAhmed'),
             'title' => 'Food Security Program',
             'summary' => 'Ensuring food security for vulnerable families',
             'content' => 'Detailed content about food security...',
@@ -83,9 +83,9 @@ class CampaignSeeder extends Seeder
 
         // Closed campaign
         Campaign::create([
-            'id' => 'campaign-004',
-            'organization_id' => 'org-003',
-            'creator_id' => 'user-999',
+            'id' => SeedIds::id('campaigns.emergencyRelief2024'),
+            'organization_id' => SeedIds::id('organizations.techForGood'),
+            'creator_id' => SeedIds::id('users.mohammedAli'),
             'title' => 'Emergency Relief 2024',
             'summary' => 'Closed emergency relief campaign',
             'content' => 'Campaign that has been completed...',
@@ -107,9 +107,9 @@ class CampaignSeeder extends Seeder
 
         // Pending campaign for review
         Campaign::create([
-            'id' => 'campaign-005',
-            'organization_id' => 'org-002',
-            'creator_id' => 'user-1001',
+            'id' => SeedIds::id('campaigns.shelterForHomeless'),
+            'organization_id' => SeedIds::id('organizations.educationInitiative'),
+            'creator_id' => SeedIds::id('users.fatimaHassan'),
             'title' => 'Shelter for Homeless',
             'summary' => 'Building shelter facilities for homeless individuals',
             'content' => 'Detailed shelter campaign content...',

@@ -11,8 +11,8 @@ class NotificationSeeder extends Seeder
     {
         // Sent notification
         Notification::create([
-            'id' => 'notification-001',
-            'creator_id' => 'user-123',
+            'id' => SeedIds::id('notifications.newCampaignSubmitted'),
+            'creator_id' => SeedIds::id('users.johnAdmin'),
             'title' => 'New Campaign Submitted for Review',
             'body' => 'A new campaign has been submitted by Help Foundation and is awaiting your review',
             'category' => 'campaign',
@@ -22,7 +22,7 @@ class NotificationSeeder extends Seeder
             'priority' => 'normal',
             'status' => 'sent',
             'reference_label' => 'Emergency Medical Fund',
-            'reference_path' => '/admin/campaigns/campaign-001',
+            'reference_path' => '/admin/campaigns/'.SeedIds::id('campaigns.emergencyMedicalFund'),
             'created_at' => now()->subDays(1),
             'sent_at' => now()->subDays(1),
             'read_at' => null,
@@ -30,8 +30,8 @@ class NotificationSeeder extends Seeder
 
         // Unread notification
         Notification::create([
-            'id' => 'notification-002',
-            'creator_id' => 'user-456',
+            'id' => SeedIds::id('notifications.postApprovalAlert'),
+            'creator_id' => SeedIds::id('users.sarahAhmed'),
             'title' => 'Post Approval Alert',
             'body' => 'Your post has been approved and published to the platform',
             'category' => 'post',
@@ -41,7 +41,7 @@ class NotificationSeeder extends Seeder
             'priority' => 'high',
             'status' => 'unread',
             'reference_label' => 'Emergency flood relief needed',
-            'reference_path' => '/posts/post-001',
+            'reference_path' => '/posts/'.SeedIds::id('posts.emergencyFloodRelief'),
             'created_at' => now()->subHours(2),
             'sent_at' => now()->subHours(2),
             'read_at' => null,
@@ -49,8 +49,8 @@ class NotificationSeeder extends Seeder
 
         // Read notification
         Notification::create([
-            'id' => 'notification-003',
-            'creator_id' => 'user-123',
+            'id' => SeedIds::id('notifications.reportSubmitted'),
+            'creator_id' => SeedIds::id('users.johnAdmin'),
             'title' => 'Report Submitted',
             'body' => 'A new report has been submitted and requires your attention',
             'category' => 'report',
@@ -60,7 +60,7 @@ class NotificationSeeder extends Seeder
             'priority' => 'high',
             'status' => 'read',
             'reference_label' => 'Suspicious campaign activity',
-            'reference_path' => '/admin/reports/report-001',
+            'reference_path' => '/admin/reports/'.SeedIds::id('reports.suspiciousCampaignActivity'),
             'created_at' => now()->subDays(2),
             'sent_at' => now()->subDays(2),
             'read_at' => now()->subDays(1),
@@ -68,7 +68,7 @@ class NotificationSeeder extends Seeder
 
         // System notification
         Notification::create([
-            'id' => 'notification-004',
+            'id' => SeedIds::id('notifications.platformMaintenance'),
             'creator_id' => null,
             'title' => 'Platform Maintenance Scheduled',
             'body' => 'The platform will undergo maintenance on Friday at 10 PM for 2 hours',
@@ -87,7 +87,7 @@ class NotificationSeeder extends Seeder
 
         // Badge award notification
         Notification::create([
-            'id' => 'notification-005',
+            'id' => SeedIds::id('notifications.badgeAwarded'),
             'creator_id' => null,
             'title' => 'Badge Awarded',
             'body' => 'You have earned the "Top Donor" badge for donating over $1000 to campaigns',
@@ -98,7 +98,7 @@ class NotificationSeeder extends Seeder
             'priority' => 'normal',
             'status' => 'sent',
             'reference_label' => 'Top Donor',
-            'reference_path' => '/badges/badge-001',
+            'reference_path' => '/badges/'.SeedIds::id('badges.topDonor'),
             'created_at' => now()->subDays(5),
             'sent_at' => now()->subDays(5),
             'read_at' => null,

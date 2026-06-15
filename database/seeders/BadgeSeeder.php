@@ -10,7 +10,7 @@ class BadgeSeeder extends Seeder
     public function run(): void
     {
         Badge::create([
-            'id' => 'badge-001',
+            'id' => SeedIds::id('badges.topDonor'),
             'name' => 'Top Donor',
             'description' => 'Given to users who have donated over $1000',
             'criteria' => 'total_donations >= 1000',
@@ -20,7 +20,7 @@ class BadgeSeeder extends Seeder
         ]);
 
         Badge::create([
-            'id' => 'badge-002',
+            'id' => SeedIds::id('badges.volunteerChampion'),
             'name' => 'Volunteer Champion',
             'description' => 'Given to volunteers with 50+ hours of service',
             'criteria' => 'volunteer_hours >= 50',
@@ -30,7 +30,7 @@ class BadgeSeeder extends Seeder
         ]);
 
         Badge::create([
-            'id' => 'badge-003',
+            'id' => SeedIds::id('badges.organizationLeader'),
             'name' => 'Organization Leader',
             'description' => 'For organizations with 5+ successful campaigns',
             'criteria' => 'successful_campaigns >= 5',
@@ -40,7 +40,7 @@ class BadgeSeeder extends Seeder
         ]);
 
         Badge::create([
-            'id' => 'badge-004',
+            'id' => SeedIds::id('badges.earlySupporter'),
             'name' => 'Early Supporter',
             'description' => 'For users who joined in the first month',
             'criteria' => 'joined_in_first_month = true',
@@ -50,7 +50,7 @@ class BadgeSeeder extends Seeder
         ]);
 
         Badge::create([
-            'id' => 'badge-005',
+            'id' => SeedIds::id('badges.communityHero'),
             'name' => 'Community Hero',
             'description' => 'For active community members with high engagement',
             'criteria' => 'community_score >= 100',
