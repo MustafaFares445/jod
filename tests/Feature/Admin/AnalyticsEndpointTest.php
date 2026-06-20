@@ -11,6 +11,9 @@ use App\Models\Organization;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\Permissions\PermissionCatalog;
+use Database\Seeders\Permissions\PermissionsSeeder;
+use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -56,6 +59,47 @@ class AnalyticsEndpointTest extends TestCase
         $this->assertIsArray($response->json('data.stats'));
         $this->assertNotEmpty($response->json('data.stats'));
         $this->assertIsArray($response->json('data.activity'));
+    }
+
+    public function test_seeded_admin_user_receives_all_permissions(): void
+    {
+        $this->seed(PermissionsSeeder::class);
+        $this->seed(UserSeeder::class);
+
+        $admin = User::query()
+            ->where('email', 'admin@jod.com')
+            ->firstOrFail();
+
+        $this->assertEqualsCanonicalizing(
+            PermissionCatalog::names(),
+            $admin->getAllPermissions()->pluck('name')->all(),
+        );
+    }
+
+    public function test_seeded_admin_user_can_access_admin_overview(): void
+    {
+        $this->seed(PermissionsSeeder::class);
+        $this->seed(UserSeeder::class);
+
+        $admin = User::query()
+            ->where('email', 'admin@jod.com')
+            ->firstOrFail();
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/admin/overview');
+
+        $response->assertOk();
+        $this->assertIsArray($response->json('data.stats'));
+        $this->assertIsArray($response->json('data.activity'));
+    }
+
+    public function test_forbids_admin_overview_without_users_view_permission(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/v1/admin/overview')
+            ->assertForbidden();
     }
 
     public function test_returns_kpi_data_for_7_days(): void
