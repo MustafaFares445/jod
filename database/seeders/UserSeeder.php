@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\Permissions\PermissionCatalog;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
@@ -15,7 +16,7 @@ class UserSeeder extends Seeder
         // Keep these in sync with the seeded organizations, roles, and content rows.
 
         // Admin user
-        User::create([
+        $admin = User::create([
             'id' => SeedIds::id('users.johnAdmin'),
             'name' => 'John Admin',
             'email' => 'admin@jod.com',
@@ -27,6 +28,8 @@ class UserSeeder extends Seeder
             'created_at' => now()->subMonths(5),
             'last_active_at' => now(),
         ]);
+
+        $admin->syncPermissions(PermissionCatalog::names());
 
         // Organization owner
         User::create([
