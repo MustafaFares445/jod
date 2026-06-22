@@ -88,9 +88,10 @@ class ReportService
         return $report;
     }
 
-    private function appendTimeline(?array $timeline, string $action, string $label, string $actorName, ?string $note = null): array
+    private function appendTimeline(mixed $timeline, string $action, string $label, string $actorName, ?string $note = null): array
     {
-        $timeline ??= [];
+        $timeline = $this->normalizeTimeline($timeline);
+
         $entry = [
             'action' => $action,
             'label' => $label,
@@ -105,6 +106,35 @@ class ReportService
         $timeline[] = $entry;
 
         return $timeline;
+    }
+
+    /**
+     * Normalize legacy or malformed timeline values before appending a new entry.
+     *
+     * Some existing rows may contain a JSON string value instead of a JSON array,
+     * so Laravel's array cast returns a string and strict typing used to throw a
+     * TypeError. Invalid timeline values are treated as an empty timeline so the
+     * report action can recover the row by saving a proper JSON array.
+     */
+    private function normalizeTimeline(mixed $timeline): array
+    {
+        if ($timeline === null || $timeline === '') {
+            return [];
+        }
+
+        if (is_array($timeline)) {
+            return array_is_list($timeline) ? $timeline : [$timeline];
+        }
+
+        if (is_string($timeline)) {
+            $decoded = json_decode($timeline, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return array_is_list($decoded) ? $decoded : [$decoded];
+            }
+        }
+
+        return [];
     }
 
     private function param(array $params, string $key): mixed
