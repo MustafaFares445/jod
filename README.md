@@ -11,7 +11,8 @@ The project uses **Scramble** to generate OpenAPI documentation for the frontend
 | Interactive API docs | `/docs/api` |
 | OpenAPI JSON | `/docs/api.json` |
 | Static OpenAPI export | `composer api-docs` |
-| Frontend API guide | `API_CONTRACT_FOR_FRONTEND.md` |
+| Frontend API guide | `docs/FRONTEND_API_GUIDE.md` |
+| Legacy API contract | `API_CONTRACT_FOR_FRONTEND.md` |
 
 ## Local Setup
 
