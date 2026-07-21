@@ -42,7 +42,7 @@ class AuthEndpointsTest extends TestCase
         $response->assertJsonPath('message', 'Logged in successfully');
         $response->assertJsonPath('data.tokenType', 'Bearer');
         $response->assertJsonPath('data.user.id', $user->id);
-        $response->assertJsonPath('data.permissions.flat.dashboard.view', true);
+        $this->assertTrue($response->json('data.permissions.flat')['dashboard.view']);
         $response->assertJsonPath('data.permissions.granted.0', 'dashboard.view');
         $this->assertNotEmpty($response->json('data.token'));
         $this->assertMatchesRegularExpression('/^[A-Za-z0-9\|]+$/', $response->json('data.token'));
@@ -103,7 +103,7 @@ class AuthEndpointsTest extends TestCase
         ]);
 
         $response->assertOk();
-        $response->assertJsonPath("data.permissions.flat.{$permissionName}", true);
+        $this->assertTrue($response->json('data.permissions.flat')[$permissionName]);
         $this->assertTrue($user->fresh()->can($permissionName));
     }
 

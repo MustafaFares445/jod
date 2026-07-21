@@ -103,16 +103,20 @@ class RoleSeeder extends Seeder
             ->orderBy('id')
             ->each(function (Organization $organization): void {
                 foreach ($this->defaultRoles() as $roleData) {
-                    $role = OrganizationRole::query()->firstOrNew([
-                        'organization_id' => $organization->id,
-                        'name' => $roleData['name'],
-                    ]);
+                    $roleId = $this->roleId($organization->id, $roleData['name']);
+                    $role = OrganizationRole::query()->find($roleId)
+                        ?? OrganizationRole::query()->firstOrNew([
+                            'organization_id' => $organization->id,
+                            'name' => $roleData['name'],
+                        ]);
 
                     if (! $role->exists) {
-                        $role->id = $this->roleId($organization->id, $roleData['name']);
+                        $role->id = $roleId;
                     }
 
                     $role->fill([
+                        'organization_id' => $organization->id,
+                        'name' => $roleData['name'],
                         'description' => $roleData['description'],
                         'permissions' => $roleData['permissions'],
                         'is_active' => true,
