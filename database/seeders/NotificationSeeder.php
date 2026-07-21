@@ -9,73 +9,69 @@ class NotificationSeeder extends Seeder
 {
     public function run(): void
     {
-        // Sent notification
         Notification::create([
             'id' => SeedIds::id('notifications.newCampaignSubmitted'),
             'creator_id' => SeedIds::id('users.johnAdmin'),
-            'title' => 'New Campaign Submitted for Review',
-            'body' => 'A new campaign has been submitted by Help Foundation and is awaiting your review',
+            'title' => 'تم إرسال حملة جديدة للمراجعة',
+            'body' => 'أرسلت مؤسسة العون حملة جديدة وهي بانتظار مراجعة الإدارة.',
             'category' => 'campaign',
             'mailbox' => 'sent',
             'recipient_scope' => 'all',
-            'recipient_label' => 'All administrators',
+            'recipient_label' => 'جميع مديري المنصة',
             'priority' => 'normal',
             'status' => 'sent',
-            'reference_label' => 'Emergency Medical Fund',
+            'reference_label' => 'صندوق العلاج الطبي الطارئ',
             'reference_path' => '/admin/campaigns/'.SeedIds::id('campaigns.emergencyMedicalFund'),
-            'created_at' => now()->subDays(1),
-            'sent_at' => now()->subDays(1),
+            'created_at' => now()->subDay(),
+            'sent_at' => now()->subDay(),
             'read_at' => null,
         ]);
 
-        // Unread notification
         Notification::create([
             'id' => SeedIds::id('notifications.postApprovalAlert'),
             'creator_id' => SeedIds::id('users.sarahAhmed'),
-            'title' => 'Post Approval Alert',
-            'body' => 'Your post has been approved and published to the platform',
+            'title' => 'تمت الموافقة على المنشور',
+            'body' => 'تمت الموافقة على منشورك ونشره على المنصة.',
             'category' => 'post',
             'mailbox' => 'inbox',
             'recipient_scope' => 'organizations',
-            'recipient_label' => 'Organization staff',
+            'recipient_label' => 'فريق عمل المؤسسة',
             'priority' => 'high',
             'status' => 'unread',
-            'reference_label' => 'Emergency flood relief needed',
+            'reference_label' => 'مطلوب دعم عاجل لمتضرري الفيضانات',
             'reference_path' => '/posts/'.SeedIds::id('posts.emergencyFloodRelief'),
             'created_at' => now()->subHours(2),
             'sent_at' => now()->subHours(2),
             'read_at' => null,
         ]);
 
-        // Read notification
         Notification::create([
             'id' => SeedIds::id('notifications.reportSubmitted'),
             'creator_id' => SeedIds::id('users.johnAdmin'),
-            'title' => 'Report Submitted',
-            'body' => 'A new report has been submitted and requires your attention',
+            'title' => 'تم إرسال بلاغ جديد',
+            'body' => 'تم إرسال بلاغ جديد ويحتاج إلى مراجعة الإدارة.',
             'category' => 'report',
             'mailbox' => 'inbox',
             'recipient_scope' => 'users',
-            'recipient_label' => 'Administrators',
+            'recipient_label' => 'مديرو المنصة',
             'priority' => 'high',
             'status' => 'read',
-            'reference_label' => 'Suspicious campaign activity',
+            'reference_label' => 'نشاط مشبوه في حملة',
             'reference_path' => '/admin/reports/'.SeedIds::id('reports.suspiciousCampaignActivity'),
             'created_at' => now()->subDays(2),
             'sent_at' => now()->subDays(2),
-            'read_at' => now()->subDays(1),
+            'read_at' => now()->subDay(),
         ]);
 
-        // System notification
         Notification::create([
             'id' => SeedIds::id('notifications.platformMaintenance'),
             'creator_id' => null,
-            'title' => 'Platform Maintenance Scheduled',
-            'body' => 'The platform will undergo maintenance on Friday at 10 PM for 2 hours',
+            'title' => 'موعد صيانة المنصة',
+            'body' => 'ستتوقف المنصة للصيانة يوم الجمعة الساعة العاشرة مساءً لمدة ساعتين.',
             'category' => 'system',
             'mailbox' => 'sent',
             'recipient_scope' => 'all',
-            'recipient_label' => 'All users and organizations',
+            'recipient_label' => 'جميع المستخدمين والمؤسسات',
             'priority' => 'high',
             'status' => 'sent',
             'reference_label' => null,
@@ -85,19 +81,18 @@ class NotificationSeeder extends Seeder
             'read_at' => null,
         ]);
 
-        // Badge award notification
         Notification::create([
             'id' => SeedIds::id('notifications.badgeAwarded'),
             'creator_id' => null,
-            'title' => 'Badge Awarded',
-            'body' => 'You have earned the "Top Donor" badge for donating over $1000 to campaigns',
+            'title' => 'تم منحك شارة جديدة',
+            'body' => 'حصلت على شارة "كبير المتبرعين" بعد تجاوز مجموع تبرعاتك 1000 دولار.',
             'category' => 'badge',
             'mailbox' => 'sent',
             'recipient_scope' => 'users',
-            'recipient_label' => 'User with badge',
+            'recipient_label' => 'المستخدم الحاصل على الشارة',
             'priority' => 'normal',
             'status' => 'sent',
-            'reference_label' => 'Top Donor',
+            'reference_label' => 'كبير المتبرعين',
             'reference_path' => '/badges/'.SeedIds::id('badges.topDonor'),
             'created_at' => now()->subDays(5),
             'sent_at' => now()->subDays(5),

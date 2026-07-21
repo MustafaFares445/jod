@@ -7,11 +7,18 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
+use App\Models\User;
+use App\Services\Permissions\OrganizationPermissionSyncService;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class OrganizationRoleService
 {
+    public function __construct(
+        private readonly OrganizationPermissionSyncService $permissionSyncService,
+    ) {}
+
     public function getRoles(Organization $organization, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         $query = $organization->roles();
@@ -29,7 +36,7 @@ class OrganizationRoleService
 
     public function createRole(Organization $organization, array $data, string $actorUserId): OrganizationRole
     {
-        $role = DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationRole {
+        return DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationRole {
             $role = $organization->roles()->create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
@@ -41,8 +48,6 @@ class OrganizationRoleService
 
             return $role;
         });
-
-        return $role;
     }
 
     public function updateRole(OrganizationRole $role, array $data, string $actorUserId): OrganizationRole
@@ -62,6 +67,8 @@ class OrganizationRoleService
                 'to' => $role->only(['name', 'description', 'permissions', 'is_active']),
             ]);
 
+            $this->permissionSyncService->syncForRole($role->fresh());
+
             return $role;
         });
     }
@@ -73,17 +80,33 @@ class OrganizationRoleService
                 return false;
             }
 
-            $staffWithRole = $role->staff()->count();
-            if ($staffWithRole > 0) {
-                $defaultRole = $role->organization->roles()->where('name', 'Viewer')->first();
-                if ($defaultRole) {
+            /** @var Collection<int, User> $affectedUsers */
+            $affectedUsers = $role->staff()
+                ->with('user')
+                ->whereNotNull('user_id')
+                ->get()
+                ->pluck('user')
+                ->filter();
+
+            if ($role->staff()->exists()) {
+                $defaultRole = $role->organization->roles()
+                    ->whereIn('name', ['المشاهد', 'Viewer'])
+                    ->first();
+
+                if ($defaultRole !== null) {
                     $role->staff()->update(['organization_role_id' => $defaultRole->id]);
                 }
             }
 
             $this->logAudit($actorUserId, 'role.deleted', 'OrganizationRole', (string) $role->id, ['name' => $role->name]);
 
-            return $role->delete();
+            $deleted = $role->delete();
+
+            if ($deleted) {
+                $affectedUsers->each(fn (User $user): mixed => $this->permissionSyncService->syncForUser($user));
+            }
+
+            return $deleted;
         });
     }
 

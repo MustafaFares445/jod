@@ -39,6 +39,7 @@ class CategoryEndpointsTest extends TestCase
         $response = $this->getJson('/api/v1/admin/categories');
 
         $response->assertOk();
+        $response->assertJsonPath('message', 'Data retrieved successfully.');
         $this->assertCount(3, $response->json('data'));
     }
 
@@ -104,7 +105,7 @@ class CategoryEndpointsTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/admin/categories/{$category->id}");
 
-        $response->assertNoContent();
+        $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
         $this->assertSoftDeleted('categories', ['id' => $category->id]);
     }
 }

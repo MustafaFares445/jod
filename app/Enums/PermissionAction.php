@@ -28,37 +28,34 @@ enum PermissionAction: string
     public function label(): string
     {
         return match ($this) {
-            self::VIEW => 'View',
-            self::CREATE => 'Create',
-            self::UPDATE => 'Update',
-            self::DELETE => 'Delete',
-            self::RESET_PASSWORD => 'Reset Password',
-            self::VERIFY => 'Verify',
-            self::ACCEPT => 'Accept',
-            self::APPROVE => 'Approve',
-            self::REJECT => 'Reject',
-            self::CLAIM => 'Claim',
-            self::REQUEST_INFO => 'Request Info',
-            self::CLOSE => 'Close',
-            self::MANAGE => 'Manage',
-            self::PUBLISH => 'Publish',
-            self::ARCHIVE => 'Archive',
-            self::RESTORE => 'Restore',
-            self::SEND => 'Send',
-            self::RESEND => 'Resend',
+            self::VIEW => 'عرض',
+            self::CREATE => 'إنشاء',
+            self::UPDATE => 'تحديث',
+            self::DELETE => 'حذف',
+            self::RESET_PASSWORD => 'إعادة تعيين كلمة المرور',
+            self::VERIFY => 'توثيق',
+            self::ACCEPT => 'قبول',
+            self::APPROVE => 'موافقة',
+            self::REJECT => 'رفض',
+            self::CLAIM => 'استلام',
+            self::REQUEST_INFO => 'طلب معلومات',
+            self::CLOSE => 'إغلاق',
+            self::MANAGE => 'إدارة',
+            self::PUBLISH => 'نشر',
+            self::ARCHIVE => 'أرشفة',
+            self::RESTORE => 'استعادة',
+            self::SEND => 'إرسال',
+            self::RESEND => 'إعادة إرسال',
         };
     }
 
+    /** @return list<self> */
     public static function crud(): array
     {
-        return [
-            self::VIEW,
-            self::CREATE,
-            self::UPDATE,
-            self::DELETE,
-        ];
+        return [self::VIEW, self::CREATE, self::UPDATE, self::DELETE];
     }
 
+    /** @return list<self> */
     public static function readOnly(): array
     {
         return [self::VIEW];

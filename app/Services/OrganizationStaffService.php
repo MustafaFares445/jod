@@ -7,11 +7,16 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\OrganizationStaff;
+use App\Services\Permissions\OrganizationPermissionSyncService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class OrganizationStaffService
 {
+    public function __construct(
+        private readonly OrganizationPermissionSyncService $permissionSyncService,
+    ) {}
+
     public function getStaff(Organization $organization, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
         $query = $organization->staff();
@@ -31,7 +36,7 @@ class OrganizationStaffService
 
     public function inviteStaff(Organization $organization, array $data, string $actorUserId): OrganizationStaff
     {
-        $staff = DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationStaff {
+        return DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationStaff {
             $staff = $organization->staff()->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -51,8 +56,6 @@ class OrganizationStaffService
 
             return $staff;
         });
-
-        return $staff;
     }
 
     public function updateStaff(OrganizationStaff $staff, array $data, string $actorUserId): OrganizationStaff
@@ -73,6 +76,11 @@ class OrganizationStaffService
                 'to' => $staff->only(['name', 'email', 'phone', 'organization_role_id', 'status']),
             ]);
 
+            $staff->loadMissing('user');
+            if ($staff->user !== null) {
+                $this->permissionSyncService->syncForUser($staff->user);
+            }
+
             return $staff;
         });
     }
@@ -80,12 +88,21 @@ class OrganizationStaffService
     public function removeStaff(OrganizationStaff $staff, string $actorUserId): bool
     {
         return DB::transaction(function () use ($staff, $actorUserId): bool {
+            $staff->loadMissing('user');
+            $user = $staff->user;
+
             $this->logAudit($actorUserId, 'staff.removed', 'OrganizationStaff', (string) $staff->id, [
                 'name' => $staff->name,
                 'email' => $staff->email,
             ]);
 
-            return $staff->delete();
+            $deleted = $staff->delete();
+
+            if ($deleted && $user !== null) {
+                $this->permissionSyncService->syncForUser($user);
+            }
+
+            return $deleted;
         });
     }
 

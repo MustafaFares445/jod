@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['id', 'name', 'email', 'password', 'phone', 'status', 'user_type', 'organization_id', 'last_active_at'])]
@@ -22,7 +21,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasPermissions, HasRoles, HasStringPrimaryKey, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, HasStringPrimaryKey, Notifiable;
 
     public $incrementing = false;
 

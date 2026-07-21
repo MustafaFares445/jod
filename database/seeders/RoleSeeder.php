@@ -28,8 +28,8 @@ class RoleSeeder extends Seeder
     {
         return [
             [
-                'name' => 'Owner',
-                'description' => 'Full access to organization management.',
+                'name' => 'المالك',
+                'description' => 'صلاحية كاملة لإدارة المؤسسة وجميع أقسامها.',
                 'permissions' => array_merge(
                     [PermissionNameResolver::resolve(PermissionGroup::DASHBOARD, PermissionAction::VIEW)],
                     $this->organizationPermissionNames(),
@@ -37,8 +37,8 @@ class RoleSeeder extends Seeder
                 'is_system' => true,
             ],
             [
-                'name' => 'Manager',
-                'description' => 'Can manage campaigns, posts, staff, and notifications.',
+                'name' => 'المدير',
+                'description' => 'يمكنه إدارة الحملات والمنشورات وفريق العمل والإشعارات.',
                 'permissions' => $this->resolvePermissions([
                     [PermissionGroup::DASHBOARD, PermissionAction::VIEW],
                     [PermissionGroup::ORG_CAMPAIGN, PermissionAction::VIEW],
@@ -64,8 +64,8 @@ class RoleSeeder extends Seeder
                 'is_system' => false,
             ],
             [
-                'name' => 'Editor',
-                'description' => 'Can create and edit campaigns and posts.',
+                'name' => 'المحرر',
+                'description' => 'يمكنه إنشاء الحملات والمنشورات وتعديلها ومتابعة البيانات ذات الصلة.',
                 'permissions' => $this->resolvePermissions([
                     [PermissionGroup::DASHBOARD, PermissionAction::VIEW],
                     [PermissionGroup::ORG_CAMPAIGN, PermissionAction::VIEW],
@@ -82,8 +82,8 @@ class RoleSeeder extends Seeder
                 'is_system' => false,
             ],
             [
-                'name' => 'Viewer',
-                'description' => 'Can only view organization data.',
+                'name' => 'المشاهد',
+                'description' => 'يمكنه عرض بيانات المؤسسة فقط دون تعديلها.',
                 'permissions' => $this->resolvePermissions([
                     [PermissionGroup::DASHBOARD, PermissionAction::VIEW],
                     [PermissionGroup::ORG_CAMPAIGN, PermissionAction::VIEW],
@@ -122,9 +122,7 @@ class RoleSeeder extends Seeder
             });
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function organizationPermissionNames(): array
     {
         return PermissionCatalog::permissions()
@@ -138,31 +136,31 @@ class RoleSeeder extends Seeder
     {
         return match ($organizationId) {
             SeedIds::id('organizations.helpFoundation') => match ($roleName) {
-                'Owner' => SeedIds::id('roles.org1.owner'),
-                'Manager' => SeedIds::id('roles.org1.manager'),
-                'Editor' => SeedIds::id('roles.org1.editor'),
-                'Viewer' => SeedIds::id('roles.org1.viewer'),
+                'المالك' => SeedIds::id('roles.org1.owner'),
+                'المدير' => SeedIds::id('roles.org1.manager'),
+                'المحرر' => SeedIds::id('roles.org1.editor'),
+                'المشاهد' => SeedIds::id('roles.org1.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
             SeedIds::id('organizations.educationInitiative') => match ($roleName) {
-                'Owner' => SeedIds::id('roles.org2.owner'),
-                'Manager' => SeedIds::id('roles.org2.manager'),
-                'Editor' => SeedIds::id('roles.org2.editor'),
-                'Viewer' => SeedIds::id('roles.org2.viewer'),
+                'المالك' => SeedIds::id('roles.org2.owner'),
+                'المدير' => SeedIds::id('roles.org2.manager'),
+                'المحرر' => SeedIds::id('roles.org2.editor'),
+                'المشاهد' => SeedIds::id('roles.org2.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
             SeedIds::id('organizations.techForGood') => match ($roleName) {
-                'Owner' => SeedIds::id('roles.org3.owner'),
-                'Manager' => SeedIds::id('roles.org3.manager'),
-                'Editor' => SeedIds::id('roles.org3.editor'),
-                'Viewer' => SeedIds::id('roles.org3.viewer'),
+                'المالك' => SeedIds::id('roles.org3.owner'),
+                'المدير' => SeedIds::id('roles.org3.manager'),
+                'المحرر' => SeedIds::id('roles.org3.editor'),
+                'المشاهد' => SeedIds::id('roles.org3.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
             SeedIds::id('organizations.ammanCommunityGroup') => match ($roleName) {
-                'Owner' => SeedIds::id('roles.org4.owner'),
-                'Manager' => SeedIds::id('roles.org4.manager'),
-                'Editor' => SeedIds::id('roles.org4.editor'),
-                'Viewer' => SeedIds::id('roles.org4.viewer'),
+                'المالك' => SeedIds::id('roles.org4.owner'),
+                'المدير' => SeedIds::id('roles.org4.manager'),
+                'المحرر' => SeedIds::id('roles.org4.editor'),
+                'المشاهد' => SeedIds::id('roles.org4.viewer'),
                 default => throw new \InvalidArgumentException("Unsupported role [$roleName] for organization [$organizationId]."),
             },
             default => (string) Str::uuid(),
@@ -170,7 +168,7 @@ class RoleSeeder extends Seeder
     }
 
     /**
-     * @param  list<array{0: PermissionGroup, 1: PermissionAction}>  $definitions
+     * @param list<array{0: PermissionGroup, 1: PermissionAction}> $definitions
      * @return list<string>
      */
     private function resolvePermissions(array $definitions): array

@@ -34,7 +34,6 @@ use App\Policies\PostReviewPolicy;
 use App\Policies\ReportPolicy;
 use App\Policies\SettingsPolicy;
 use App\Policies\UserPolicy;
-use App\Support\Permissions\PermissionCatalog;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -61,12 +60,6 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerPolicies();
-
-        foreach (PermissionCatalog::names() as $permissionName) {
-            Gate::define($permissionName, static function (User $user) use ($permissionName): bool {
-                return $user->hasPermissionTo($permissionName);
-            });
-        }
 
         Gate::define('org-dashboard', static function (User $user): bool {
             return $user->organization_id !== null;
