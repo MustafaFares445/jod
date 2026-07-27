@@ -13,15 +13,16 @@ use Illuminate\Validation\ValidationException;
 
 class PostService
 {
-    public function paginate(array $params, int $organizationId): LengthAwarePaginator
+    public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
-        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
         $sort = $this->normalizeSort($params);
+        $status = $params['status'] ?? $this->param($params, 'filter.status');
 
         $query = Post::query()
             ->with('campaign')
             ->where('organization_id', $organizationId)
-            ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
+            ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
             ->when(($search = $this->param($params, 'filter.search')) && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
@@ -42,7 +43,7 @@ class PostService
         return $query->paginate($perPage);
     }
 
-    public function create(PostData $data, int $organizationId): Post
+    public function create(PostData $data, string $organizationId): Post
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
@@ -59,7 +60,7 @@ class PostService
         ]);
     }
 
-    public function update(Post $post, PostData $data, int $organizationId): Post
+    public function update(Post $post, PostData $data, string $organizationId): Post
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
@@ -77,6 +78,22 @@ class PostService
         ]);
 
         return $post;
+    }
+
+    public function updateStatus(Post $post, string $status): Post
+    {
+        if ($post->status === $status) {
+            return $post;
+        }
+
+        return match ("{$post->status}:{$status}") {
+            'draft:published' => $this->publish($post),
+            'published:archived' => $this->archive($post),
+            'archived:draft' => $this->restore($post),
+            default => throw ValidationException::withMessages([
+                'status' => ["Post status cannot transition from {$post->status} to {$status}."],
+            ]),
+        };
     }
 
     public function publish(Post $post): Post
@@ -123,9 +140,9 @@ class PostService
         $post->delete();
     }
 
-    private function resolveCampaignId(?string $campaignTitle, int $organizationId): ?int
+    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
     {
-        if (!$campaignTitle) {
+        if (! $campaignTitle) {
             return null;
         }
 
@@ -137,6 +154,13 @@ class PostService
 
     private function normalizeSort(array $params): string
     {
+        $sortingField = (string) ($params['sortingField'] ?? '');
+        if ($sortingField !== '') {
+            $direction = ($params['sortingDir'] ?? 'desc') === 'asc' ? '' : '-';
+
+            return $direction.$sortingField;
+        }
+
         $sort = (string) ($params['sort'] ?? '');
         if ($sort !== '') {
             return $sort;
