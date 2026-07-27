@@ -7,6 +7,7 @@ namespace App\Http\Controllers\API\Org;
 use App\Data\CampaignData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\CampaignRequest;
+use App\Http\Requests\Org\CampaignStatusRequest;
 use App\Http\Requests\Org\CloseCampaignRequest;
 use App\Http\Resources\CampaignResource;
 use App\Models\Campaign;
@@ -57,6 +58,24 @@ class CampaignController extends Controller
         );
 
         return CampaignResource::make($campaign);
+    }
+
+    public function updateStatus(CampaignStatusRequest $request, Campaign $campaign): CampaignResource
+    {
+        $status = (string) $request->validated('status');
+
+        $this->authorize(
+            $status === 'closed' ? 'closeOrganization' : 'updateOrganization',
+            $campaign,
+        );
+
+        $campaign = $this->service->updateStatus(
+            $campaign,
+            $status,
+            $request->validated('closedReason'),
+        );
+
+        return CampaignResource::make($campaign->refresh());
     }
 
     public function close(CloseCampaignRequest $request, Campaign $campaign): CampaignResource
