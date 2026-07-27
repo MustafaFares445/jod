@@ -23,6 +23,10 @@ use App\Http\Controllers\API\Org\RoleController;
 use App\Http\Controllers\API\Org\StaffController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('mobile')
+    ->name('mobile.')
+    ->group(base_path('routes/mobile.php'));
+
 Route::prefix('v1/auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
 
