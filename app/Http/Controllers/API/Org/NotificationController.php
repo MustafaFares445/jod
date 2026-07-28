@@ -75,6 +75,15 @@ class NotificationController extends Controller
         return response()->noContent();
     }
 
+    public function markRead(Notification $notification): OrgNotificationResource
+    {
+        $this->authorize('updateReadStateOrganization', $notification);
+
+        $notification = $this->service->updateReadState($notification, 'read');
+
+        return OrgNotificationResource::make($notification->refresh()->loadMissing('createdBy'));
+    }
+
     public function updateReadState(NotificationReadStateRequest $request, Notification $notification): OrgNotificationResource
     {
         $this->authorize('updateReadStateOrganization', $notification);
