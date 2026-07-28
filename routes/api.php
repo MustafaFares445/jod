@@ -93,11 +93,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('v1/org')->group(function () {
         Route::get('overview', App\Http\Controllers\API\Org\OverviewController::class);
+        Route::get('dashboard/overview', App\Http\Controllers\API\Org\OverviewController::class);
 
         Route::apiResource('campaigns', CampaignController::class);
+        Route::patch('campaigns/{campaign}/status', CampaignController::class.'@updateStatus');
         Route::post('campaigns/{campaign}/close', CampaignController::class.'@close');
 
         Route::apiResource('posts', PostController::class);
+        Route::patch('posts/{post}/status', PostController::class.'@updateStatus');
         Route::post('posts/{post}/publish', PostController::class.'@publish');
         Route::post('posts/{post}/archive', PostController::class.'@archive');
         Route::post('posts/{post}/restore', PostController::class.'@restore');
@@ -106,18 +109,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('applicants', ApplicantController::class);
 
         Route::apiResource('notifications', App\Http\Controllers\API\Org\NotificationController::class);
+        Route::patch('notifications/{notification}/read', App\Http\Controllers\API\Org\NotificationController::class.'@markRead');
         Route::patch('notifications/{notification}/read-state', App\Http\Controllers\API\Org\NotificationController::class.'@updateReadState');
         Route::post('notifications/{notification}/resend', App\Http\Controllers\API\Org\NotificationController::class.'@resend');
 
         Route::get('reports', App\Http\Controllers\API\Org\ReportController::class.'@index');
         Route::get('reports/{report}', App\Http\Controllers\API\Org\ReportController::class.'@show');
 
+        Route::get('profile', App\Http\Controllers\API\Org\SettingsController::class.'@profile');
+        Route::put('profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
         Route::get('settings/profile', App\Http\Controllers\API\Org\SettingsController::class.'@profile');
         Route::patch('settings/profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
         Route::get('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@bankAccount');
         Route::patch('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@updateBankAccount');
 
         Route::apiResource('staff', StaffController::class);
+        Route::apiResource('staff/roles', RoleController::class);
         Route::apiResource('roles', RoleController::class);
         Route::get('permissions/catalog', App\Http\Controllers\API\Org\PermissionsController::class);
     });
