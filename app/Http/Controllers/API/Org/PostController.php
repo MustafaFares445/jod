@@ -7,6 +7,7 @@ namespace App\Http\Controllers\API\Org;
 use App\Data\PostData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\PostRequest;
+use App\Http\Requests\Org\PostStatusRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
 use App\Services\PostService;
@@ -57,6 +58,23 @@ class PostController extends Controller
         );
 
         return PostResource::make($post);
+    }
+
+    public function updateStatus(PostStatusRequest $request, Post $post): PostResource
+    {
+        $status = (string) $request->validated('status');
+
+        $ability = match ($status) {
+            'published' => 'publishOrganization',
+            'archived' => 'archiveOrganization',
+            'draft' => 'restoreOrganization',
+        };
+
+        $this->authorize($ability, $post);
+
+        $post = $this->service->updateStatus($post, $status);
+
+        return PostResource::make($post->refresh());
     }
 
     public function publish(Post $post): PostResource
