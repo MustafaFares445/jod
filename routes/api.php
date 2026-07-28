@@ -123,8 +123,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@bankAccount');
         Route::patch('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@updateBankAccount');
 
-        Route::apiResource('staff', StaffController::class);
         Route::apiResource('staff/roles', RoleController::class);
+        Route::apiResource('staff', StaffController::class);
         Route::apiResource('roles', RoleController::class);
         Route::get('permissions/catalog', App\Http\Controllers\API\Org\PermissionsController::class);
     });
