@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('v1/me')->group(function () {
         Route::get('/', ProfileController::class);
         Route::patch('/profile', [ProfileController::class, 'update']);
+        Route::patch('/password', [ProfileController::class, 'updatePassword']);
         Route::get('/permissions', PermissionsController::class);
         Route::get('/dashboard-context', DashboardContextController::class);
     });
