@@ -78,9 +78,8 @@ class CampaignReviewPolicy
 
     private function authorizeOrganizationAction(User $user, PermissionAction $action): bool
     {
-        return $user->can(
-            PermissionNameResolver::resolve(PermissionGroup::ORG_CAMPAIGN, $action)
-        );
+        return $user->isOrganizationOwner()
+            || $user->can(PermissionNameResolver::resolve(PermissionGroup::ORG_CAMPAIGN, $action));
     }
 
     private function sameOrganization(User $user, Campaign $model): bool

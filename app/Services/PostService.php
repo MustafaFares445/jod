@@ -18,13 +18,14 @@ class PostService
         $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
         $sort = $this->normalizeSort($params);
         $status = $params['status'] ?? $this->param($params, 'filter.status');
+        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Post::query()
             ->with('campaign')
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
-            ->when(($search = $this->param($params, 'filter.search')) && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
@@ -146,10 +147,18 @@ class PostService
             return null;
         }
 
-        return Campaign::query()
+        $campaignId = Campaign::query()
             ->where('organization_id', $organizationId)
             ->where('title', $campaignTitle)
             ->value('id');
+
+        if ($campaignId === null) {
+            throw ValidationException::withMessages([
+                'campaignTitle' => ['Selected campaign does not belong to the organization.'],
+            ]);
+        }
+
+        return (string) $campaignId;
     }
 
     private function normalizeSort(array $params): string
