@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'email',
     'phone',
     'status',
-    'invitation_token'
+    'invitation_token',
 ])]
 class OrganizationStaff extends Model
 {
@@ -44,6 +44,16 @@ class OrganizationStaff extends Model
     public function role(): BelongsTo
     {
         return $this->belongsTo(OrganizationRole::class, 'organization_role_id');
+    }
+
+    public function isOwner(): bool
+    {
+        $role = $this->relationLoaded('role') ? $this->role : $this->role()->first();
+
+        return $this->status === 'active'
+            && $role !== null
+            && $role->is_active
+            && $role->is_system;
     }
 
     public function generateInvitationToken(): string

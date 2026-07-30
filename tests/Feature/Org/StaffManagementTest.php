@@ -29,30 +29,39 @@ class StaffManagementTest extends TestCase
 
         $this->organization = Organization::factory()->create();
         $this->owner = User::factory()->create(['organization_id' => $this->organization->id]);
+
+        $ownerRole = OrganizationRole::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Owner',
+            'is_active' => true,
+            'is_system' => true,
+        ]);
+
+        OrganizationStaff::factory()->create([
+            'organization_id' => $this->organization->id,
+            'user_id' => $this->owner->id,
+            'organization_role_id' => $ownerRole->id,
+            'status' => 'active',
+        ]);
+
         $this->managerRole = OrganizationRole::factory()->create([
             'organization_id' => $this->organization->id,
             'name' => 'Manager',
-        ]);
-
-        $this->grantPermissions($this->owner, [
-            [PermissionGroup::ORG_STAFF, PermissionAction::VIEW],
-            [PermissionGroup::ORG_STAFF, PermissionAction::CREATE],
-            [PermissionGroup::ORG_STAFF, PermissionAction::UPDATE],
-            [PermissionGroup::ORG_STAFF, PermissionAction::DELETE],
+            'is_system' => false,
         ]);
     }
 
     public function test_list_organization_staff(): void
     {
-        $staff1 = OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
-        $staff2 = OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
+        OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
+        OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
 
         $response = $this->actingAs($this->owner)
             ->getJson('/api/v1/org/staff');
 
         $response->assertStatus(200)
             ->assertJsonStructure(['data' => [], 'meta'])
-            ->assertJsonCount(2, 'data');
+            ->assertJsonCount(3, 'data');
     }
 
     public function test_invite_staff_member(): void
@@ -99,8 +108,36 @@ class StaffManagementTest extends TestCase
         $response = $this->actingAs($this->owner)
             ->deleteJson("/api/v1/org/staff/{$staff->id}");
 
-        $response->assertStatus(204);
+        $response->assertStatus(200);
         $this->assertDatabaseMissing('organization_staff', ['id' => $staff->id]);
+    }
+
+    public function test_staff_cannot_manage_staff_even_with_staff_permissions(): void
+    {
+        $staffUser = User::factory()->create(['organization_id' => $this->organization->id]);
+        $staffRole = OrganizationRole::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Malformed Manager',
+            'is_active' => true,
+            'is_system' => false,
+        ]);
+
+        OrganizationStaff::factory()->create([
+            'organization_id' => $this->organization->id,
+            'user_id' => $staffUser->id,
+            'organization_role_id' => $staffRole->id,
+            'status' => 'active',
+        ]);
+
+        $this->grantPermissions($staffUser, [
+            [PermissionGroup::ORG_STAFF, PermissionAction::VIEW],
+            [PermissionGroup::ORG_STAFF, PermissionAction::MANAGE],
+            [PermissionGroup::ORG_STAFF, PermissionAction::DELETE],
+        ]);
+
+        $this->actingAs($staffUser)
+            ->getJson('/api/v1/org/staff')
+            ->assertForbidden();
     }
 
     public function test_cannot_manage_staff_from_different_organization(): void

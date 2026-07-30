@@ -8,6 +8,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
+use App\Models\OrganizationStaff;
 use App\Models\User;
 use App\Support\Permissions\PermissionNameResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,11 +28,19 @@ class RoleManagementTest extends TestCase
 
         $this->organization = Organization::factory()->create();
         $this->owner = User::factory()->create(['organization_id' => $this->organization->id]);
-        $this->grantPermissions($this->owner, [
-            [PermissionGroup::ORG_ROLE, PermissionAction::VIEW],
-            [PermissionGroup::ORG_ROLE, PermissionAction::CREATE],
-            [PermissionGroup::ORG_ROLE, PermissionAction::UPDATE],
-            [PermissionGroup::ORG_ROLE, PermissionAction::DELETE],
+
+        $ownerRole = OrganizationRole::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Owner',
+            'is_active' => true,
+            'is_system' => true,
+        ]);
+
+        OrganizationStaff::factory()->create([
+            'organization_id' => $this->organization->id,
+            'user_id' => $this->owner->id,
+            'organization_role_id' => $ownerRole->id,
+            'status' => 'active',
         ]);
     }
 
@@ -46,7 +55,7 @@ class RoleManagementTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure(['data' => [], 'meta'])
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(4, 'data');
     }
 
     public function test_create_role(): void
@@ -104,7 +113,7 @@ class RoleManagementTest extends TestCase
         $response = $this->actingAs($this->owner)
             ->deleteJson("/api/v1/org/roles/{$role->id}");
 
-        $response->assertStatus(204);
+        $response->assertStatus(200);
         $this->assertDatabaseMissing('organization_roles', ['id' => $role->id]);
     }
 
@@ -113,7 +122,7 @@ class RoleManagementTest extends TestCase
         $role = OrganizationRole::factory()->create([
             'organization_id' => $this->organization->id,
             'is_system' => true,
-            'name' => 'Owner',
+            'name' => 'Protected Owner',
         ]);
 
         $response = $this->actingAs($this->owner)
@@ -123,13 +132,68 @@ class RoleManagementTest extends TestCase
         $this->assertDatabaseHas('organization_roles', ['id' => $role->id]);
     }
 
-    public function test_permission_catalog(): void
+    public function test_permission_catalog_returns_only_assignable_ready_permissions(): void
     {
         $response = $this->actingAs($this->owner)
             ->getJson('/api/v1/org/permissions/catalog');
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['data' => [['id', 'name', 'group']]]);
+            ->assertJsonStructure([
+                'data' => [[
+                    'id',
+                    'name',
+                    'group',
+                    'description',
+                    'action',
+                    'requires',
+                    'assignable',
+                ]],
+            ])
+            ->assertJsonFragment([
+                'id' => PermissionNameResolver::resolve(PermissionGroup::DASHBOARD, PermissionAction::VIEW),
+                'assignable' => true,
+            ])
+            ->assertJsonMissing([
+                'id' => PermissionNameResolver::resolve(PermissionGroup::ORG_STAFF, PermissionAction::VIEW),
+            ])
+            ->assertJsonMissing([
+                'id' => PermissionNameResolver::resolve(PermissionGroup::ORG_ROLE, PermissionAction::VIEW),
+            ])
+            ->assertJsonMissing([
+                'id' => PermissionNameResolver::resolve(PermissionGroup::ORG_NOTIFICATION, PermissionAction::VIEW),
+            ]);
+    }
+
+    public function test_staff_cannot_access_role_administration_or_catalog_even_with_permissions(): void
+    {
+        $staffUser = User::factory()->create(['organization_id' => $this->organization->id]);
+        $staffRole = OrganizationRole::factory()->create([
+            'organization_id' => $this->organization->id,
+            'name' => 'Manager',
+            'is_active' => true,
+            'is_system' => false,
+        ]);
+
+        OrganizationStaff::factory()->create([
+            'organization_id' => $this->organization->id,
+            'user_id' => $staffUser->id,
+            'organization_role_id' => $staffRole->id,
+            'status' => 'active',
+        ]);
+
+        $this->grantPermissions($staffUser, [
+            [PermissionGroup::ORG_ROLE, PermissionAction::VIEW],
+            [PermissionGroup::ORG_ROLE, PermissionAction::CREATE],
+            [PermissionGroup::ORG_STAFF, PermissionAction::MANAGE],
+        ]);
+
+        $this->actingAs($staffUser)
+            ->getJson('/api/v1/org/permissions/catalog')
+            ->assertForbidden();
+
+        $this->actingAs($staffUser)
+            ->getJson('/api/v1/org/roles')
+            ->assertForbidden();
     }
 
     public function test_cannot_manage_roles_from_different_organization(): void
