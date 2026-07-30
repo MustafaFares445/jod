@@ -93,6 +93,7 @@ class RoleManagementTest extends TestCase
                 'name' => 'Advanced Editor',
                 'description' => 'Updated description',
                 'permissions' => [
+                    PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::VIEW),
                     PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::CREATE),
                     PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::UPDATE),
                 ],
@@ -162,6 +163,77 @@ class RoleManagementTest extends TestCase
             ->assertJsonMissing([
                 'id' => PermissionNameResolver::resolve(PermissionGroup::ORG_NOTIFICATION, PermissionAction::VIEW),
             ]);
+    }
+
+    public function test_role_permissions_require_view_permission(): void
+    {
+        $response = $this->actingAs($this->owner)
+            ->postJson('/api/v1/org/staff/roles', [
+                'name' => 'Invalid Editor',
+                'description' => 'Missing view dependency',
+                'permissions' => [
+                    PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::UPDATE),
+                ],
+                'is_active' => true,
+            ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors('permissions');
+    }
+
+    public function test_role_cannot_receive_owner_only_or_deferred_permissions(): void
+    {
+        $response = $this->actingAs($this->owner)
+            ->postJson('/api/v1/org/staff/roles', [
+                'name' => 'Unsafe Role',
+                'description' => 'Contains protected permissions',
+                'permissions' => [
+                    PermissionNameResolver::resolve(PermissionGroup::ORG_STAFF, PermissionAction::VIEW),
+                ],
+                'is_active' => true,
+            ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors('permissions.0');
+    }
+
+    public function test_active_staff_role_cannot_be_deleted(): void
+    {
+        $role = OrganizationRole::factory()->create([
+            'organization_id' => $this->organization->id,
+            'is_system' => false,
+        ]);
+
+        OrganizationStaff::factory()->create([
+            'organization_id' => $this->organization->id,
+            'organization_role_id' => $role->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($this->owner)
+            ->deleteJson("/api/v1/org/staff/roles/{$role->id}")
+            ->assertConflict();
+
+        $this->assertDatabaseHas('organization_roles', ['id' => $role->id]);
+    }
+
+    public function test_system_role_cannot_be_updated(): void
+    {
+        $systemRole = OrganizationRole::query()
+            ->where('organization_id', $this->organization->id)
+            ->where('is_system', true)
+            ->firstOrFail();
+
+        $this->actingAs($this->owner)
+            ->putJson("/api/v1/org/staff/roles/{$systemRole->id}", [
+                'name' => 'Changed Owner',
+                'description' => 'Unsafe',
+                'permissions' => [
+                    PermissionNameResolver::resolve(PermissionGroup::DASHBOARD, PermissionAction::VIEW),
+                ],
+                'is_active' => true,
+            ])
+            ->assertConflict();
     }
 
     public function test_staff_cannot_access_role_administration_or_catalog_even_with_permissions(): void

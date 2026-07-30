@@ -112,6 +112,67 @@ class StaffManagementTest extends TestCase
         $this->assertDatabaseMissing('organization_staff', ['id' => $staff->id]);
     }
 
+    public function test_staff_role_must_belong_to_the_same_organization(): void
+    {
+        $otherOrganization = Organization::factory()->create();
+        $otherRole = OrganizationRole::factory()->create([
+            'organization_id' => $otherOrganization->id,
+            'is_system' => false,
+        ]);
+
+        $this->actingAs($this->owner)
+            ->postJson('/api/v1/org/staff', [
+                'name' => 'Cross Org Staff',
+                'email' => 'cross-org@example.com',
+                'organization_role_id' => $otherRole->id,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('organization_role_id');
+    }
+
+    public function test_final_owner_cannot_be_demoted(): void
+    {
+        $ownerMembership = OrganizationStaff::query()
+            ->where('user_id', $this->owner->id)
+            ->firstOrFail();
+
+        $this->actingAs($this->owner)
+            ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
+                'organizationRoleId' => $this->managerRole->id,
+            ])
+            ->assertConflict();
+
+        $this->assertDatabaseHas('organization_staff', [
+            'id' => $ownerMembership->id,
+            'organization_role_id' => $ownerMembership->organization_role_id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_final_owner_cannot_be_deactivated(): void
+    {
+        $ownerMembership = OrganizationStaff::query()
+            ->where('user_id', $this->owner->id)
+            ->firstOrFail();
+
+        $this->actingAs($this->owner)
+            ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
+                'status' => 'inactive',
+            ])
+            ->assertConflict();
+    }
+
+    public function test_owner_cannot_remove_own_membership(): void
+    {
+        $ownerMembership = OrganizationStaff::query()
+            ->where('user_id', $this->owner->id)
+            ->firstOrFail();
+
+        $this->actingAs($this->owner)
+            ->deleteJson("/api/v1/org/staff/{$ownerMembership->id}")
+            ->assertForbidden();
+    }
+
     public function test_staff_cannot_manage_staff_even_with_staff_permissions(): void
     {
         $staffUser = User::factory()->create(['organization_id' => $this->organization->id]);

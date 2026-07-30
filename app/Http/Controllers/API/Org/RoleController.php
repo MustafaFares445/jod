@@ -9,26 +9,23 @@ use App\Http\Requests\Org\RoleRequest;
 use App\Http\Resources\Org\RoleResource;
 use App\Models\OrganizationRole;
 use App\Services\OrganizationRoleService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class RoleController extends Controller
 {
-    public function __construct(private OrganizationRoleService $service) {}
+    public function __construct(private readonly OrganizationRoleService $service) {}
 
     public function index(Request $request)
     {
-        $user = auth()->user();
-        if (! $user || ! $user->organization_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $this->authorize('viewAny', OrganizationRole::class);
+        $organization = $request->user()->organization;
 
-        $organization = $user->organization;
-        if (! $organization) {
-            return response()->json(['message' => 'Organization not found'], 404);
+        if ($organization === null) {
+            throw ValidationException::withMessages([
+                'organizationId' => ['Authenticated user is not linked to an organization.'],
+            ]);
         }
 
         $filters = [
@@ -36,23 +33,20 @@ class RoleController extends Controller
             'sort' => $request->input('sort', '-updatedAt'),
         ];
 
-        $roles = $this->service->getRoles($organization, $filters, $request->integer('perPage', 20));
-
-        return RoleResource::collection($roles);
+        return RoleResource::collection(
+            $this->service->getRoles($organization, $filters, $request->integer('perPage', 20)),
+        );
     }
 
     public function store(RoleRequest $request): RoleResource
     {
-        $user = auth()->user();
-        if (! $user || ! $user->organization_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $this->authorize('create', OrganizationRole::class);
+        $organization = $request->user()->organization;
 
-        $organization = $user->organization;
-        if (! $organization) {
-            return response()->json(['message' => 'Organization not found'], 404);
+        if ($organization === null) {
+            throw ValidationException::withMessages([
+                'organizationId' => ['Authenticated user is not linked to an organization.'],
+            ]);
         }
 
         $role = $this->service->createRole(
@@ -61,36 +55,31 @@ class RoleController extends Controller
             (string) $request->user()->id,
         );
 
-        return RoleResource::make($role);
+        return RoleResource::make($role->loadCount('staff'));
     }
 
     public function show(OrganizationRole $role): RoleResource
     {
         $this->authorize('view', $role);
 
-        return RoleResource::make($role);
+        return RoleResource::make($role->loadCount('staff'));
     }
 
     public function update(RoleRequest $request, OrganizationRole $role): RoleResource
     {
         $this->authorize('update', $role);
 
-        $updated = $this->service->updateRole(
+        return RoleResource::make($this->service->updateRole(
             $role,
             $request->validated(),
             (string) $request->user()->id,
-        );
-
-        return RoleResource::make($updated);
+        ));
     }
 
-    public function destroy(Request $request, OrganizationRole $role): Response|JsonResponse
+    public function destroy(Request $request, OrganizationRole $role): Response
     {
         $this->authorize('delete', $role);
-
-        if (! $this->service->deleteRole($role, (string) $request->user()->id)) {
-            return response()->json(['message' => 'Cannot delete system role'], 422);
-        }
+        $this->service->deleteRole($role, (string) $request->user()->id);
 
         return response()->noContent();
     }

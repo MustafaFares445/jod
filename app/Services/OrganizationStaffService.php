@@ -6,10 +6,12 @@ namespace App\Services;
 
 use App\Models\AuditLog;
 use App\Models\Organization;
+use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
 use App\Services\Permissions\OrganizationPermissionSyncService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrganizationStaffService
 {
@@ -22,9 +24,13 @@ class OrganizationStaffService
         $query = $organization->staff();
 
         if (isset($filters['role'])) {
-            $query->whereHas('role', function ($q) use ($filters) {
-                $q->where('name', $filters['role']);
+            $query->whereHas('role', function ($query) use ($filters): void {
+                $query->where('name', $filters['role']);
             });
+        }
+
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
         }
 
         if (isset($filters['sort'])) {
@@ -36,12 +42,14 @@ class OrganizationStaffService
 
     public function inviteStaff(Organization $organization, array $data, string $actorUserId): OrganizationStaff
     {
-        return DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationStaff {
+        $role = $this->roleForOrganization($organization, (string) $data['organization_role_id']);
+
+        return DB::transaction(function () use ($organization, $data, $actorUserId, $role): OrganizationStaff {
             $staff = $organization->staff()->create([
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
-                'organization_role_id' => $data['organization_role_id'],
+                'organization_role_id' => $role->id,
                 'status' => 'invited',
                 'invited_at' => now(),
             ]);
@@ -51,24 +59,32 @@ class OrganizationStaffService
             $this->logAudit($actorUserId, 'staff.invited', 'OrganizationStaff', (string) $staff->id, [
                 'name' => $staff->name,
                 'email' => $staff->email,
-                'role_id' => $data['organization_role_id'],
+                'role_id' => $role->id,
             ]);
 
-            return $staff;
+            return $staff->load('role');
         });
     }
 
     public function updateStaff(OrganizationStaff $staff, array $data, string $actorUserId): OrganizationStaff
     {
-        return DB::transaction(function () use ($staff, $data, $actorUserId): OrganizationStaff {
+        $staff->loadMissing(['organization', 'role', 'user']);
+        $targetRole = array_key_exists('organization_role_id', $data)
+            ? $this->roleForOrganization($staff->organization, (string) $data['organization_role_id'])
+            : $staff->role;
+        $targetStatus = $data['status'] ?? $staff->status;
+
+        $this->guardLastOwnerTransition($staff, $targetRole, $targetStatus);
+
+        return DB::transaction(function () use ($staff, $data, $actorUserId, $targetRole, $targetStatus): OrganizationStaff {
             $originalData = $staff->only(['name', 'email', 'phone', 'organization_role_id', 'status']);
 
             $staff->update([
                 'name' => $data['name'] ?? $staff->name,
                 'email' => $data['email'] ?? $staff->email,
-                'phone' => $data['phone'] ?? $staff->phone,
-                'organization_role_id' => $data['organization_role_id'] ?? $staff->organization_role_id,
-                'status' => $data['status'] ?? $staff->status,
+                'phone' => array_key_exists('phone', $data) ? $data['phone'] : $staff->phone,
+                'organization_role_id' => $targetRole?->id,
+                'status' => $targetStatus,
             ]);
 
             $this->logAudit($actorUserId, 'staff.updated', 'OrganizationStaff', (string) $staff->id, [
@@ -76,19 +92,33 @@ class OrganizationStaffService
                 'to' => $staff->only(['name', 'email', 'phone', 'organization_role_id', 'status']),
             ]);
 
-            $staff->loadMissing('user');
             if ($staff->user !== null) {
                 $this->permissionSyncService->syncForUser($staff->user);
             }
 
-            return $staff;
+            return $staff->fresh()->load('role');
         });
     }
 
-    public function removeStaff(OrganizationStaff $staff, string $actorUserId): bool
+    public function removeStaff(OrganizationStaff $staff, string $actorUserId): void
     {
-        return DB::transaction(function () use ($staff, $actorUserId): bool {
-            $staff->loadMissing('user');
+        $staff->loadMissing(['organization', 'role', 'user']);
+
+        abort_if(
+            $staff->user_id !== null && (string) $staff->user_id === $actorUserId,
+            Response::HTTP_CONFLICT,
+            'You cannot remove your own staff membership.',
+        );
+
+        if ($staff->isOwner()) {
+            abort_if(
+                $this->activeOwnerCount($staff->organization) <= 1,
+                Response::HTTP_CONFLICT,
+                'The final active organization owner cannot be removed.',
+            );
+        }
+
+        DB::transaction(function () use ($staff, $actorUserId): void {
             $user = $staff->user;
 
             $this->logAudit($actorUserId, 'staff.removed', 'OrganizationStaff', (string) $staff->id, [
@@ -96,14 +126,53 @@ class OrganizationStaffService
                 'email' => $staff->email,
             ]);
 
-            $deleted = $staff->delete();
+            $staff->delete();
 
-            if ($deleted && $user !== null) {
+            if ($user !== null) {
                 $this->permissionSyncService->syncForUser($user);
             }
-
-            return $deleted;
         });
+    }
+
+    private function guardLastOwnerTransition(
+        OrganizationStaff $staff,
+        ?OrganizationRole $targetRole,
+        string $targetStatus,
+    ): void {
+        if (! $staff->isOwner()) {
+            return;
+        }
+
+        $remainsOwner = $targetStatus === 'active'
+            && $targetRole !== null
+            && $targetRole->is_active
+            && $targetRole->is_system;
+
+        abort_if(
+            ! $remainsOwner && $this->activeOwnerCount($staff->organization) <= 1,
+            Response::HTTP_CONFLICT,
+            'The final active organization owner cannot be deactivated or demoted.',
+        );
+    }
+
+    private function activeOwnerCount(Organization $organization): int
+    {
+        return $organization->staff()
+            ->where('status', 'active')
+            ->whereHas('role', function ($query): void {
+                $query->where('is_active', true)->where('is_system', true);
+            })
+            ->count();
+    }
+
+    private function roleForOrganization(Organization $organization, string $roleId): OrganizationRole
+    {
+        $role = $organization->roles()->whereKey($roleId)->first();
+
+        abort_if($role === null, Response::HTTP_UNPROCESSABLE_ENTITY, 'Selected role does not belong to the organization.');
+        abort_if(! $role->is_active, Response::HTTP_UNPROCESSABLE_ENTITY, 'Selected role is inactive.');
+
+        return $role;
     }
 
     private function applySorting($query, string $sort): void
@@ -111,7 +180,13 @@ class OrganizationStaffService
         $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
         $field = ltrim($sort, '-');
 
-        $fieldMap = ['invitedAt' => 'invited_at', 'name' => 'name', 'acceptedAt' => 'accepted_at'];
+        $fieldMap = [
+            'invitedAt' => 'invited_at',
+            'name' => 'name',
+            'acceptedAt' => 'accepted_at',
+            'status' => 'status',
+        ];
+
         if (isset($fieldMap[$field])) {
             $query->orderBy($fieldMap[$field], $direction);
         }

@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'email',
     'phone',
     'status',
+    'invited_at',
+    'accepted_at',
     'invitation_token',
 ])]
 class OrganizationStaff extends Model
