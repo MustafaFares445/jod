@@ -62,7 +62,12 @@ class AuthServiceProvider extends ServiceProvider
         $this->registerPolicies();
 
         Gate::define('org-dashboard', static function (User $user): bool {
-            return $user->organization_id !== null;
+            return $user->organization_id !== null
+                && ($user->isOrganizationOwner()
+                    || $user->can(\App\Support\Permissions\PermissionNameResolver::resolve(
+                        \App\Enums\PermissionGroup::DASHBOARD,
+                        \App\Enums\PermissionAction::VIEW,
+                    )));
         });
     }
 }
