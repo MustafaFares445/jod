@@ -19,12 +19,12 @@ use Illuminate\Support\Collection;
 
 class OrganizationOverviewService
 {
-    /** @return array{stats: list<array<string, mixed>>, activity: list<array<string, mixed>>} */
+    /** @return array{stats: list<array<string, mixed>>, recentActivity: list<array<string, mixed>>} */
     public function overview(User $user, Organization $organization): array
     {
         return [
             'stats' => $this->stats($user, $organization),
-            'activity' => $this->activity($user, $organization),
+            'recentActivity' => $this->activity($user, $organization),
         ];
     }
 
