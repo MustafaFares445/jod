@@ -116,6 +116,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('reports', App\Http\Controllers\API\Org\ReportController::class.'@index');
         Route::get('reports/{report}', App\Http\Controllers\API\Org\ReportController::class.'@show');
+        Route::patch('reports/{report}/status', App\Http\Controllers\API\Org\ReportController::class.'@updateStatus');
         Route::post('reports/{report}/claim', App\Http\Controllers\API\Org\ReportController::class.'@claim');
         Route::post('reports/{report}/request-info', App\Http\Controllers\API\Org\ReportController::class.'@requestInfo');
         Route::post('reports/{report}/close', App\Http\Controllers\API\Org\ReportController::class.'@close');

@@ -6,7 +6,10 @@ namespace App\Http\Controllers\API\Org;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AuditLogs\AuditLogFilterRequest;
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Http\Resources\AuditLogResource;
+use App\Support\Permissions\PermissionNameResolver;
 use App\Models\AuditLog;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\ValidationException;
@@ -16,7 +19,11 @@ class AuditLogController extends Controller
     public function index(AuditLogFilterRequest $request): AnonymousResourceCollection
     {
         $user = $request->user();
-        abort_unless($user->isOrganizationOwner(), 403);
+        abort_unless(
+            $user->isOrganizationOwner()
+                || $user->can(PermissionNameResolver::resolve(PermissionGroup::ORG_AUDIT_LOG, PermissionAction::VIEW)),
+            403,
+        );
 
         $organizationId = (string) $user->organization_id;
         if ($organizationId === '') {

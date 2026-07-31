@@ -42,6 +42,12 @@ class ReportPolicy
             && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
     }
 
+    public function updateOrganization(User $user, Report $model): bool
+    {
+        return $this->sameOrganization($user, $model)
+            && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE);
+    }
+
     public function claim(User $user, Report $model): bool
     {
         return $this->sameOrganization($user, $model)

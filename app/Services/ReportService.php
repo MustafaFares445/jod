@@ -96,6 +96,22 @@ class ReportService
         return $report;
     }
 
+    public function updateStatus(Report $report, string $status, string $actorName, ?string $note = null, int|string|null $assigneeId = null): Report
+    {
+        if ($report->status === $status) {
+            return $report;
+        }
+
+        return match ($status) {
+            'in_progress' => $this->claim($report, $assigneeId, $actorName, $note),
+            'waiting_response' => $this->requestInfo($report, $note, $actorName),
+            'closed' => $this->close($report, $note, $actorName),
+            default => throw ValidationException::withMessages([
+                'status' => ['Unsupported report status transition.'],
+            ]),
+        };
+    }
+
     private function appendTimeline(mixed $timeline, string $action, string $label, string $actorName, ?string $note = null): array
     {
         $timeline = $this->normalizeTimeline($timeline);
