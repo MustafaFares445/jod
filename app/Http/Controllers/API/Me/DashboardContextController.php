@@ -6,13 +6,13 @@ namespace App\Http\Controllers\API\Me;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
-use App\Models\Notification;
 use App\Models\OrganizationStaff;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\Permissions\PermissionCatalogService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class DashboardContextController extends Controller
 {
@@ -22,6 +22,12 @@ class DashboardContextController extends Controller
     ): array {
         $user = $request->user();
         $user->loadMissing('organization');
+
+        if ($user->user_type !== 'admin' && $user->organization_id === null) {
+            throw ValidationException::withMessages([
+                'organizationId' => ['Authenticated user is not linked to an organization.'],
+            ]);
+        }
 
         $membership = $user->activeOrganizationStaffMembership()
             ->with('role')
@@ -74,15 +80,11 @@ class DashboardContextController extends Controller
         return $membership->isOwner() ? 'org_owner' : 'org_staff';
     }
 
-    /** @return array{unreadNotifications: int, pendingReviews: int, openReports: int} */
+    /** @return array{pendingReviews: int, openReports: int} */
     private function counters(User $user): array
     {
         if ($user->user_type === 'admin') {
             return [
-                'unreadNotifications' => Notification::query()
-                    ->where('status', 'unread')
-                    ->where('recipient_id', $user->id)
-                    ->count(),
                 'pendingReviews' => Post::query()->where('status', 'pending')->count()
                     + Campaign::query()->where('status', 'pending')->count(),
                 'openReports' => Report::query()
@@ -91,24 +93,9 @@ class DashboardContextController extends Controller
             ];
         }
 
-        if ($user->organization_id === null) {
-            return [
-                'unreadNotifications' => 0,
-                'pendingReviews' => 0,
-                'openReports' => 0,
-            ];
-        }
-
         $organizationId = (string) $user->organization_id;
 
         return [
-            'unreadNotifications' => Notification::query()
-                ->where('status', 'unread')
-                ->where(function ($query) use ($organizationId, $user): void {
-                    $query->where('recipient_id', $user->id)
-                        ->orWhere('organization_id', $organizationId);
-                })
-                ->count(),
             'pendingReviews' => Post::query()
                 ->where('organization_id', $organizationId)
                 ->where('status', 'pending')

@@ -16,7 +16,8 @@ class PermissionCatalogService
 {
     public function forUser(User $user): array
     {
-        $permissions = PermissionCatalog::permissions();
+        $permissions = PermissionCatalog::permissions()
+            ->reject(fn (array $permission): bool => $permission['group'] === PermissionGroup::ORG_NOTIFICATION);
 
         $allowed = $user->getAllPermissions()
             ->pluck('name')
