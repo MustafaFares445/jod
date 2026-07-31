@@ -17,6 +17,13 @@ class RoleRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('isActive') && ! $this->has('is_active')) {
+            $this->merge(['is_active' => $this->boolean('isActive')]);
+        }
+    }
+
     public function rules(): array
     {
         $role = $this->route('role');
