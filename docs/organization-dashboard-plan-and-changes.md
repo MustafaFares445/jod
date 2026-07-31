@@ -1,41 +1,41 @@
-# خطة وتفاصيل تكامل لوحة تحكم المؤسسة
+# Organization Dashboard Plan and Implementation Changes
 
-> هذا الملف موجود بنسخة متطابقة داخل مستودعي الـBackend والـFrontend ليكون المرجع المشترك لتنفيذ لوحة تحكم مالك المؤسسة وموظفي المؤسسة.
+> This file exists with identical content in both the Backend and Frontend repositories and serves as the shared reference for the Organization Owner and Organization Staff dashboard implementation.
 
-## معلومات الوثيقة
+## Document Information
 
-| البند | القيمة |
+| Item | Value |
 |---|---|
-| الحالة | مكتملة ومطبقة |
-| تاريخ آخر تحديث | 2026-07-31 |
-| نطاق العمل | Organization Owner Dashboard + Organization Staff Dashboard |
-| Backend | Laravel API داخل `BE-JOD/jod` |
-| Frontend | Next.js داخل `JOD-FrontEnd` |
-| خارج النطاق | Organization Notifications وMobile Backend Integration |
+| Status | Completed and implemented |
+| Last updated | 2026-07-31 |
+| Scope | Organization Owner Dashboard + Organization Staff Dashboard |
+| Backend | Laravel API in `BE-JOD/jod` |
+| Frontend | Next.js in `JOD-FrontEnd` |
+| Out of scope | Organization Notifications and Mobile Backend Integration |
 
 ---
 
-## 1. الهدف من الخطة
+## 1. Plan Objective
 
-الهدف هو بناء تكامل Full Stack موحد للوحة تحكم المؤسسة، بحيث:
+The objective is to deliver a unified Full Stack integration for the organization dashboard so that:
 
-- يكون الـBackend هو المصدر الأساسي للصلاحيات والعقود والبيانات.
-- تستخدم واجهتا المالك والموظف نفس Organization APIs.
-- تختلف العناصر والصفحات والعمليات المتاحة حسب صلاحيات المستخدم.
-- تمنع الـPolicies أي وصول إلى بيانات مؤسسة أخرى.
-- تتطابق أسماء الصلاحيات بين الـBackend والـFrontend.
-- تستبدل البيانات الثابتة في الأقسام المكتملة ببيانات حقيقية من الـAPI.
-- تستخدم العمليات ذات دورة الحياة Endpoint موحداً للحالة بدلاً من ربط الواجهة بمسارات متفرقة.
+- The Backend is the source of truth for permissions, contracts, and data.
+- Organization Owner and Organization Staff use the same organization-scoped APIs.
+- Pages, navigation items, and actions differ based on the authenticated user's permissions.
+- Backend Policies prevent access to data owned by another organization.
+- Permission names are identical across Backend and Frontend.
+- Completed sections use real API data instead of static data.
+- Lifecycle operations use canonical status endpoints instead of separate action-specific frontend integrations.
 
 ---
 
-## 2. نطاق التنفيذ
+## 2. Implementation Scope
 
-### داخل النطاق
+### Included
 
-- Authentication Context وإعادة تحميل الصلاحيات.
-- فصل أدوار Admin وOrganization Owner وOrganization Staff.
-- Overview Dashboard.
+- Authentication Context and permission refresh.
+- Isolation between Admin, Organization Owner, and Organization Staff.
+- Organization Overview Dashboard.
 - Staff Management.
 - Roles and Permission Catalog.
 - Campaigns.
@@ -46,43 +46,43 @@
 - Organization Audit Log.
 - Organization Profile and Settings.
 - Staff Personal Profile.
-- Route Guards وNavigation Guards.
-- Backend feature tests والعقود المشتركة.
+- Route Guards and Navigation Guards.
+- Backend feature tests and shared contracts.
 
-### خارج النطاق الحالي
+### Excluded from the current delivery
 
-- Organization Notifications UI/API Integration.
-- Mobile Application Backend Integration.
+- Organization Notifications UI/API integration.
+- Mobile Application Backend integration.
 - Mobile-only compatibility endpoints.
 
-ملفات الإشعارات الحالية لم تُحذف، لكن روابطها مخفية ومحميّة ضمن لوحة المؤسسة إلى أن تبدأ مرحلة الإشعارات بشكل مستقل.
+Existing notification source files were not removed. Their organization navigation links are hidden and guarded until notifications are implemented as a separate phase.
 
 ---
 
-## 3. المبادئ المعمارية
+## 3. Architectural Principles
 
-### 3.1 الـBackend هو مصدر الصلاحيات
+### 3.1 Backend as the permission source of truth
 
-يتم تحميل سياق لوحة التحكم من:
+Dashboard context is loaded from:
 
 ```http
 GET /api/v1/me/dashboard-context
 ```
 
-ويحتوي على:
+It contains:
 
-- بيانات المستخدم.
-- نوع لوحة التحكم.
-- المؤسسة المرتبط بها المستخدم.
-- الصلاحيات بشكل هرمي داخل `modules`.
-- الصلاحيات بشكل مباشر داخل `flat`.
-- قائمة الصلاحيات الممنوحة داخل `granted`.
+- Authenticated user data.
+- Dashboard role/type.
+- The user's organization membership.
+- Hierarchical permissions in `modules`.
+- Direct permission lookup in `flat`.
+- Granted permission names in `granted`.
 
-إذا كان المستخدم غير Admin وغير مرتبط بمؤسسة، يرجع الـBackend استجابة `422` بدلاً من بناء سياق ناقص.
+If a non-admin user is not linked to an organization, the Backend returns `422` instead of generating an incomplete organization dashboard context.
 
-### 3.2 Organization Scoping
+### 3.2 Organization scoping
 
-كل موارد المؤسسة تخضع إلى `organization_id` الخاص بالمستخدم الحالي. لا تعتمد الحماية على إخفاء الأزرار فقط، بل على:
+All organization resources are scoped using the authenticated user's `organization_id`. Security does not rely on hidden buttons only. It is enforced through:
 
 - Laravel Policies.
 - Resource ownership checks.
@@ -91,25 +91,25 @@ GET /api/v1/me/dashboard-context
 
 ### 3.3 Permission-aware Frontend
 
-الـFrontend يستخدم `AuthProvider` والدالة:
+The Frontend uses `AuthProvider` and:
 
 ```ts
 can('permission.name')
 ```
 
-للتحكم في:
+This controls:
 
 - Sidebar items.
 - Section tabs.
-- أزرار الإنشاء والتعديل والحذف.
+- Create, update, and delete buttons.
 - Lifecycle actions.
-- تشغيل Queries الاختيارية.
-- حماية الروابط المباشرة.
-- التحويل إلى أول صفحة مسموحة.
+- Optional query execution.
+- Direct route access.
+- Redirects to the first allowed route.
 
-### 3.4 العقود الموحدة
+### 3.4 Canonical API contracts
 
-تم اعتماد Endpoints موحدة لتحديث الحالة:
+Canonical status endpoints were introduced:
 
 ```http
 PATCH /api/v1/org/campaigns/{campaign}/status
@@ -117,137 +117,137 @@ PATCH /api/v1/org/posts/{post}/status
 PATCH /api/v1/org/reports/{report}/status
 ```
 
-المسارات القديمة ما زالت موجودة في الـBackend للتوافق المؤقت، لكن الواجهة الجديدة تستخدم العقود الموحدة.
+Legacy action endpoints may remain in the Backend for temporary compatibility, but the new Frontend integration uses the canonical contracts.
 
 ---
 
-## 4. مراحل التنفيذ
+## 4. Implementation Phases
 
-| المرحلة | المحتوى | الحالة |
+| Phase | Content | Status |
 |---|---|---|
-| Phase 1 | Authentication Context وPermission Navigation | مكتملة |
-| Phase 2 | Staff, Roles, Permission Catalog | مكتملة |
-| Phase 3 | Organization Overview | مكتملة |
-| Phase 4 | Campaigns and Posts Lifecycle | مكتملة |
-| Phase 5 | Donors and Applicants | مكتملة |
-| Phase 6 | Reports and Audit Log | مكتملة |
-| Phase 7 | Profile and Settings | مكتملة |
-| Phase 8 | Tests, Cleanup, Documentation | مكتملة |
+| Phase 1 | Authentication Context and Permission Navigation | Completed |
+| Phase 2 | Staff, Roles, and Permission Catalog | Completed |
+| Phase 3 | Organization Overview | Completed |
+| Phase 4 | Campaigns and Posts Lifecycle | Completed |
+| Phase 5 | Donors and Applicants | Completed |
+| Phase 6 | Reports and Audit Log | Completed |
+| Phase 7 | Profile and Settings | Completed |
+| Phase 8 | Tests, Cleanup, and Documentation | Completed |
 
 ---
 
-## 5. التعديلات حسب كل قسم
+## 5. Changes by Section
 
 ## 5.1 Authentication and Permissions
 
-### تعديلات الـBackend
+### Backend changes
 
-- تحديث `/me/dashboard-context` ليعيد سياقاً كاملاً للمؤسسة والصلاحيات.
-- إضافة مجموعة صلاحيات سجل نشاط المؤسسة `org.audit_logs`.
-- إضافة صلاحية تحديث التقارير `org.reports.update`.
-- إزالة صلاحيات إشعارات المؤسسة من Permission Catalog القابل للإسناد في هذه المرحلة.
-- منع إنشاء Dashboard Context لمستخدم مؤسسة غير مرتبط بمؤسسة.
-- عدم تضمين Notification counters ضمن سياق لوحة المؤسسة الحالي.
+- Updated `/me/dashboard-context` to return complete organization and permission context.
+- Added the organization audit log permission group `org.audit_logs`.
+- Added the report update permission `org.reports.update`.
+- Removed organization notification permissions from the assignable catalog for this delivery.
+- Prevented organization dashboard context generation for users without an organization.
+- Removed organization notification counters from the current dashboard context.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- تحميل Dashboard Context داخل `AuthProvider` عند تسجيل الدخول أو Refresh.
-- إضافة `can(permission)` كمصدر موحد للتحقق من الصلاحيات.
-- حماية Layout الخاص بلوحات التحكم.
-- فلترة Sidebar وSection Tabs حسب الصلاحيات.
-- فصل مسارات Admin عن Owner وStaff.
-- تحويل المستخدم إلى أول Route مسموح عند فتح Route غير مسموح.
-- إخفاء Organization Notification routes من التنقل الحالي.
+- Hydrated Dashboard Context in `AuthProvider` on login and refresh.
+- Added `can(permission)` as the unified permission check.
+- Protected dashboard layouts.
+- Filtered Sidebar and Section Tabs by permission.
+- Isolated Admin, Owner, and Staff routes.
+- Redirected unauthorized direct routes to the first allowed route.
+- Hid organization notification routes from current navigation.
 
 ---
 
 ## 5.2 Staff Management, Roles, and Permission Catalog
 
-### تعديلات الـBackend
+### Backend changes
 
-- توحيد عقد الأدوار لقبول `isActive` من الواجهة وتحويله إلى `is_active`.
-- إعادة `roleId` ضمن Staff Resource.
-- حماية Staff وRoles بالـPolicies.
-- منع العمليات الحساسة التي قد تلغي آخر مالك أو تعدّل أدوار النظام بطريقة غير آمنة.
-- توفير Permission Catalog من:
+- Updated role requests to accept `isActive` and map it to `is_active`.
+- Added `roleId` to the Staff Resource contract.
+- Protected Staff and Roles using Policies.
+- Preserved safeguards that prevent unsafe system-role changes or removal of the last owner.
+- Exposed the permission catalog through:
 
 ```http
 GET /api/v1/org/permissions/catalog
 ```
 
-- الإبقاء على Staff وRoles كإدارة Owner-only وغير قابلة للإسناد لموظف عادي.
+- Kept Staff and Roles management owner-only and excluded them from assignable staff permissions.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- إزالة الأدوار وPermission Catalog الثابتة.
-- تحميل الأدوار من:
+- Removed static roles and static permission catalog data.
+- Loaded roles from:
 
 ```http
 GET /api/v1/org/staff/roles
 ```
 
-- استخدام `organizationRoleId` عند إنشاء وتعديل الموظف.
-- ربط نماذج الموظف والدور بالـAPI الحقيقي.
-- إظهار صفحات Staff وRoles للمالك فقط.
-- بناء حقول الصلاحيات ديناميكياً من Permission Catalog.
+- Used `organizationRoleId` during staff create and update operations.
+- Connected staff and role forms to real APIs.
+- Restricted Staff and Roles pages to the organization owner.
+- Built permission fields dynamically from the Backend catalog.
 
 ---
 
 ## 5.3 Organization Overview
 
-### تعديلات الـBackend
+### Backend changes
 
-توفير:
+Exposed:
 
 ```http
 GET /api/v1/org/dashboard/overview
 ```
 
-والاستجابة تشمل:
+The response includes:
 
-- إحصائيات الحملات.
-- إحصائيات المنشورات.
-- إحصائيات المتبرعين والمتقدمين والتقارير حسب الصلاحية.
-- `recentActivity` بدلاً من المفتاح القديم `activity`.
+- Campaign statistics.
+- Post statistics.
+- Donor, applicant, and report statistics when permitted.
+- `recentActivity` instead of the previous `activity` key.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- إزالة Overview الثابت للمالك والموظف.
-- إنشاء Component مشترك لواجهتي Owner وStaff.
-- تحميل البيانات من `/org/dashboard/overview`.
-- عدم عرض إحصائية لا يملك المستخدم صلاحية قسمها.
-- إضافة Loading وError وEmpty states.
+- Removed static Overview data for Owner and Staff.
+- Created a shared Overview component for both dashboard types.
+- Loaded data from `/org/dashboard/overview`.
+- Hid statistics for sections the user cannot view.
+- Added loading, error, and empty states.
 
 ---
 
 ## 5.4 Campaigns
 
-### تعديلات الـBackend
+### Backend changes
 
-- CRUD كامل عبر:
+- Full CRUD through:
 
 ```http
 /api/v1/org/campaigns
 ```
 
-- Endpoint موحد للحالة:
+- Canonical status endpoint:
 
 ```http
 PATCH /api/v1/org/campaigns/{campaign}/status
 ```
 
-- الحالات المدعومة:
+- Supported statuses:
   - `draft`
   - `active`
   - `closed`
-- دعم `closedReason` عند الإغلاق.
-- حماية العرض والإنشاء والتعديل والإغلاق والحذف بواسطة Policies.
-- منع الوصول إلى حملة تتبع مؤسسة أخرى.
+- Supported `closedReason` when closing a campaign.
+- Protected view, create, update, close, and delete operations using Policies.
+- Rejected access to campaigns owned by another organization.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- استبدال مسار `/close` بالعقد الموحد `/status`.
-- إرسال:
+- Replaced the `/close` integration with the canonical `/status` contract.
+- Sends:
 
 ```json
 {
@@ -256,43 +256,43 @@ PATCH /api/v1/org/campaigns/{campaign}/status
 }
 ```
 
-- حماية الأزرار باستخدام:
+- Protected actions using:
   - `org.campaigns.create`
   - `org.campaigns.update`
   - `org.campaigns.close`
   - `org.campaigns.delete`
-- الإبقاء على العرض حسب `org.campaigns.view`.
-- استخدام API data بدلاً من بيانات محلية للعمليات الرئيسية.
+- Protected the section itself using `org.campaigns.view`.
+- Connected main campaign operations to real API data.
 
 ---
 
 ## 5.5 Posts
 
-### تعديلات الـBackend
+### Backend changes
 
-- CRUD كامل عبر:
+- Full CRUD through:
 
 ```http
 /api/v1/org/posts
 ```
 
-- Endpoint موحد للحالة:
+- Canonical status endpoint:
 
 ```http
 PATCH /api/v1/org/posts/{post}/status
 ```
 
-- الحالات المدعومة:
+- Supported statuses:
   - `draft`
   - `published`
   - `archived`
-- تطبيق قواعد الانتقال داخل الـBackend.
-- حماية Publish وArchive وRestore كل واحدة بصلاحيتها.
+- Enforced lifecycle transition rules in the Backend.
+- Protected Publish, Archive, and Restore using separate permissions.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- إيقاف استخدام مسارات Publish/Archive/Restore المنفصلة في الواجهة الجديدة.
-- ربط العمليات بالعقد الموحد:
+- Stopped using separate Publish, Archive, and Restore endpoints in the new integration.
+- Uses the canonical status contract:
 
 ```json
 { "status": "published" }
@@ -300,7 +300,7 @@ PATCH /api/v1/org/posts/{post}/status
 { "status": "draft" }
 ```
 
-- حماية العمليات باستخدام:
+- Protected operations using:
   - `org.posts.create`
   - `org.posts.update`
   - `org.posts.publish`
@@ -312,22 +312,22 @@ PATCH /api/v1/org/posts/{post}/status
 
 ## 5.6 Donors
 
-### تعديلات الـBackend
+### Backend changes
 
-- CRUD كامل عبر:
+- Full CRUD through:
 
 ```http
 /api/v1/org/donors
 ```
 
-- فلترة البيانات حسب مؤسسة المستخدم.
-- حماية View/Create/Update/Delete بالـPolicies.
+- Scoped data to the authenticated user's organization.
+- Protected View, Create, Update, and Delete with Policies.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- ربط القائمة والنماذج والحذف بالـAPI.
-- تشغيل Donors Query فقط عند فتح قسم المتبرعين وامتلاك صلاحية العرض.
-- حماية الأزرار باستخدام:
+- Connected list, create, edit, and delete operations to the API.
+- Runs the Donors query only when the donor section is active and the user has view permission.
+- Protected actions using:
   - `org.donors.create`
   - `org.donors.update`
   - `org.donors.delete`
@@ -336,23 +336,23 @@ PATCH /api/v1/org/posts/{post}/status
 
 ## 5.7 Applicants
 
-### تعديلات الـBackend
+### Backend changes
 
-- CRUD مستقل عبر:
+- Independent CRUD through:
 
 ```http
 /api/v1/org/applicants
 ```
 
-- عدم دمج المتقدمين مع المتبرعين في مسار واحد.
-- فلترة النتائج حسب المؤسسة.
-- حماية View/Create/Update/Delete بالـPolicies.
+- Kept applicants separate from donors at the API level.
+- Scoped results to the authenticated user's organization.
+- Protected View, Create, Update, and Delete using Policies.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- استخدام Applicants Query مستقل.
-- عدم تشغيل Query المتقدمين أثناء عرض المتبرعين والعكس صحيح.
-- حماية العمليات باستخدام:
+- Uses an independent Applicants query.
+- Does not run the Applicants query while the Donors section is active, and vice versa.
+- Protected actions using:
   - `org.applicants.create`
   - `org.applicants.update`
   - `org.applicants.delete`
@@ -361,86 +361,86 @@ PATCH /api/v1/org/posts/{post}/status
 
 ## 5.8 Reports
 
-### تعديلات الـBackend
+### Backend changes
 
-- عرض القائمة والتفاصيل عبر:
+- List and detail endpoints:
 
 ```http
 GET /api/v1/org/reports
 GET /api/v1/org/reports/{report}
 ```
 
-- إضافة Endpoint موحد للحالة:
+- Added the canonical status endpoint:
 
 ```http
 PATCH /api/v1/org/reports/{report}/status
 ```
 
-- الانتقالات المعتمدة:
+- Supported transitions:
   - `new -> in_progress`
   - `in_progress -> waiting_response`
   - `in_progress -> closed`
   - `waiting_response -> closed`
-- الاستفادة من نفس Service methods القديمة لضمان عدم تكرار منطق الأعمال.
-- حماية التحديث باستخدام `org.reports.update`.
-- منع تحديث تقرير يتبع مؤسسة أخرى.
+- Reused existing service methods to avoid duplicating business logic.
+- Protected updates with `org.reports.update`.
+- Rejected updates to reports owned by another organization.
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- إنشاء Reports service/query خاص بالمؤسسة.
-- عرض الحقول الفعلية القادمة من `ReportResource`:
+- Created organization-specific reports service and query hooks.
+- Displays actual `ReportResource` fields:
   - `title`
   - `description`
   - `severity`
   - `status`
   - `reporterName`
   - `createdAt`
-- إظهار Status control فقط عند امتلاك `org.reports.update`.
-- منع عرض انتقال غير صالح بحسب الحالة الحالية.
+- Displays status controls only when the user has `org.reports.update`.
+- Prevents invalid transitions based on the current report status.
 
 ---
 
 ## 5.9 Organization Audit Log
 
-### تعديلات الـBackend
+### Backend changes
 
-- استخدام:
+- Uses:
 
 ```http
 GET /api/v1/org/audit-logs
 ```
 
-- السماح للمالك دائماً.
-- السماح للموظف عند امتلاك:
+- Always allows the organization owner.
+- Allows organization staff only when they have:
 
 ```text
 org.audit_logs.view
 ```
 
-- فلترة السجلات حسب مؤسسة الـActor.
-- دعم فلاتر:
+- Scopes logs by the actor's organization.
+- Supports filters:
   - `actorUserId`
   - `action`
   - `from`
   - `to`
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- إزالة استخدام Admin Audit Hook من صفحة المؤسسة.
-- إنشاء:
+- Removed the Admin Audit Log hook from organization pages.
+- Added:
   - `org.audit-logs.services.ts`
   - `org.audit-logs.query.ts`
   - `org.audit-logs.types.ts`
-- توجيه الطلبات إلى `/org/audit-logs` بدلاً من `/admin/audit-logs`.
-- حماية Route والتنقل بصلاحية `org.audit_logs.view`.
+- Sends requests to `/org/audit-logs` instead of `/admin/audit-logs`.
+- Protects route and navigation access using `org.audit_logs.view`.
 
 ---
 
 ## 5.10 Organization Profile and Settings
 
-### تعديلات الـBackend
+### Backend changes
 
-توفير العقود التالية:
+Provided:
 
 ```http
 GET   /api/v1/org/settings/profile
@@ -449,77 +449,77 @@ GET   /api/v1/org/settings/bank-account
 PATCH /api/v1/org/settings/bank-account
 ```
 
-بيانات المؤسسة تشمل:
+Organization data includes:
 
-- الاسم.
-- البريد الإلكتروني.
-- الهاتف.
-- اسم البنك.
+- Name.
+- Email.
+- Phone.
+- Bank name.
 - IBAN.
 
-الحماية تعتمد على:
+Access is protected by:
 
 - `org.settings.view`
 - `org.settings.update`
 
-### تعديلات الـFrontend
+### Frontend changes
 
-- إزالة حفظ إعدادات المؤسسة محلياً فقط.
-- إنشاء Organization Settings service/query.
-- ربط صفحة Settings للمالك والموظف بعقود المؤسسة.
-- إظهار الحقول بوضع القراءة فقط عند عدم وجود Update permission.
-- فصل Profile إلى:
-  - مالك المؤسسة: يعدّل بيانات المؤسسة.
-  - موظف المؤسسة: يعدّل حسابه الشخصي من `/me/profile` فقط.
+- Removed local-only organization settings behavior.
+- Created organization settings services and query hooks.
+- Connected Owner and Staff settings pages to the organization settings APIs.
+- Displays read-only fields when the user lacks update permission.
+- Split Profile behavior:
+  - Organization Owner updates organization profile data.
+  - Organization Staff updates personal account data through `/me/profile` only.
 
 ---
 
 ## 5.11 Organization Notifications
 
-هذا القسم مؤجل عمداً.
+This section is intentionally deferred.
 
-### الوضع الحالي في الـBackend
+### Current Backend state
 
-- قد تبقى Routes أو Models موجودة للتوافق أو التطوير اللاحق.
-- صلاحيات Notifications غير معروضة ضمن Permission Catalog القابل للإسناد في هذه المرحلة.
+- Routes or models may remain for compatibility or future development.
+- Notification permissions are not included in the assignable permission catalog for this delivery.
 
-### الوضع الحالي في الـFrontend
+### Current Frontend state
 
-- Routes قد تبقى ضمن ملفات Next.js ويتم توليدها أثناء Build.
-- لا تظهر في Sidebar أو Tabs.
-- Direct route guard يحول المستخدم إلى Route مسموح.
-- لا يتم تشغيل Notification API requests من مسار الاستخدام الطبيعي للوحة المؤسسة.
+- Next.js notification route files may still exist and appear in the build output.
+- Notification links are not shown in Sidebar or Tabs.
+- Direct route guards redirect users to an allowed route.
+- Normal organization dashboard usage does not trigger notification API requests.
 
 ---
 
-## 6. جدول الـAPI الرئيسي
+## 6. Main API Reference
 
-| القسم | Method | Endpoint | الاستخدام |
+| Section | Method | Endpoint | Purpose |
 |---|---|---|---|
-| Auth | GET | `/api/v1/me/dashboard-context` | المستخدم والمؤسسة والصلاحيات |
-| Overview | GET | `/api/v1/org/dashboard/overview` | إحصائيات ونشاط المؤسسة |
-| Campaigns | REST | `/api/v1/org/campaigns` | CRUD الحملات |
-| Campaign Status | PATCH | `/api/v1/org/campaigns/{id}/status` | تغيير حالة الحملة |
-| Posts | REST | `/api/v1/org/posts` | CRUD المنشورات |
-| Post Status | PATCH | `/api/v1/org/posts/{id}/status` | تغيير حالة المنشور |
-| Donors | REST | `/api/v1/org/donors` | CRUD المتبرعين |
-| Applicants | REST | `/api/v1/org/applicants` | CRUD المتقدمين |
-| Staff | REST | `/api/v1/org/staff` | إدارة الموظفين |
-| Roles | REST | `/api/v1/org/staff/roles` | إدارة أدوار المؤسسة |
-| Permissions | GET | `/api/v1/org/permissions/catalog` | كتالوج الصلاحيات |
-| Reports | GET | `/api/v1/org/reports` | قائمة التقارير |
-| Report Detail | GET | `/api/v1/org/reports/{id}` | تفاصيل التقرير |
-| Report Status | PATCH | `/api/v1/org/reports/{id}/status` | تحديث مسار التقرير |
-| Audit Log | GET | `/api/v1/org/audit-logs` | سجل نشاط المؤسسة |
-| Org Profile | GET/PATCH | `/api/v1/org/settings/profile` | بيانات المؤسسة |
-| Bank Account | GET/PATCH | `/api/v1/org/settings/bank-account` | الحساب البنكي |
-| Staff Profile | PATCH | `/api/v1/me/profile` | بيانات الموظف الشخصية |
+| Auth | GET | `/api/v1/me/dashboard-context` | User, organization, and permissions |
+| Overview | GET | `/api/v1/org/dashboard/overview` | Organization statistics and recent activity |
+| Campaigns | REST | `/api/v1/org/campaigns` | Campaign CRUD |
+| Campaign Status | PATCH | `/api/v1/org/campaigns/{id}/status` | Campaign lifecycle update |
+| Posts | REST | `/api/v1/org/posts` | Post CRUD |
+| Post Status | PATCH | `/api/v1/org/posts/{id}/status` | Post lifecycle update |
+| Donors | REST | `/api/v1/org/donors` | Donor CRUD |
+| Applicants | REST | `/api/v1/org/applicants` | Applicant CRUD |
+| Staff | REST | `/api/v1/org/staff` | Staff management |
+| Roles | REST | `/api/v1/org/staff/roles` | Organization role management |
+| Permissions | GET | `/api/v1/org/permissions/catalog` | Assignable permission catalog |
+| Reports | GET | `/api/v1/org/reports` | Report list |
+| Report Detail | GET | `/api/v1/org/reports/{id}` | Report detail |
+| Report Status | PATCH | `/api/v1/org/reports/{id}/status` | Report lifecycle update |
+| Audit Log | GET | `/api/v1/org/audit-logs` | Organization audit log |
+| Org Profile | GET/PATCH | `/api/v1/org/settings/profile` | Organization profile data |
+| Bank Account | GET/PATCH | `/api/v1/org/settings/bank-account` | Organization bank account |
+| Staff Profile | PATCH | `/api/v1/me/profile` | Staff personal account data |
 
 ---
 
-## 7. مصفوفة الصلاحيات
+## 7. Permission Matrix
 
-| القسم | صلاحيات العرض والعمليات |
+| Section | View and action permissions |
 |---|---|
 | Dashboard | `dashboard.view` |
 | Campaigns | `org.campaigns.view/create/update/close/delete` |
@@ -529,65 +529,65 @@ PATCH /api/v1/org/settings/bank-account
 | Reports | `org.reports.view/update` |
 | Audit Log | `org.audit_logs.view` |
 | Settings | `org.settings.view/update` |
-| Staff and Roles | Owner-only وليست ضمن الكتالوج القابل للإسناد |
-| Notifications | مؤجلة وغير قابلة للإسناد في هذا الإصدار |
+| Staff and Roles | Owner-only and not part of the assignable catalog |
+| Notifications | Deferred and not assignable in this delivery |
 
-أي صلاحية تعديل تتطلب منطقياً صلاحية العرض للقسم نفسه، ويعيد Permission Catalog هذه العلاقة داخل `requires`.
-
----
-
-## 8. قواعد الحماية
-
-1. إخفاء الزر في الواجهة ليس بديلاً عن Policy في الـBackend.
-2. كل Show/Update/Delete يجب أن يتحقق من تطابق `organization_id`.
-3. المالك يمتلك صلاحيات الإدارة الحساسة الخاصة بالمؤسسة.
-4. الموظف يحصل فقط على الصلاحيات المسندة لدوره.
-5. لا تُستخدم Admin APIs داخل صفحات المؤسسة.
-6. لا يتم إرسال `organizationId` من الواجهة لتحديد المؤسسة؛ يتم أخذه من المستخدم المصادق عليه.
-7. Lifecycle transitions يتم التحقق منها في Service أو Domain logic وليس داخل الواجهة فقط.
-8. عند فقدان صلاحية Route، يتم التحويل لأول Route مسموح بدلاً من عرض صفحة ناقصة.
+Every mutating permission logically requires the matching section view permission. The Backend permission catalog returns this dependency in `requires`.
 
 ---
 
-## 9. التحقق والاختبارات
+## 8. Security Rules
+
+1. Hiding a button in the Frontend is not a replacement for a Backend Policy.
+2. Every Show, Update, and Delete operation must verify `organization_id` ownership.
+3. The organization owner retains sensitive organization management capabilities.
+4. Organization staff receive only permissions assigned through their role.
+5. Organization pages must never use Admin APIs.
+6. The Frontend does not send `organizationId` to select the organization; it is resolved from the authenticated user.
+7. Lifecycle transitions are validated in Backend services/domain logic, not only in the Frontend.
+8. When route permission is missing, the user is redirected to the first allowed route instead of seeing a partially functional page.
+
+---
+
+## 9. Verification and Testing
 
 ### Frontend
 
-تم التحقق بواسطة:
+Verified using:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-النتيجة الحالية:
+Current result:
 
-- Lint نجح بدون Errors.
-- توجد Warnings قديمة غير مانعة.
-- Production Build نجح.
-- TypeScript validation نجح.
-- Next.js يعرض تحذير انتقال `middleware` إلى `proxy`.
-- لا يوجد Frontend test runner معرف حالياً داخل `package.json`.
+- Lint passed with zero errors.
+- Existing non-blocking warnings remain.
+- Production build passed.
+- TypeScript validation passed.
+- Next.js reports the existing `middleware` to `proxy` deprecation warning.
+- No Frontend test runner is currently configured in `package.json`.
 
 ### Backend
 
-تمت إضافة Feature tests تغطي:
+Feature tests cover:
 
 - Organization scoping.
-- Campaign/Post lifecycle contracts.
+- Campaign and Post lifecycle contracts.
 - Report status contract.
-- Audit Log للمالك.
-- Audit Log للموظف صاحب الصلاحية.
-- رفض الموظف الذي لا يملك صلاحية Audit Log.
+- Owner audit log access.
+- Staff audit log access with permission.
+- Rejection of staff without audit log permission.
 - Organization Profile and Bank Settings.
 
-أمر التشغيل:
+Run with:
 
 ```bash
 php artisan test tests/Feature/Org
 ```
 
-لم يتم تشغيل الاختبارات داخل بيئة التنفيذ الحالية لأن `php` غير مثبت وظهر:
+The tests could not be executed in the current environment because `php` is not installed. The environment returned:
 
 ```text
 spawn php ENOENT
@@ -595,7 +595,7 @@ spawn php ENOENT
 
 ---
 
-## 10. خريطة الـCommits الرئيسية
+## 10. Main Commit Map
 
 ### Backend
 
@@ -623,29 +623,29 @@ a58ea43 docs(org-dashboard): record integration verification
 
 ---
 
-## 11. قواعد تطوير أي قسم جديد
+## 11. Rules for Adding a New Organization Section
 
-عند إضافة قسم جديد إلى لوحة المؤسسة يجب تنفيذ الخطوات التالية:
+When adding a new section to the organization dashboard:
 
-1. تعريف Permission Group وActions في الـBackend.
-2. إضافتها إلى Permission Catalog إذا كانت قابلة للإسناد.
-3. إنشاء Policy والتحقق من Organization Scoping.
-4. إنشاء API Resource بعقد camelCase واضح.
-5. إنشاء Frontend types وservice وquery keys وquery hooks.
-6. حماية Route وSidebar وTabs بصلاحية العرض.
-7. حماية كل Action بصلاحيته الخاصة.
-8. منع Query غير المسموح بدلاً من الاعتماد على استجابة `403` فقط.
-9. إضافة Feature tests للعقد والحماية والتداخل بين المؤسسات.
-10. تحديث هذا الملف في مستودعي الـBackend والـFrontend بنفس التعديلات.
+1. Define the Backend Permission Group and actions.
+2. Add permissions to the catalog when they are assignable.
+3. Create a Policy and enforce organization scoping.
+4. Create a clear camelCase API Resource contract.
+5. Create Frontend types, services, query keys, and query hooks.
+6. Protect Route, Sidebar, and Tabs using the view permission.
+7. Protect every action with its specific permission.
+8. Disable unauthorized queries instead of relying only on a `403` response.
+9. Add Feature tests for the contract, permissions, and cross-organization access.
+10. Update this file in both Backend and Frontend repositories.
 
 ---
 
-## 12. الحالة النهائية
+## 12. Final Status
 
-- التكامل الأساسي بين Backend وFrontend مكتمل.
-- Owner وStaff يستخدمان نفس Organization APIs.
-- الصلاحيات متطابقة بين الطرفين.
-- Organization scoping مطبق في الـBackend.
-- الأقسام المكتملة مرتبطة ببيانات حقيقية.
-- الإشعارات والموبايل مؤجلان بوضوح.
-- أي تطوير لاحق يجب أن يحافظ على العقود الموحدة وقواعد الصلاحيات المذكورة في هذه الوثيقة.
+- Core Backend and Frontend integration is complete.
+- Owner and Staff use the same organization APIs.
+- Permission names are aligned across both repositories.
+- Organization scoping is enforced in the Backend.
+- Completed sections use real API data.
+- Notifications and Mobile integration are explicitly deferred.
+- Future work must preserve the canonical contracts and permission rules documented here.
