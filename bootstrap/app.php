@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAccessToken;
 use App\Http\Middleware\EnsureApiResponseMessage;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'access-token' => EnsureAccessToken::class,
+        ]);
+
         $middleware->api(append: [
             EnsureApiResponseMessage::class,
         ]);
