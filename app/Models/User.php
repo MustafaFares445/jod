@@ -49,7 +49,9 @@ class User extends Authenticatable
 
     public function activeOrganizationStaffMembership(): HasOne
     {
-        return $this->organizationStaffMembership()->where('status', 'active');
+        return $this->organizationStaffMembership()
+            ->where('organization_id', $this->organization_id)
+            ->where('status', 'active');
     }
 
     public function organizationDashboardRole(): ?string
