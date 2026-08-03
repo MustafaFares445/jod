@@ -12,9 +12,9 @@ class PostData extends Data
         public string $title,
         public string $summary,
         public string $type,
-        public string $status,
         public string $authorName,
         public string $location,
         public ?string $campaignTitle = null,
+        public string $status = 'draft',
     ) {}
 }
