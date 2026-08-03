@@ -10,6 +10,7 @@ use App\Http\Resources\Org\StaffResource;
 use App\Models\OrganizationStaff;
 use App\Services\OrganizationStaffService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
@@ -17,7 +18,7 @@ class StaffController extends Controller
 {
     public function __construct(private readonly OrganizationStaffService $service) {}
 
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', OrganizationStaff::class);
         $organization = $request->user()->organization;
