@@ -12,11 +12,11 @@ class CampaignData extends Data
         public string $title,
         public string $summary,
         public string $category,
-        public ?string $status = 'draft',
         public string $location,
         public float $goalAmount,
         public int $beneficiariesCount,
         public string $startDate,
         public string $endDate,
+        public ?string $status = 'draft',
     ) {}
 }
