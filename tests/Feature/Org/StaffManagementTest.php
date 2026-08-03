@@ -108,7 +108,7 @@ class StaffManagementTest extends TestCase
         $response = $this->actingAs($this->owner)
             ->deleteJson("/api/v1/org/staff/{$staff->id}");
 
-        $response->assertStatus(200);
+        $response->assertNoContent();
         $this->assertDatabaseMissing('organization_staff', ['id' => $staff->id]);
     }
 
@@ -128,6 +128,30 @@ class StaffManagementTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('organization_role_id');
+    }
+
+    public function test_membership_from_another_organization_does_not_grant_owner_access(): void
+    {
+        $otherOrganization = Organization::factory()->create();
+        $user = User::factory()->create(['organization_id' => $this->organization->id]);
+        $otherOwnerRole = OrganizationRole::factory()->create([
+            'organization_id' => $otherOrganization->id,
+            'is_active' => true,
+            'is_system' => true,
+        ]);
+
+        OrganizationStaff::factory()->create([
+            'organization_id' => $otherOrganization->id,
+            'user_id' => $user->id,
+            'organization_role_id' => $otherOwnerRole->id,
+            'status' => 'active',
+        ]);
+
+        $this->assertFalse($user->fresh()->isOrganizationOwner());
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/org/staff')
+            ->assertForbidden();
     }
 
     public function test_final_owner_cannot_be_demoted(): void
