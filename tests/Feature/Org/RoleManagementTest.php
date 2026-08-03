@@ -114,7 +114,7 @@ class RoleManagementTest extends TestCase
         $response = $this->actingAs($this->owner)
             ->deleteJson("/api/v1/org/roles/{$role->id}");
 
-        $response->assertStatus(200);
+        $response->assertNoContent();
         $this->assertDatabaseMissing('organization_roles', ['id' => $role->id]);
     }
 
@@ -168,7 +168,7 @@ class RoleManagementTest extends TestCase
     public function test_role_permissions_require_view_permission(): void
     {
         $response = $this->actingAs($this->owner)
-            ->postJson('/api/v1/org/staff/roles', [
+            ->postJson('/api/v1/org/roles', [
                 'name' => 'Invalid Editor',
                 'description' => 'Missing view dependency',
                 'permissions' => [
@@ -184,7 +184,7 @@ class RoleManagementTest extends TestCase
     public function test_role_cannot_receive_owner_only_or_deferred_permissions(): void
     {
         $response = $this->actingAs($this->owner)
-            ->postJson('/api/v1/org/staff/roles', [
+            ->postJson('/api/v1/org/roles', [
                 'name' => 'Unsafe Role',
                 'description' => 'Contains protected permissions',
                 'permissions' => [
@@ -211,7 +211,7 @@ class RoleManagementTest extends TestCase
         ]);
 
         $this->actingAs($this->owner)
-            ->deleteJson("/api/v1/org/staff/roles/{$role->id}")
+            ->deleteJson("/api/v1/org/roles/{$role->id}")
             ->assertConflict();
 
         $this->assertDatabaseHas('organization_roles', ['id' => $role->id]);
@@ -225,7 +225,7 @@ class RoleManagementTest extends TestCase
             ->firstOrFail();
 
         $this->actingAs($this->owner)
-            ->putJson("/api/v1/org/staff/roles/{$systemRole->id}", [
+            ->putJson("/api/v1/org/roles/{$systemRole->id}", [
                 'name' => 'Changed Owner',
                 'description' => 'Unsafe',
                 'permissions' => [
