@@ -10,6 +10,7 @@ use App\Http\Resources\Org\RoleResource;
 use App\Models\OrganizationRole;
 use App\Services\OrganizationRoleService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
@@ -17,7 +18,7 @@ class RoleController extends Controller
 {
     public function __construct(private readonly OrganizationRoleService $service) {}
 
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', OrganizationRole::class);
         $organization = $request->user()->organization;
