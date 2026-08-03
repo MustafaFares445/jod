@@ -74,9 +74,8 @@ class OrganizationStaffService
             : $staff->role;
         $targetStatus = $data['status'] ?? $staff->status;
 
-        $this->guardLastOwnerTransition($staff, $targetRole, $targetStatus);
-
         return DB::transaction(function () use ($staff, $data, $actorUserId, $targetRole, $targetStatus): OrganizationStaff {
+            $this->guardLastOwnerTransition($staff, $targetRole, $targetStatus);
             $originalData = $staff->only(['name', 'email', 'phone', 'organization_role_id', 'status']);
 
             $staff->update([
@@ -110,15 +109,15 @@ class OrganizationStaffService
             'You cannot remove your own staff membership.',
         );
 
-        if ($staff->isOwner()) {
-            abort_if(
-                $this->activeOwnerCount($staff->organization) <= 1,
-                Response::HTTP_CONFLICT,
-                'The final active organization owner cannot be removed.',
-            );
-        }
-
         DB::transaction(function () use ($staff, $actorUserId): void {
+            if ($staff->isOwner()) {
+                abort_if(
+                    $this->activeOwnerCount($staff->organization) <= 1,
+                    Response::HTTP_CONFLICT,
+                    'The final active organization owner cannot be removed.',
+                );
+            }
+
             $user = $staff->user;
 
             $this->logAudit($actorUserId, 'staff.removed', 'OrganizationStaff', (string) $staff->id, [
@@ -162,6 +161,7 @@ class OrganizationStaffService
             ->whereHas('role', function ($query): void {
                 $query->where('is_active', true)->where('is_system', true);
             })
+            ->lockForUpdate()
             ->count();
     }
 
