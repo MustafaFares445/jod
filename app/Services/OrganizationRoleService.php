@@ -144,7 +144,13 @@ class OrganizationRoleService
         }
 
         if ($field === 'permissionsCount') {
-            $query->orderByRaw('JSON_LENGTH(permissions) '.$direction);
+            $expression = match ($query->getConnection()->getDriverName()) {
+                'sqlite' => 'json_array_length(permissions)',
+                'pgsql' => 'jsonb_array_length(permissions::jsonb)',
+                default => 'JSON_LENGTH(permissions)',
+            };
+
+            $query->orderByRaw($expression.' '.$direction);
 
             return;
         }
