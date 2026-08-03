@@ -241,7 +241,13 @@ enum PermissionGroup: string
                 description: 'عرض تقارير المؤسسة وتحديث حالتها.',
                 order: 280,
                 sectionLabel: 'التقارير',
-                actions: [PermissionAction::VIEW, PermissionAction::UPDATE],
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::UPDATE,
+                    PermissionAction::CLAIM,
+                    PermissionAction::REQUEST_INFO,
+                    PermissionAction::CLOSE,
+                ],
             ),
             self::ORG_AUDIT_LOG => new PermissionGroupDefinition(
                 label: 'سجل نشاط المؤسسة',
