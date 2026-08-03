@@ -41,11 +41,11 @@ class OrganizationOverviewTest extends TestCase
             ->getJson('/api/v1/org/dashboard/overview');
 
         $response->assertOk()
-            ->assertJsonPath('item.stats.0.id', 'campaigns')
-            ->assertJsonPath('item.stats.0.value', 1)
+            ->assertJsonPath('data.stats.0.id', 'campaigns')
+            ->assertJsonPath('data.stats.0.value', 1)
             ->assertJsonFragment(['id' => 'posts', 'value' => 1])
             ->assertJsonFragment(['id' => 'staff', 'value' => 1])
-            ->assertJsonPath('item.activity.0.entityType', 'Campaign');
+            ->assertJsonPath('data.recentActivity.0.entityType', 'Campaign');
     }
 
     public function test_staff_receives_only_permitted_stats_and_activity(): void
@@ -77,8 +77,8 @@ class OrganizationOverviewTest extends TestCase
             ->assertJsonFragment(['id' => 'posts', 'value' => 1])
             ->assertJsonMissing(['id' => 'campaigns'])
             ->assertJsonMissing(['id' => 'staff'])
-            ->assertJsonCount(1, 'item.activity')
-            ->assertJsonPath('item.activity.0.entityType', 'Post');
+            ->assertJsonCount(1, 'data.recentActivity')
+            ->assertJsonPath('data.recentActivity.0.entityType', 'Post');
     }
 
     public function test_staff_without_dashboard_permission_is_forbidden(): void
