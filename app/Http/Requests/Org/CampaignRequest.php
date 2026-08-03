@@ -27,7 +27,11 @@ class CampaignRequest extends FormRequest
             'goalAmount' => [$isUpdate ? 'sometimes' : 'required', 'numeric', 'min:0'],
             'beneficiariesCount' => [$isUpdate ? 'sometimes' : 'required', 'integer', 'min:0'],
             'startDate' => [$isUpdate ? 'sometimes' : 'required', 'date'],
-            'endDate' => [$isUpdate ? 'sometimes' : 'required', 'date'],
+            'endDate' => [
+                $isUpdate ? 'sometimes' : 'required',
+                'date',
+                Rule::when($this->filled('startDate'), ['after_or_equal:startDate']),
+            ],
         ];
     }
 }
