@@ -27,12 +27,13 @@ class RoleRequest extends FormRequest
     public function rules(): array
     {
         $role = $this->route('role');
+        $isUpdate = $role !== null;
         $roleId = $role instanceof OrganizationRole ? $role->getKey() : $role;
         $permissionCatalog = app(PermissionCatalogService::class);
 
         return [
             'name' => [
-                'required',
+                $isUpdate ? 'sometimes' : 'required',
                 'string',
                 'max:255',
                 Rule::unique('organization_roles', 'name')
@@ -40,13 +41,13 @@ class RoleRequest extends FormRequest
                     ->ignore($roleId),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
-            'permissions' => ['required', 'array'],
+            'permissions' => [$isUpdate ? 'sometimes' : 'required', 'array'],
             'permissions.*' => [
                 'string',
                 'distinct',
                 Rule::in($permissionCatalog->assignableOrganizationPermissionNames()),
             ],
-            'is_active' => ['required', 'boolean'],
+            'is_active' => [$isUpdate ? 'sometimes' : 'required', 'boolean'],
         ];
     }
 
