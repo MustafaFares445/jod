@@ -24,7 +24,7 @@ class CampaignService
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
             ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
-            ->when($search, function (Builder $builder) use ($search): void {
+            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
