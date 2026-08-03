@@ -10,6 +10,7 @@ use App\Models\Report;
 use App\Services\ReportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ReportController extends Controller
@@ -32,12 +33,41 @@ class ReportController extends Controller
         return ReportResource::make($report->loadMissing(['organization', 'reporter', 'assignee']));
     }
 
+    public function updateStatus(Request $request, Report $report): ReportResource
+    {
+        $this->authorize('updateOrganization', $report);
+
+        $data = $request->validate([
+            'status' => ['required', 'string', 'in:in_progress,waiting_response,closed'],
+            'note' => ['nullable', 'string', 'max:2000'],
+            'assigneeId' => [
+                'nullable',
+                'string',
+                Rule::exists('users', 'id')->where('organization_id', $report->organization_id),
+            ],
+        ]);
+
+        $report = $this->service->updateStatus(
+            $report,
+            $data['status'],
+            (string) $request->user()->name,
+            $data['note'] ?? null,
+            $data['assigneeId'] ?? auth()->id(),
+        );
+
+        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+    }
+
     public function claim(Request $request, Report $report): ReportResource
     {
         $this->authorize('claim', $report);
 
         $data = $request->validate([
-            'assigneeId' => ['nullable', 'string', 'exists:users,id'],
+            'assigneeId' => [
+                'nullable',
+                'string',
+                Rule::exists('users', 'id')->where('organization_id', $report->organization_id),
+            ],
         ]);
 
         $report = $this->service->claim(

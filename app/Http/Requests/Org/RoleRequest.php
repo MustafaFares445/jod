@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Org;
 
-use App\Support\Permissions\PermissionCatalog;
+use App\Models\OrganizationRole;
+use App\Services\Permissions\PermissionCatalogService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class RoleRequest extends FormRequest
 {
@@ -15,16 +17,63 @@ class RoleRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('isActive') && ! $this->has('is_active')) {
+            $this->merge(['is_active' => $this->boolean('isActive')]);
+        }
+    }
+
     public function rules(): array
     {
-        $roleId = $this->route('role');
+        $role = $this->route('role');
+        $isUpdate = $role !== null;
+        $roleId = $role instanceof OrganizationRole ? $role->getKey() : $role;
+        $permissionCatalog = app(PermissionCatalogService::class);
 
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('organization_roles', 'name')->where('organization_id', auth()->user()?->organization_id)->ignore($roleId)],
+            'name' => [
+                $isUpdate ? 'sometimes' : 'required',
+                'string',
+                'max:255',
+                Rule::unique('organization_roles', 'name')
+                    ->where('organization_id', $this->user()?->organization_id)
+                    ->ignore($roleId),
+            ],
             'description' => ['nullable', 'string', 'max:1000'],
-            'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', Rule::in(PermissionCatalog::names())],
-            'is_active' => ['required', 'boolean'],
+            'permissions' => [$isUpdate ? 'sometimes' : 'required', 'array'],
+            'permissions.*' => [
+                'string',
+                'distinct',
+                Rule::in($permissionCatalog->assignableOrganizationPermissionNames()),
+            ],
+            'is_active' => [$isUpdate ? 'sometimes' : 'required', 'boolean'],
         ];
+    }
+
+    /** @return list<callable(Validator): void> */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $selected = collect($this->input('permissions', []))
+                ->filter(fn (mixed $permission): bool => is_string($permission))
+                ->values();
+
+            $catalog = collect(app(PermissionCatalogService::class)->catalog())
+                ->keyBy('id');
+
+            foreach ($selected as $permissionName) {
+                $requiredPermissions = $catalog->get($permissionName)['requires'] ?? [];
+
+                foreach ($requiredPermissions as $requiredPermission) {
+                    if (! $selected->contains($requiredPermission)) {
+                        $validator->errors()->add(
+                            'permissions',
+                            "Permission [{$permissionName}] requires [{$requiredPermission}].",
+                        );
+                    }
+                }
+            }
+        }];
     }
 }

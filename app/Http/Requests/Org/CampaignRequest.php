@@ -9,18 +9,29 @@ use Illuminate\Validation\Rule;
 
 class CampaignRequest extends FormRequest
 {
+    public function authorize(): bool
+    {
+        return true;
+    }
+
     public function rules(): array
     {
+        $isUpdate = $this->route('campaign') !== null;
+
         return [
-            'title' => ['required', 'string', 'max:255'],
-            'summary' => ['required', 'string'],
-            'category' => ['required', Rule::in(['health', 'education', 'food', 'shelter', 'employment'])],
-            'status' => ['required', Rule::in(['draft', 'active', 'closed'])],
-            'location' => ['required', 'string', 'max:255'],
-            'goalAmount' => ['required', 'numeric', 'min:0'],
-            'beneficiariesCount' => ['required', 'integer', 'min:0'],
-            'startDate' => ['required', 'date'],
-            'endDate' => ['required', 'date', 'after_or_equal:startDate'],
+            'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
+            'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
+            'category' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['health', 'education', 'food', 'shelter', 'employment'])],
+            'status' => [$isUpdate ? 'prohibited' : 'sometimes', Rule::in(['draft'])],
+            'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
+            'goalAmount' => [$isUpdate ? 'sometimes' : 'required', 'numeric', 'min:0'],
+            'beneficiariesCount' => [$isUpdate ? 'sometimes' : 'required', 'integer', 'min:0'],
+            'startDate' => [$isUpdate ? 'sometimes' : 'required', 'date'],
+            'endDate' => [
+                $isUpdate ? 'sometimes' : 'required',
+                'date',
+                Rule::when($this->filled('startDate'), ['after_or_equal:startDate']),
+            ],
         ];
     }
 }

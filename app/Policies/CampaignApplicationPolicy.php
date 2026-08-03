@@ -44,6 +44,10 @@ class CampaignApplicationPolicy
 
     private function authorizeOrganizationAction(User $user, PermissionAction ...$actions): bool
     {
+        if ($user->isOrganizationOwner()) {
+            return true;
+        }
+
         foreach ($actions as $action) {
             if ($user->can(PermissionNameResolver::resolve(PermissionGroup::ORG_APPLICANT, $action))) {
                 return true;

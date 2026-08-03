@@ -28,6 +28,7 @@ enum PermissionGroup: string
     case ORG_ROLE = 'org.roles';
     case ORG_NOTIFICATION = 'org.notifications';
     case ORG_REPORT = 'org.reports';
+    case ORG_AUDIT_LOG = 'org.audit_logs';
     case ORG_SETTINGS = 'org.settings';
 
     public function definition(): PermissionGroupDefinition
@@ -237,9 +238,23 @@ enum PermissionGroup: string
             self::ORG_REPORT => new PermissionGroupDefinition(
                 label: 'التقارير',
                 module: PermissionModule::ORGANIZATION,
-                description: 'عرض تقارير المؤسسة.',
+                description: 'عرض تقارير المؤسسة وتحديث حالتها.',
                 order: 280,
                 sectionLabel: 'التقارير',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::UPDATE,
+                    PermissionAction::CLAIM,
+                    PermissionAction::REQUEST_INFO,
+                    PermissionAction::CLOSE,
+                ],
+            ),
+            self::ORG_AUDIT_LOG => new PermissionGroupDefinition(
+                label: 'سجل نشاط المؤسسة',
+                module: PermissionModule::ORGANIZATION,
+                description: 'عرض سجل نشاط المؤسسة.',
+                order: 285,
+                sectionLabel: 'سجل النشاط',
                 actions: [PermissionAction::VIEW],
             ),
             self::ORG_SETTINGS => new PermissionGroupDefinition(

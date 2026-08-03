@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
     Route::prefix('v1/me')->group(function () {
         Route::get('/', ProfileController::class);
         Route::patch('/profile', [ProfileController::class, 'update']);
+        Route::patch('/password', [ProfileController::class, 'updatePassword']);
         Route::get('/permissions', PermissionsController::class);
         Route::get('/dashboard-context', DashboardContextController::class);
     });
@@ -116,6 +117,11 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
 
         Route::get('reports', App\Http\Controllers\API\Org\ReportController::class.'@index');
         Route::get('reports/{report}', App\Http\Controllers\API\Org\ReportController::class.'@show');
+        Route::patch('reports/{report}/status', App\Http\Controllers\API\Org\ReportController::class.'@updateStatus');
+        Route::post('reports/{report}/claim', App\Http\Controllers\API\Org\ReportController::class.'@claim');
+        Route::post('reports/{report}/request-info', App\Http\Controllers\API\Org\ReportController::class.'@requestInfo');
+        Route::post('reports/{report}/close', App\Http\Controllers\API\Org\ReportController::class.'@close');
+        Route::get('audit-logs', App\Http\Controllers\API\Org\AuditLogController::class.'@index');
 
         Route::get('profile', App\Http\Controllers\API\Org\SettingsController::class.'@profile');
         Route::put('profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
