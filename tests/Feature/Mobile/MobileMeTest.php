@@ -91,4 +91,17 @@ class MobileMeTest extends TestCase
         $response->assertJsonPath('error.code', 'validation_error');
         $response->assertJsonValidationErrors(['name', 'email'], 'error.details');
     }
+
+    public function test_mobile_profile_validation_keeps_existing_validation_error_code(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $response = $this->patchJson('/api/mobile/me/profile', [
+            'name' => '',
+            'email' => 'invalid-email',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('error.code', 'validation_error');
+    }
 }

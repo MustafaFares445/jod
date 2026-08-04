@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Mobile;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 
 class MobileApiResponse
@@ -20,6 +21,20 @@ class MobileApiResponse
             'error' => null,
             'meta' => (object) $meta,
         ]);
+    }
+
+    public static function paginated(LengthAwarePaginator $paginator, string $message = 'Records retrieved successfully.'): JsonResponse
+    {
+        return self::success(
+            data: $paginator->items(),
+            message: $message,
+            meta: [
+                'currentPage' => $paginator->currentPage(),
+                'perPage' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'lastPage' => $paginator->lastPage(),
+            ],
+        );
     }
 
     /**

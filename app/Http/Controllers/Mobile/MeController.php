@@ -22,6 +22,13 @@ class MeController extends Controller
 {
     public function __construct(private UserService $userService) {}
 
+    /**
+     * Get the authenticated mobile user profile.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{id: int, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: int|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}, error: null, meta: array}
+     */
     public function profile(Request $request): JsonResponse
     {
         $user = $request->user()->loadMissing('organization');
@@ -32,6 +39,13 @@ class MeController extends Controller
         );
     }
 
+    /**
+     * Update the authenticated mobile user profile.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{id: int, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: int|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}, error: null, meta: array}
+     */
     public function updateProfile(ProfileRequest $request): JsonResponse
     {
         $user = $this->userService->update(
@@ -45,6 +59,13 @@ class MeController extends Controller
         );
     }
 
+    /**
+     * Get the authenticated user's mobile permission catalogue.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array, error: null, meta: array}
+     */
     public function permissions(Request $request, PermissionCatalogService $permissionCatalogService): JsonResponse
     {
         return MobileApiResponse::success(
@@ -53,6 +74,13 @@ class MeController extends Controller
         );
     }
 
+    /**
+     * Get profile, permissions, and dashboard counters for mobile startup.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{profile: array, permissions: array, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: array}
+     */
     public function dashboardContext(Request $request, PermissionCatalogService $permissionCatalogService): JsonResponse
     {
         $user = $request->user();
@@ -80,6 +108,13 @@ class MeController extends Controller
         ], 'Dashboard context retrieved successfully.');
     }
 
+    /**
+     * Ping the authenticated mobile API session.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{pong: bool, userId: int}, error: null, meta: array}
+     */
     public function ping(Request $request): JsonResponse
     {
         return MobileApiResponse::success([

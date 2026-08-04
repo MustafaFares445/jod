@@ -15,6 +15,13 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    /**
+     * Log in to the mobile API.
+     *
+     * Public endpoint that returns a Sanctum bearer token and the current mobile user profile.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: int, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: int|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -46,6 +53,13 @@ class AuthController extends Controller
         ], 'Logged in successfully.');
     }
 
+    /**
+     * Log out from the mobile API.
+     *
+     * Requires a Sanctum bearer token and revokes the current access token.
+     *
+     * @response array{success: bool, message: string, data: null, error: null, meta: array}
+     */
     public function logout(Request $request): JsonResponse
     {
         $request->user()?->currentAccessToken()?->delete();
