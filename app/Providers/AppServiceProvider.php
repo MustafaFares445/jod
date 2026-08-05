@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use App\Models\User;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -32,15 +36,49 @@ class AppServiceProvider extends ServiceProvider
             return app()->environment('local') || (bool) config('scramble.allow_production_docs', false);
         });
 
-        if (! class_exists(\Dedoc\Scramble\Scramble::class)) {
+        if (! class_exists(Scramble::class)) {
             return;
         }
 
-        \Dedoc\Scramble\Scramble::configure()
+        Scramble::registerApi('mobile', [
+            'api_path' => 'api/mobile',
+            'export_path' => 'public/mobile-api.json',
+            'info' => [
+                'version' => env('API_VERSION', '1.0.0'),
+                'description' => <<<'MARKDOWN'
+# JOD Mobile API
+
+Documentation for the implemented native mobile API endpoints only. Public authentication endpoints are unauthenticated; profile endpoints require a Sanctum bearer token.
+MARKDOWN,
+            ],
+            'servers' => [
+                'Current host' => 'api/mobile',
+            ],
+            'security_strategy' => [
+                MiddlewareAuthSecurityStrategy::class,
+                [
+                    'middleware' => ['auth:sanctum', '*Authenticate:sanctum'],
+                    'scheme' => SecurityScheme::http('bearer'),
+                ],
+            ],
+            'ui' => [
+                'title' => 'JOD Mobile API',
+                'theme' => 'light',
+                'hide_try_it' => false,
+                'hide_schemas' => false,
+                'logo' => '',
+                'try_it_credentials_policy' => 'include',
+                'layout' => 'responsive',
+            ],
+        ])
+            ->routes(static fn (Route $route): bool => Str::startsWith($route->uri(), 'api/mobile/'))
+            ->expose(ui: 'docs/mobile-api', document: 'docs/mobile-api.json');
+
+        Scramble::configure()
             ->routes(static fn (Route $route): bool => Str::startsWith($route->uri(), 'api/v1/'))
-            ->withDocumentTransformers(static function (\Dedoc\Scramble\Support\Generator\OpenApi $openApi): void {
+            ->withDocumentTransformers(static function (OpenApi $openApi): void {
                 $openApi->secure(
-                    \Dedoc\Scramble\Support\Generator\SecurityScheme::http('bearer')
+                    SecurityScheme::http('bearer')
                 );
             });
     }

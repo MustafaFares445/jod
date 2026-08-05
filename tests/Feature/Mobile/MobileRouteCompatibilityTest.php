@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Mobile;
+
+use Tests\TestCase;
+
+class MobileRouteCompatibilityTest extends TestCase
+{
+    public function test_existing_mobile_route_names_and_paths_remain_registered(): void
+    {
+        $expectedRoutes = [
+            'mobile.auth.login' => ['POST', 'api/mobile/auth/login'],
+            'mobile.auth.logout' => ['POST', 'api/mobile/auth/logout'],
+            'mobile.me.profile' => ['GET', 'api/mobile/me'],
+            'mobile.me.profile.update' => ['PATCH', 'api/mobile/me/profile'],
+            'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
+        ];
+
+        foreach ($expectedRoutes as $routeName => [$method, $uri]) {
+            $route = app('router')->getRoutes()->getByName($routeName);
+
+            $this->assertNotNull($route, "Route [{$routeName}] is not registered.");
+            $this->assertSame($uri, $route->uri());
+            $this->assertContains($method, $route->methods());
+        }
+    }
+}

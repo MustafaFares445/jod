@@ -23,10 +23,13 @@ class UserService
         });
     }
 
-    public function update(UserData $data, User $user): User
+    /**
+     * @param  list<string>  $preserveNullAttributes
+     */
+    public function update(UserData $data, User $user, array $preserveNullAttributes = []): User
     {
-        return DB::transaction(static function () use ($data, $user) {
-            $attributes = $data->onlyModelAttributes();
+        return DB::transaction(static function () use ($data, $user, $preserveNullAttributes) {
+            $attributes = $data->onlyModelAttributes($preserveNullAttributes);
             if (isset($attributes['password']) && ! empty($attributes['password'])) {
                 $attributes['password'] = Hash::make($attributes['password']);
             } else {
