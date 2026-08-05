@@ -48,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
                 'description' => <<<'MARKDOWN'
 # JOD Mobile API
 
-Documentation for the implemented native mobile API endpoints only. Public authentication endpoints are unauthenticated; profile and dashboard-context endpoints require a Sanctum bearer token.
+Documentation for the implemented native mobile API endpoints only. Public authentication endpoints are unauthenticated; profile endpoints require a Sanctum bearer token.
 MARKDOWN,
             ],
             'servers' => [

@@ -18,7 +18,11 @@ class UserData extends Data
         public ?string $organizationId = null,
     ) {}
 
-    public function onlyModelAttributes(): array
+    /**
+     * @param  list<string>  $preserveNullAttributes
+     * @return array<string, mixed>
+     */
+    public function onlyModelAttributes(array $preserveNullAttributes = []): array
     {
         return array_filter([
             'name' => $this->name,
@@ -28,6 +32,6 @@ class UserData extends Data
             'user_type' => $this->userType,
             'status' => $this->status,
             'organization_id' => $this->organizationId,
-        ], static fn (mixed $value): bool => $value !== null);
+        ], static fn (mixed $value, string $attribute): bool => $value !== null || in_array($attribute, $preserveNullAttributes, true), ARRAY_FILTER_USE_BOTH);
     }
 }

@@ -37,7 +37,5 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
-            Route::get('dashboard-context', [MeController::class, 'dashboardContext'])->name('dashboard-context');
-            Route::get('ping', [MeController::class, 'ping'])->name('ping');
         });
 });

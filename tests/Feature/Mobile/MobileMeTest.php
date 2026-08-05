@@ -16,26 +16,12 @@ class MobileMeTest extends TestCase
 
     public function test_protected_mobile_endpoint_returns_mobile_error_envelope_when_unauthenticated(): void
     {
-        $response = $this->getJson('/api/mobile/me/ping');
+        $response = $this->getJson('/api/mobile/me');
 
         $response->assertUnauthorized();
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('data', null);
         $response->assertJsonPath('error.code', 'unauthenticated');
-    }
-
-    public function test_mobile_ping_returns_current_user(): void
-    {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
-
-        $response = $this->getJson('/api/mobile/me/ping');
-
-        $response->assertOk();
-        $response->assertJsonPath('success', true);
-        $response->assertJsonPath('data.pong', true);
-        $response->assertJsonPath('data.userId', $user->id);
-        $response->assertJsonPath('error', null);
     }
 
     public function test_mobile_profile_includes_loaded_organization_without_sensitive_fields(): void
@@ -74,6 +60,25 @@ class MobileMeTest extends TestCase
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
             'email' => 'updated-mobile@example.com',
+        ]);
+    }
+
+    public function test_mobile_profile_phone_can_be_cleared(): void
+    {
+        $user = User::factory()->create(['phone' => '+962790000000']);
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson('/api/mobile/me/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => null,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.phone', null);
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'phone' => null,
         ]);
     }
 

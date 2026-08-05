@@ -3,7 +3,7 @@
     "info": {
         "title": "JOD Mobile API",
         "version": "1.0.0",
-        "description": "# JOD Mobile API\n\nDocumentation for the implemented native mobile API endpoints only. Public authentication endpoints are unauthenticated; profile and dashboard-context endpoints require a Sanctum bearer token."
+        "description": "# JOD Mobile API\n\nDocumentation for the implemented native mobile API endpoints only. Public authentication endpoints are unauthenticated; profile endpoints require a Sanctum bearer token."
     },
     "servers": [
         {
@@ -62,7 +62,7 @@
                                                     "type": "object",
                                                     "properties": {
                                                         "id": {
-                                                            "type": "integer"
+                                                            "type": "string"
                                                         },
                                                         "name": {
                                                             "type": "string"
@@ -90,16 +90,55 @@
                                                         },
                                                         "organizationId": {
                                                             "type": [
-                                                                "integer",
+                                                                "string",
                                                                 "null"
                                                             ]
                                                         },
                                                         "organization": {
                                                             "type": [
-                                                                "array",
+                                                                "object",
                                                                 "null"
                                                             ],
-                                                            "items": {}
+                                                            "properties": {
+                                                                "id": {
+                                                                    "type": "string"
+                                                                },
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "email": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "phone": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "status": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "verificationStatus": {
+                                                                    "type": [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "id",
+                                                                "name",
+                                                                "email",
+                                                                "phone",
+                                                                "status",
+                                                                "verificationStatus"
+                                                            ]
                                                         },
                                                         "createdAt": {
                                                             "type": [
@@ -138,8 +177,9 @@
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "properties": {},
+                                            "additionalProperties": true
                                         }
                                     },
                                     "required": [
@@ -189,8 +229,9 @@
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "properties": {},
+                                            "additionalProperties": true
                                         }
                                     },
                                     "required": [
@@ -236,7 +277,7 @@
                                             "type": "object",
                                             "properties": {
                                                 "id": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "name": {
                                                     "type": "string"
@@ -264,16 +305,55 @@
                                                 },
                                                 "organizationId": {
                                                     "type": [
-                                                        "integer",
+                                                        "string",
                                                         "null"
                                                     ]
                                                 },
                                                 "organization": {
                                                     "type": [
-                                                        "array",
+                                                        "object",
                                                         "null"
                                                     ],
-                                                    "items": {}
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "email": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "phone": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "status": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "verificationStatus": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "name",
+                                                        "email",
+                                                        "phone",
+                                                        "status",
+                                                        "verificationStatus"
+                                                    ]
                                                 },
                                                 "createdAt": {
                                                     "type": [
@@ -305,8 +385,9 @@
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "properties": {},
+                                            "additionalProperties": true
                                         }
                                     },
                                     "required": [
@@ -362,7 +443,7 @@
                                             "type": "object",
                                             "properties": {
                                                 "id": {
-                                                    "type": "integer"
+                                                    "type": "string"
                                                 },
                                                 "name": {
                                                     "type": "string"
@@ -390,16 +471,55 @@
                                                 },
                                                 "organizationId": {
                                                     "type": [
-                                                        "integer",
+                                                        "string",
                                                         "null"
                                                     ]
                                                 },
                                                 "organization": {
                                                     "type": [
-                                                        "array",
+                                                        "object",
                                                         "null"
                                                     ],
-                                                    "items": {}
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "email": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "phone": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "status": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "verificationStatus": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "name",
+                                                        "email",
+                                                        "phone",
+                                                        "status",
+                                                        "verificationStatus"
+                                                    ]
                                                 },
                                                 "createdAt": {
                                                     "type": [
@@ -431,8 +551,9 @@
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "array",
-                                            "items": {}
+                                            "type": "object",
+                                            "properties": {},
+                                            "additionalProperties": true
                                         }
                                     },
                                     "required": [
@@ -485,154 +606,9 @@
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "array",
-                                            "items": {}
-                                        }
-                                    },
-                                    "required": [
-                                        "success",
-                                        "message",
-                                        "data",
-                                        "error",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                }
-            }
-        },
-        "/me/dashboard-context": {
-            "get": {
-                "operationId": "mobile.me.dashboard-context",
-                "description": "Requires a Sanctum bearer token.",
-                "summary": "Get profile, permissions, and dashboard counters for mobile startup",
-                "tags": [
-                    "Me"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
                                             "type": "object",
-                                            "properties": {
-                                                "profile": {
-                                                    "type": "array",
-                                                    "items": {}
-                                                },
-                                                "permissions": {
-                                                    "type": "array",
-                                                    "items": {}
-                                                },
-                                                "counters": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "unreadNotifications": {
-                                                            "type": "integer"
-                                                        },
-                                                        "pendingReviews": {
-                                                            "type": "integer"
-                                                        },
-                                                        "openReports": {
-                                                            "type": "integer"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "unreadNotifications",
-                                                        "pendingReviews",
-                                                        "openReports"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "profile",
-                                                "permissions",
-                                                "counters"
-                                            ]
-                                        },
-                                        "error": {
-                                            "type": "null"
-                                        },
-                                        "meta": {
-                                            "type": "array",
-                                            "items": {}
-                                        }
-                                    },
-                                    "required": [
-                                        "success",
-                                        "message",
-                                        "data",
-                                        "error",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                }
-            }
-        },
-        "/me/ping": {
-            "get": {
-                "operationId": "mobile.me.ping",
-                "description": "Requires a Sanctum bearer token.",
-                "summary": "Ping the authenticated mobile API session",
-                "tags": [
-                    "Me"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "pong": {
-                                                    "type": "boolean"
-                                                },
-                                                "userId": {
-                                                    "type": "integer"
-                                                }
-                                            },
-                                            "required": [
-                                                "pong",
-                                                "userId"
-                                            ]
-                                        },
-                                        "error": {
-                                            "type": "null"
-                                        },
-                                        "meta": {
-                                            "type": "array",
-                                            "items": {}
+                                            "properties": {},
+                                            "additionalProperties": true
                                         }
                                     },
                                     "required": [
