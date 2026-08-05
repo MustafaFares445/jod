@@ -15,7 +15,11 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')
     ->name('auth.')
     ->group(function (): void {
+        Route::post('register', [AuthController::class, 'register'])->name('register');
         Route::post('login', [AuthController::class, 'login'])->name('login');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot-password');
+        Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])->name('verify-reset-code');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
     });
 
 /*
@@ -36,6 +40,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
+            Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
+            Route::get('dashboard-context', [MeController::class, 'dashboardContext'])->name('dashboard-context');
+            Route::get('ping', [MeController::class, 'ping'])->name('ping');
         });
 });

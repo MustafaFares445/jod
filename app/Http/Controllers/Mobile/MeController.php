@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Mobile;
 
 use App\Data\UserData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Mobile\ChangePasswordRequest;
 use App\Http\Requests\Mobile\ProfileRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Services\Permissions\PermissionCatalogService;
@@ -13,6 +14,7 @@ use App\Services\UserService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class MeController extends Controller
 {
@@ -54,6 +56,28 @@ class MeController extends Controller
             UserResource::make($user)->resolve($request),
             'Profile updated successfully.',
         );
+    }
+
+    /**
+     * Change the authenticated mobile user password.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{passwordChanged: bool}, error: null, meta: array}
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! Hash::check($request->validated('currentPassword'), $user->password)) {
+            return MobileApiResponse::error('invalid_credentials', 'The current password is incorrect.', null, 422);
+        }
+
+        $this->userService->updatePassword($user, $request->validated('password'));
+
+        return MobileApiResponse::success([
+            'passwordChanged' => true,
+        ], 'Password changed successfully.');
     }
 
     /**
