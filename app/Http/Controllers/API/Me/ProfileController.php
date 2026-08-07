@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API\Me;
 
 use App\Data\UserData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Me\PasswordRequest;
 use App\Http\Requests\Me\ProfileRequest;
 use App\Services\UserService;
 use Illuminate\Http\Request;
@@ -30,6 +31,19 @@ class ProfileController extends Controller
 
         return [
             'data' => $this->profileData($updated),
+        ];
+    }
+
+    public function updatePassword(PasswordRequest $request): array
+    {
+        $updated = $this->service->updatePassword(
+            $request->user(),
+            (string) $request->validated('newPassword'),
+        );
+
+        return [
+            'data' => $this->profileData($updated),
+            'message' => 'Password updated successfully.',
         ];
     }
 

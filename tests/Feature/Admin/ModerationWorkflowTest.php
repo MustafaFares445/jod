@@ -183,6 +183,7 @@ class ModerationWorkflowTest extends TestCase
             ->assertJsonPath('data.status', 'sent');
 
         $this->deleteJson("/api/v1/admin/notifications/{$created}")
-            ->assertNoContent();
+            ->assertOk()
+            ->assertJsonPath('message', 'Data deleted successfully.');
     }
 }

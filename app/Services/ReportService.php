@@ -23,11 +23,19 @@ class ReportService
             $query->where('organization_id', $organizationId);
         }
 
+        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
+
         $query
             ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($severity = $this->param($params, 'filter.severity')) && $severity !== 'all', fn (Builder $builder) => $builder->where('severity', $severity))
             ->when(($entityType = $this->param($params, 'filter.entityType')) && $entityType !== 'all', fn (Builder $builder) => $builder->where('entity_type', $entityType))
-            ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category));
+            ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
+            ->when($search, function (Builder $builder) use ($search): void {
+                $builder->where(function (Builder $inner) use ($search): void {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            });
 
         match ($sort) {
             'createdAt', 'submittedAt' => $query->orderBy('created_at'),
@@ -86,6 +94,22 @@ class ReportService
         ]);
 
         return $report;
+    }
+
+    public function updateStatus(Report $report, string $status, string $actorName, ?string $note = null, int|string|null $assigneeId = null): Report
+    {
+        if ($report->status === $status) {
+            return $report;
+        }
+
+        return match ($status) {
+            'in_progress' => $this->claim($report, $assigneeId, $actorName, $note),
+            'waiting_response' => $this->requestInfo($report, $note, $actorName),
+            'closed' => $this->close($report, $note, $actorName),
+            default => throw ValidationException::withMessages([
+                'status' => ['Unsupported report status transition.'],
+            ]),
+        };
     }
 
     private function appendTimeline(mixed $timeline, string $action, string $label, string $actorName, ?string $note = null): array

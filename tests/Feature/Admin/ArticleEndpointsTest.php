@@ -126,7 +126,7 @@ class ArticleEndpointsTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/admin/articles/{$article->id}");
 
-        $response->assertNoContent();
+        $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
         $this->assertDatabaseMissing('articles', ['id' => $article->id]);
     }
 

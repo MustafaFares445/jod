@@ -9,56 +9,53 @@ class DonorSeeder extends Seeder
 {
     public function run(): void
     {
-        // Donor 1
         Donor::create([
             'id' => SeedIds::id('donors.ahmedMohammed'),
             'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
-            'name' => 'Ahmed Mohammed',
+            'name' => 'أحمد محمد',
             'email' => 'ahmed@example.com',
             'phone' => '+962791234567',
-            'campaign_title' => 'Emergency Medical Fund',
+            'campaign_title' => 'صندوق العلاج الطبي الطارئ',
             'amount_or_type' => '500.00',
             'donated_at' => now()->subDays(5),
-            'city' => 'Amman',
+            'city' => 'عمّان',
             'source' => 'website',
             'payment_method' => 'credit_card',
             'campaign_ref' => 'REF-2025-001',
             'assigned_to' => SeedIds::id('users.sarahAhmed'),
-            'internal_notes' => 'VIP donor - send thank you gift',
+            'internal_notes' => 'متبرع مهم، يُرجى إرسال هدية شكر.',
         ]);
 
-        // Donor 2
         Donor::create([
             'id' => SeedIds::id('donors.fatimaHassan'),
             'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
-            'name' => 'Fatima Hassan',
+            'name' => 'فاطمة حسن',
             'email' => 'fatima@example.com',
             'phone' => '+962791234568',
-            'campaign_title' => 'Emergency Medical Fund',
+            'campaign_title' => 'صندوق العلاج الطبي الطارئ',
             'amount_or_type' => '1000.00',
             'donated_at' => now()->subDays(3),
-            'city' => 'Zarqa',
+            'city' => 'الزرقاء',
             'source' => 'website',
             'payment_method' => 'bank_transfer',
             'campaign_ref' => 'REF-2025-002',
             'assigned_to' => SeedIds::id('users.sarahAhmed'),
-            'internal_notes' => 'Large donor - personal follow-up needed',
+            'internal_notes' => 'تبرع كبير يحتاج إلى متابعة شخصية.',
         ]);
 
-        // Donor 3
         Donor::create([
             'id' => SeedIds::id('donors.mohammadHassan'),
             'organization_id' => SeedIds::id('organizations.educationInitiative'),
             'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
-            'name' => 'Mohammad Hassan',
+            'name' => 'محمد حسن',
             'email' => 'mohammad@example.com',
             'phone' => '+962791234569',
-            'campaign_title' => 'Back to School Initiative',
+            'campaign_title' => 'مبادرة العودة إلى المدارس',
             'amount_or_type' => '250.00',
             'donated_at' => now()->subDays(2),
-            'city' => 'Amman',
+            'city' => 'عمّان',
             'source' => 'mobile_app',
             'payment_method' => 'credit_card',
             'campaign_ref' => 'REF-2025-003',
@@ -66,42 +63,40 @@ class DonorSeeder extends Seeder
             'internal_notes' => null,
         ]);
 
-        // Donor 4
         Donor::create([
             'id' => SeedIds::id('donors.sarahWilliams'),
             'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
-            'name' => 'Sarah Williams',
+            'name' => 'سارة وليامز',
             'email' => 'sarah@example.com',
             'phone' => '+962791234570',
-            'campaign_title' => 'Emergency Medical Fund',
+            'campaign_title' => 'صندوق العلاج الطبي الطارئ',
             'amount_or_type' => '2000.00',
-            'donated_at' => now()->subDays(1),
-            'city' => 'Amman',
+            'donated_at' => now()->subDay(),
+            'city' => 'عمّان',
             'source' => 'social_media',
             'payment_method' => 'credit_card',
             'campaign_ref' => 'REF-2025-004',
             'assigned_to' => SeedIds::id('users.sarahAhmed'),
-            'internal_notes' => 'International donor - send international receipt',
+            'internal_notes' => 'متبرعة دولية، يُرجى إرسال إيصال دولي.',
         ]);
 
-        // Donor 5
         Donor::create([
             'id' => SeedIds::id('donors.aliAbdullah'),
             'organization_id' => SeedIds::id('organizations.educationInitiative'),
             'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
-            'name' => 'Ali Abdullah',
+            'name' => 'علي عبد الله',
             'email' => 'ali@example.com',
             'phone' => '+962791234571',
-            'campaign_title' => 'Back to School Initiative',
+            'campaign_title' => 'مبادرة العودة إلى المدارس',
             'amount_or_type' => '500.00',
             'donated_at' => now()->subHours(12),
-            'city' => 'Irbid',
+            'city' => 'إربد',
             'source' => 'direct',
             'payment_method' => 'cash',
             'campaign_ref' => 'REF-2025-005',
             'assigned_to' => null,
-            'internal_notes' => 'Cash donation received at office',
+            'internal_notes' => 'تم استلام التبرع النقدي في مكتب المؤسسة.',
         ]);
     }
 }

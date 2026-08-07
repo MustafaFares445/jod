@@ -10,57 +10,52 @@ use App\Http\Resources\Org\StaffResource;
 use App\Models\OrganizationStaff;
 use App\Services\OrganizationStaffService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class StaffController extends Controller
 {
-    public function __construct(private OrganizationStaffService $service) {}
+    public function __construct(private readonly OrganizationStaffService $service) {}
 
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $user = auth()->user();
-        if (! $user || ! $user->organization_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $this->authorize('viewAny', OrganizationStaff::class);
+        $organization = $request->user()->organization;
 
-        $organization = $user->organization;
-        if (! $organization) {
-            return response()->json(['message' => 'Organization not found'], 404);
+        if ($organization === null) {
+            throw ValidationException::withMessages([
+                'organizationId' => ['Authenticated user is not linked to an organization.'],
+            ]);
         }
 
         $filters = [
             'role' => $request->input('filter.role'),
+            'status' => $request->input('filter.status'),
             'sort' => $request->input('sort', '-invitedAt'),
         ];
 
-        $staff = $this->service->getStaff($organization, $filters, $request->integer('perPage', 20));
-
-        return StaffResource::collection($staff);
+        return StaffResource::collection(
+            $this->service->getStaff($organization, $filters, $request->integer('perPage', 20)),
+        );
     }
 
     public function store(StaffRequest $request): StaffResource
     {
-        $user = auth()->user();
-        if (! $user || ! $user->organization_id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
-
         $this->authorize('create', OrganizationStaff::class);
+        $organization = $request->user()->organization;
 
-        $organization = $user->organization;
-        if (! $organization) {
-            return response()->json(['message' => 'Organization not found'], 404);
+        if ($organization === null) {
+            throw ValidationException::withMessages([
+                'organizationId' => ['Authenticated user is not linked to an organization.'],
+            ]);
         }
 
-        $staff = $this->service->inviteStaff(
+        return StaffResource::make($this->service->inviteStaff(
             $organization,
             $request->validated(),
             (string) $request->user()->id,
-        );
-
-        return StaffResource::make($staff->load('role'));
+        ));
     }
 
     public function show(OrganizationStaff $staff): StaffResource
@@ -74,19 +69,16 @@ class StaffController extends Controller
     {
         $this->authorize('update', $staff);
 
-        $updated = $this->service->updateStaff(
+        return StaffResource::make($this->service->updateStaff(
             $staff,
             $request->validated(),
             (string) $request->user()->id,
-        );
-
-        return StaffResource::make($updated->load('role'));
+        ));
     }
 
     public function destroy(Request $request, OrganizationStaff $staff): Response
     {
         $this->authorize('delete', $staff);
-
         $this->service->removeStaff($staff, (string) $request->user()->id);
 
         return response()->noContent();

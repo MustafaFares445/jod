@@ -11,8 +11,8 @@ class BadgeSeeder extends Seeder
     {
         Badge::create([
             'id' => SeedIds::id('badges.topDonor'),
-            'name' => 'Top Donor',
-            'description' => 'Given to users who have donated over $1000',
+            'name' => 'كبير المتبرعين',
+            'description' => 'تُمنح للمستخدمين الذين تجاوز مجموع تبرعاتهم 1000 دولار.',
             'criteria' => 'total_donations >= 1000',
             'icon_name' => 'star',
             'is_active' => true,
@@ -21,8 +21,8 @@ class BadgeSeeder extends Seeder
 
         Badge::create([
             'id' => SeedIds::id('badges.volunteerChampion'),
-            'name' => 'Volunteer Champion',
-            'description' => 'Given to volunteers with 50+ hours of service',
+            'name' => 'بطل التطوع',
+            'description' => 'تُمنح للمتطوعين الذين أكملوا أكثر من 50 ساعة خدمة.',
             'criteria' => 'volunteer_hours >= 50',
             'icon_name' => 'heart',
             'is_active' => true,
@@ -31,8 +31,8 @@ class BadgeSeeder extends Seeder
 
         Badge::create([
             'id' => SeedIds::id('badges.organizationLeader'),
-            'name' => 'Organization Leader',
-            'description' => 'For organizations with 5+ successful campaigns',
+            'name' => 'قائد المؤسسة',
+            'description' => 'تُمنح للمؤسسات التي أنجزت خمس حملات ناجحة أو أكثر.',
             'criteria' => 'successful_campaigns >= 5',
             'icon_name' => 'medal',
             'is_active' => true,
@@ -41,8 +41,8 @@ class BadgeSeeder extends Seeder
 
         Badge::create([
             'id' => SeedIds::id('badges.earlySupporter'),
-            'name' => 'Early Supporter',
-            'description' => 'For users who joined in the first month',
+            'name' => 'الداعم المبكر',
+            'description' => 'تُمنح للمستخدمين الذين انضموا خلال الشهر الأول لإطلاق المنصة.',
             'criteria' => 'joined_in_first_month = true',
             'icon_name' => 'rocket',
             'is_active' => true,
@@ -51,8 +51,8 @@ class BadgeSeeder extends Seeder
 
         Badge::create([
             'id' => SeedIds::id('badges.communityHero'),
-            'name' => 'Community Hero',
-            'description' => 'For active community members with high engagement',
+            'name' => 'بطل المجتمع',
+            'description' => 'تُمنح لأعضاء المجتمع النشطين ذوي التفاعل المرتفع.',
             'criteria' => 'community_score >= 100',
             'icon_name' => 'award',
             'is_active' => true,

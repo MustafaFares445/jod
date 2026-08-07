@@ -9,99 +9,94 @@ class ApplicantSeeder extends Seeder
 {
     public function run(): void
     {
-        // Applicant 1
         Applicant::create([
             'id' => SeedIds::id('applicants.leilaMohammed'),
             'organization_id' => SeedIds::id('organizations.educationInitiative'),
             'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
-            'name' => 'Leila Mohammed',
+            'name' => 'ليلى محمد',
             'email' => 'leila@example.com',
             'phone' => '+962791234572',
-            'campaign_title' => 'Back to School',
-            'amount_or_type' => 'Approved',
+            'campaign_title' => 'مبادرة العودة إلى المدارس',
+            'amount_or_type' => 'مقبول',
             'applied_at' => now()->subDays(10),
-            'city' => 'Zarqa',
+            'city' => 'الزرقاء',
             'source' => 'internal',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-001',
             'assigned_to' => SeedIds::id('users.fatimaHassan'),
-            'internal_notes' => 'Pending documents verification',
+            'internal_notes' => 'بانتظار التحقق من الوثائق.',
         ]);
 
-        // Applicant 2
         Applicant::create([
             'id' => SeedIds::id('applicants.noorHassan'),
             'organization_id' => SeedIds::id('organizations.educationInitiative'),
             'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
-            'name' => 'Noor Hassan',
+            'name' => 'نور حسن',
             'email' => 'noor@example.com',
             'phone' => '+962791234573',
-            'campaign_title' => 'Back to School',
-            'amount_or_type' => 'Pending',
+            'campaign_title' => 'مبادرة العودة إلى المدارس',
+            'amount_or_type' => 'قيد الانتظار',
             'applied_at' => now()->subDays(5),
-            'city' => 'Amman',
+            'city' => 'عمّان',
             'source' => 'website',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-002',
             'assigned_to' => null,
-            'internal_notes' => 'Waiting for additional documentation',
+            'internal_notes' => 'بانتظار وثائق إضافية.',
         ]);
 
-        // Applicant 3
         Applicant::create([
             'id' => SeedIds::id('applicants.omarSalem'),
             'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
-            'name' => 'Omar Salem',
+            'name' => 'عمر سالم',
             'email' => 'omar@example.com',
             'phone' => '+962791234574',
-            'campaign_title' => 'Emergency Medical Fund',
-            'amount_or_type' => 'Approved',
+            'campaign_title' => 'صندوق العلاج الطبي الطارئ',
+            'amount_or_type' => 'مقبول',
             'applied_at' => now()->subDays(15),
-            'city' => 'Amman',
+            'city' => 'عمّان',
             'source' => 'phone',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-003',
             'assigned_to' => SeedIds::id('users.sarahAhmed'),
-            'internal_notes' => 'Urgent case - high priority',
+            'internal_notes' => 'حالة عاجلة ذات أولوية مرتفعة.',
         ]);
 
-        // Applicant 4
         Applicant::create([
             'id' => SeedIds::id('applicants.zainabAhmed'),
             'organization_id' => SeedIds::id('organizations.educationInitiative'),
             'campaign_id' => SeedIds::id('campaigns.backToSchoolInitiative'),
-            'name' => 'Zainab Ahmed',
+            'name' => 'زينب أحمد',
             'email' => 'zainab@example.com',
             'phone' => '+962791234575',
-            'campaign_title' => 'Back to School',
-            'amount_or_type' => 'Rejected',
+            'campaign_title' => 'مبادرة العودة إلى المدارس',
+            'amount_or_type' => 'مرفوض',
             'applied_at' => now()->subDays(20),
-            'city' => 'Zarqa',
+            'city' => 'الزرقاء',
             'source' => 'social_media',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-004',
             'assigned_to' => SeedIds::id('users.fatimaHassan'),
-            'internal_notes' => 'Does not meet criteria for this campaign',
+            'internal_notes' => 'لا تنطبق عليها شروط الاستفادة من هذه الحملة.',
         ]);
 
-        // Applicant 5
         Applicant::create([
             'id' => SeedIds::id('applicants.raniaHassan'),
             'organization_id' => SeedIds::id('organizations.helpFoundation'),
             'campaign_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
-            'name' => 'Rania Hassan',
+            'name' => 'رانيا حسن',
             'email' => 'rania@example.com',
             'phone' => '+962791234576',
-            'campaign_title' => 'Emergency Medical Fund',
-            'amount_or_type' => 'Pending',
+            'campaign_title' => 'صندوق العلاج الطبي الطارئ',
+            'amount_or_type' => 'قيد الانتظار',
             'applied_at' => now()->subDays(3),
-            'city' => 'Irbid',
+            'city' => 'إربد',
             'source' => 'website',
             'payment_method' => null,
             'campaign_ref' => 'APP-2025-005',
             'assigned_to' => null,
-            'internal_notes' => 'Recently submitted - under review',
+            'internal_notes' => 'طلب جديد قيد المراجعة.',
         ]);
     }
 }

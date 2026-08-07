@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Services\Permissions;
 
+use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Enums\PermissionModule;
 use App\Models\User;
 use App\Support\Permissions\PermissionCatalog;
+use App\Support\Permissions\PermissionNameResolver;
 use Illuminate\Support\Collection;
 
 class PermissionCatalogService
 {
     public function forUser(User $user): array
     {
-        $permissions = PermissionCatalog::permissions();
+        $permissions = PermissionCatalog::permissions()
+            ->reject(fn (array $permission): bool => $permission['group'] === PermissionGroup::ORG_NOTIFICATION);
 
         $allowed = $user->getAllPermissions()
             ->pluck('name')
@@ -44,17 +47,44 @@ class PermissionCatalogService
     }
 
     /**
-     * @return list<array{id: string, name: string, group: string}>
+     * @return list<array{
+     *     id: string,
+     *     name: string,
+     *     group: string,
+     *     description: string,
+     *     action: string,
+     *     requires: list<string>,
+     *     assignable: bool
+     * }>
      */
     public function catalog(): array
     {
         return PermissionCatalog::permissions()
-            ->filter(fn (array $permission): bool => $permission['group']->module() === PermissionModule::ORGANIZATION)
+            ->filter(fn (array $permission): bool => $permission['group'] === PermissionGroup::DASHBOARD
+                || $permission['group']->module() === PermissionModule::ORGANIZATION)
+            ->reject(fn (array $permission): bool => in_array($permission['group'], [
+                PermissionGroup::ORG_STAFF,
+                PermissionGroup::ORG_ROLE,
+                PermissionGroup::ORG_NOTIFICATION,
+            ], true))
             ->map(fn (array $permission): array => [
                 'id' => $permission['name'],
                 'name' => $permission['label'],
                 'group' => $permission['group']->label(),
+                'description' => $permission['group']->description(),
+                'action' => $permission['action']->value,
+                'requires' => $this->requiredPermissions($permission['group'], $permission['action']),
+                'assignable' => true,
             ])
+            ->values()
+            ->all();
+    }
+
+    /** @return list<string> */
+    public function assignableOrganizationPermissionNames(): array
+    {
+        return collect($this->catalog())
+            ->pluck('id')
             ->values()
             ->all();
     }
@@ -101,5 +131,15 @@ class PermissionCatalogService
                 ->values()
                 ->all(),
         ];
+    }
+
+    /** @return list<string> */
+    private function requiredPermissions(PermissionGroup $group, PermissionAction $action): array
+    {
+        if ($action === PermissionAction::VIEW || ! in_array(PermissionAction::VIEW, $group->actions(), true)) {
+            return [];
+        }
+
+        return [PermissionNameResolver::resolve($group, PermissionAction::VIEW)];
     }
 }

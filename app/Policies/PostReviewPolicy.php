@@ -90,9 +90,8 @@ class PostReviewPolicy
 
     private function authorizeOrganizationAction(User $user, PermissionAction $action): bool
     {
-        return $user->can(
-            PermissionNameResolver::resolve(PermissionGroup::ORG_POST, $action)
-        );
+        return $user->isOrganizationOwner()
+            || $user->can(PermissionNameResolver::resolve(PermissionGroup::ORG_POST, $action));
     }
 
     private function sameOrganization(User $user, Post $model): bool

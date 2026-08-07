@@ -15,12 +15,13 @@ class DonorService
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeSort($params);
+        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Donation::query()
             ->where('organization_id', $organizationId)
             ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', $campaignId))
             ->when(($city = $this->param($params, 'filter.city')) && $city !== 'all', fn (Builder $builder) => $builder->where('city', $city))
-            ->when(($search = $this->param($params, 'filter.search')) && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
@@ -83,10 +84,18 @@ class DonorService
 
     private function resolveCampaignId(string $campaignTitle, string $organizationId): ?string
     {
-        return Campaign::query()
+        $campaignId = Campaign::query()
             ->where('organization_id', $organizationId)
             ->where('title', $campaignTitle)
             ->value('id');
+
+        if ($campaignId === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'campaignTitle' => ['Selected campaign does not belong to the organization.'],
+            ]);
+        }
+
+        return (string) $campaignId;
     }
 
     private function normalizeSort(array $params): string

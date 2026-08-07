@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['id', 'name', 'email', 'password', 'phone', 'status', 'user_type', 'organization_id', 'last_active_at'])]
@@ -22,7 +22,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, HasPermissions, HasRoles, HasStringPrimaryKey, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, HasStringPrimaryKey, Notifiable;
 
     public $incrementing = false;
 
@@ -40,6 +40,44 @@ class User extends Authenticatable
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function organizationStaffMembership(): HasOne
+    {
+        return $this->hasOne(OrganizationStaff::class);
+    }
+
+    public function activeOrganizationStaffMembership(): HasOne
+    {
+        return $this->organizationStaffMembership()
+            ->where('organization_id', $this->organization_id)
+            ->where('status', 'active');
+    }
+
+    public function organizationDashboardRole(): ?string
+    {
+        if ($this->user_type === 'admin') {
+            return 'admin';
+        }
+
+        if ($this->organization_id === null) {
+            return null;
+        }
+
+        $membership = $this->activeOrganizationStaffMembership()
+            ->with('role')
+            ->first();
+
+        if ($membership === null || $membership->role === null || ! $membership->role->is_active) {
+            return null;
+        }
+
+        return $membership->isOwner() ? 'org_owner' : 'org_staff';
+    }
+
+    public function isOrganizationOwner(): bool
+    {
+        return $this->organizationDashboardRole() === 'org_owner';
     }
 
     public function reports(): HasMany

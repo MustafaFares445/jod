@@ -56,15 +56,17 @@ class PostService
 
     public function paginate(array $params, int $organizationId): LengthAwarePaginator
     {
-        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
         $sort = $this->normalizeSort($params);
+        $status = $params['status'] ?? $this->param($params, 'filter.status');
+        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Post::query()
             ->with('campaign')
             ->where('organization_id', $organizationId)
-            ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
+            ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
-            ->when(($search = $this->param($params, 'filter.search')) && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
@@ -83,7 +85,7 @@ class PostService
         return $query->paginate($perPage);
     }
 
-    public function create(PostData $data, int $organizationId): Post
+    public function create(PostData $data, string $organizationId): Post
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
@@ -100,7 +102,7 @@ class PostService
         ]);
     }
 
-    public function update(Post $post, PostData $data, int $organizationId): Post
+    public function update(Post $post, PostData $data, string $organizationId): Post
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
@@ -118,6 +120,22 @@ class PostService
         ]);
 
         return $post;
+    }
+
+    public function updateStatus(Post $post, string $status): Post
+    {
+        if ($post->status === $status) {
+            return $post;
+        }
+
+        return match ("{$post->status}:{$status}") {
+            'draft:published' => $this->publish($post),
+            'published:archived' => $this->archive($post),
+            'archived:draft' => $this->restore($post),
+            default => throw ValidationException::withMessages([
+                'status' => ["Post status cannot transition from {$post->status} to {$status}."],
+            ]),
+        };
     }
 
     public function publish(Post $post): Post
@@ -164,20 +182,35 @@ class PostService
         $post->delete();
     }
 
-    private function resolveCampaignId(?string $campaignTitle, int $organizationId): ?int
+    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
     {
         if (! $campaignTitle) {
             return null;
         }
 
-        return Campaign::query()
+        $campaignId = Campaign::query()
             ->where('organization_id', $organizationId)
             ->where('title', $campaignTitle)
             ->value('id');
+
+        if ($campaignId === null) {
+            throw ValidationException::withMessages([
+                'campaignTitle' => ['Selected campaign does not belong to the organization.'],
+            ]);
+        }
+
+        return (string) $campaignId;
     }
 
     private function normalizeSort(array $params): string
     {
+        $sortingField = (string) ($params['sortingField'] ?? '');
+        if ($sortingField !== '') {
+            $direction = ($params['sortingDir'] ?? 'desc') === 'asc' ? '' : '-';
+
+            return $direction.$sortingField;
+        }
+
         $sort = (string) ($params['sort'] ?? '');
         if ($sort !== '') {
             return $sort;

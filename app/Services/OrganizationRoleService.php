@@ -7,14 +7,22 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
+use App\Services\Permissions\OrganizationPermissionSyncService;
+use App\Services\Permissions\PermissionCatalogService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrganizationRoleService
 {
+    public function __construct(
+        private readonly OrganizationPermissionSyncService $permissionSyncService,
+        private readonly PermissionCatalogService $permissionCatalogService,
+    ) {}
+
     public function getRoles(Organization $organization, array $filters = [], int $perPage = 20): LengthAwarePaginator
     {
-        $query = $organization->roles();
+        $query = $organization->roles()->withCount('staff');
 
         if (isset($filters['status'])) {
             $query->where('is_active', $filters['status'] === 'active');
@@ -29,31 +37,38 @@ class OrganizationRoleService
 
     public function createRole(Organization $organization, array $data, string $actorUserId): OrganizationRole
     {
-        $role = DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationRole {
+        return DB::transaction(function () use ($organization, $data, $actorUserId): OrganizationRole {
+            $permissions = $this->normalizePermissions($data['permissions'] ?? []);
+
             $role = $organization->roles()->create([
                 'name' => $data['name'],
                 'description' => $data['description'] ?? null,
-                'permissions' => array_values(array_unique($data['permissions'] ?? [])),
+                'permissions' => $permissions,
                 'is_active' => $data['is_active'] ?? true,
+                'is_system' => false,
             ]);
 
-            $this->logAudit($actorUserId, 'role.created', 'OrganizationRole', (string) $role->id, ['name' => $role->name]);
+            $this->logAudit($actorUserId, 'role.created', 'OrganizationRole', (string) $role->id, [
+                'name' => $role->name,
+                'permissions' => $permissions,
+            ]);
 
             return $role;
         });
-
-        return $role;
     }
 
     public function updateRole(OrganizationRole $role, array $data, string $actorUserId): OrganizationRole
     {
+        abort_if($role->is_system, Response::HTTP_CONFLICT, 'System roles cannot be modified.');
+
         return DB::transaction(function () use ($role, $data, $actorUserId): OrganizationRole {
             $originalData = $role->only(['name', 'description', 'permissions', 'is_active']);
+            $permissions = $this->normalizePermissions($data['permissions'] ?? $role->permissions ?? []);
 
             $role->update([
                 'name' => $data['name'] ?? $role->name,
-                'description' => $data['description'] ?? $role->description,
-                'permissions' => array_values(array_unique($data['permissions'] ?? $role->permissions ?? [])),
+                'description' => array_key_exists('description', $data) ? $data['description'] : $role->description,
+                'permissions' => $permissions,
                 'is_active' => $data['is_active'] ?? $role->is_active,
             ]);
 
@@ -62,29 +77,53 @@ class OrganizationRoleService
                 'to' => $role->only(['name', 'description', 'permissions', 'is_active']),
             ]);
 
-            return $role;
+            $this->permissionSyncService->syncForRole($role->fresh());
+
+            return $role->fresh()->loadCount('staff');
         });
     }
 
-    public function deleteRole(OrganizationRole $role, string $actorUserId): bool
+    public function deleteRole(OrganizationRole $role, string $actorUserId): void
     {
-        return DB::transaction(function () use ($role, $actorUserId): bool {
-            if ($role->is_system) {
-                return false;
-            }
+        abort_if($role->is_system, Response::HTTP_CONFLICT, 'System roles cannot be deleted.');
+        abort_if(
+            $role->staff()->where('status', 'active')->exists(),
+            Response::HTTP_CONFLICT,
+            'Roles assigned to active staff cannot be deleted.',
+        );
 
-            $staffWithRole = $role->staff()->count();
-            if ($staffWithRole > 0) {
-                $defaultRole = $role->organization->roles()->where('name', 'Viewer')->first();
-                if ($defaultRole) {
-                    $role->staff()->update(['organization_role_id' => $defaultRole->id]);
-                }
-            }
+        DB::transaction(function () use ($role, $actorUserId): void {
+            $this->logAudit($actorUserId, 'role.deleted', 'OrganizationRole', (string) $role->id, [
+                'name' => $role->name,
+            ]);
 
-            $this->logAudit($actorUserId, 'role.deleted', 'OrganizationRole', (string) $role->id, ['name' => $role->name]);
-
-            return $role->delete();
+            $role->delete();
         });
+    }
+
+    /** @param list<string> $permissions */
+    private function normalizePermissions(array $permissions): array
+    {
+        $permissions = array_values(array_unique($permissions));
+        $catalog = collect($this->permissionCatalogService->catalog())->keyBy('id');
+
+        foreach ($permissions as $permissionName) {
+            abort_unless(
+                $catalog->has($permissionName),
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                "Permission [{$permissionName}] cannot be assigned to organization staff.",
+            );
+
+            foreach ($catalog->get($permissionName)['requires'] ?? [] as $requiredPermission) {
+                abort_unless(
+                    in_array($requiredPermission, $permissions, true),
+                    Response::HTTP_UNPROCESSABLE_ENTITY,
+                    "Permission [{$permissionName}] requires [{$requiredPermission}].",
+                );
+            }
+        }
+
+        return $permissions;
     }
 
     private function applySorting($query, string $sort): void
@@ -95,18 +134,28 @@ class OrganizationRoleService
         $fieldMap = [
             'updatedAt' => 'updated_at',
             'permissionsCount' => 'permissions',
-            'membersCount' => 'members_count',
+            'membersCount' => 'staff_count',
             'name' => 'name',
             'createdAt' => 'created_at',
         ];
 
-        if (isset($fieldMap[$field])) {
-            if ($field === 'permissionsCount') {
-                $query->orderByRaw('JSON_LENGTH('.$fieldMap[$field].') '.$direction);
-            } else {
-                $query->orderBy($fieldMap[$field], $direction);
-            }
+        if (! isset($fieldMap[$field])) {
+            return;
         }
+
+        if ($field === 'permissionsCount') {
+            $expression = match ($query->getConnection()->getDriverName()) {
+                'sqlite' => 'json_array_length(permissions)',
+                'pgsql' => 'jsonb_array_length(permissions::jsonb)',
+                default => 'JSON_LENGTH(permissions)',
+            };
+
+            $query->orderByRaw($expression.' '.$direction);
+
+            return;
+        }
+
+        $query->orderBy($fieldMap[$field], $direction);
     }
 
     private function logAudit(string $actorUserId, string $action, string $entityType, string $entityId, array $metadata = []): void
