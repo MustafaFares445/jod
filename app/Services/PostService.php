@@ -13,6 +13,47 @@ use Illuminate\Validation\ValidationException;
 
 class PostService
 {
+    public function discover(array $params): LengthAwarePaginator
+    {
+        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $sort = $this->normalizeDiscoverySort($params);
+
+        $query = Post::query()
+            ->with(['organization', 'campaign'])
+            ->where('status', 'published')
+            ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
+            ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
+            ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
+            ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
+            ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
+                $search = (string) $params['search'];
+                $builder->where(function (Builder $inner) use ($search): void {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('summary', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            });
+
+        match ($sort) {
+            'title' => $query->orderBy('title'),
+            '-title' => $query->orderByDesc('title'),
+            'updatedAt' => $query->orderBy('updated_at'),
+            '-updatedAt' => $query->orderByDesc('updated_at'),
+            default => $query->orderByDesc('updated_at'),
+        };
+
+        return $query->paginate($perPage);
+    }
+
+    public function findPublicPost(string $id): ?Post
+    {
+        return Post::query()
+            ->with(['organization', 'campaign'])
+            ->whereKey($id)
+            ->where('status', 'published')
+            ->first();
+    }
+
     public function paginate(array $params, int $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
@@ -125,7 +166,7 @@ class PostService
 
     private function resolveCampaignId(?string $campaignTitle, int $organizationId): ?int
     {
-        if (!$campaignTitle) {
+        if (! $campaignTitle) {
             return null;
         }
 
@@ -148,6 +189,23 @@ class PostService
             'updated_oldest' => 'updatedAt',
             'title_asc' => 'title',
             'title_desc' => '-title',
+            default => '-updatedAt',
+        };
+    }
+
+    private function normalizeDiscoverySort(array $params): string
+    {
+        $sort = (string) ($params['sort'] ?? '');
+        if ($sort !== '') {
+            return $sort;
+        }
+
+        $sortBy = (string) ($params['sortBy'] ?? '');
+
+        return match ($sortBy) {
+            'title_asc' => 'title',
+            'title_desc' => '-title',
+            'updated_oldest' => 'updatedAt',
             default => '-updatedAt',
         };
     }
