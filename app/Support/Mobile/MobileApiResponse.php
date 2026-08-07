@@ -23,17 +23,20 @@ class MobileApiResponse
         ]);
     }
 
-    public static function paginated(LengthAwarePaginator $paginator, string $message = 'Records retrieved successfully.'): JsonResponse
+    /**
+     * @param  array<string, mixed>  $meta
+     */
+    public static function paginated(LengthAwarePaginator $paginator, string $message = 'Records retrieved successfully.', array $meta = []): JsonResponse
     {
         return self::success(
             data: $paginator->items(),
             message: $message,
-            meta: [
+            meta: array_merge([
                 'currentPage' => $paginator->currentPage(),
                 'perPage' => $paginator->perPage(),
                 'total' => $paginator->total(),
                 'lastPage' => $paginator->lastPage(),
-            ],
+            ], $meta),
         );
     }
 

@@ -25,6 +25,12 @@ class AuthController extends Controller
     /**
      * Register a mobile account.
      *
+     * @bodyParam name string required The user's display name.
+     * @bodyParam email string required The user's email address.
+     * @bodyParam phone string optional The user's phone number.
+     * @bodyParam password string required The password.
+     * @bodyParam password_confirmation string required Confirmation of the password.
+     *
      * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
     public function register(RegisterRequest $request): JsonResponse
@@ -54,6 +60,10 @@ class AuthController extends Controller
      * Log in to the mobile API.
      *
      * Public endpoint that returns a Sanctum bearer token and the current mobile user profile.
+     *
+     * @bodyParam email string optional The account email address. Required when phone is omitted.
+     * @bodyParam phone string optional The account phone number. Required when email is omitted.
+     * @bodyParam password string required The account password.
      *
      * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
@@ -99,6 +109,8 @@ class AuthController extends Controller
     /**
      * Request a password reset code.
      *
+     * @bodyParam login string required The email address or phone number for the account.
+     *
      * @response array{success: bool, message: string, data: array{resetCodeSent: bool}, error: null, meta: array}
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
@@ -124,6 +136,9 @@ class AuthController extends Controller
     /**
      * Verify a password reset code.
      *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit reset code.
+     *
      * @response array{success: bool, message: string, data: array{resetCodeVerified: bool}, error: null, meta: array}
      */
     public function verifyResetCode(VerifyResetCodeRequest $request): JsonResponse
@@ -142,6 +157,11 @@ class AuthController extends Controller
 
     /**
      * Reset a mobile account password.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit reset code.
+     * @bodyParam password string required The new password.
+     * @bodyParam password_confirmation string required Confirmation of the new password.
      *
      * @response array{success: bool, message: string, data: array{resetPasswordUpdated: bool}, error: null, meta: array}
      */

@@ -9,6 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\ChangePasswordRequest;
 use App\Http\Requests\Mobile\ProfileRequest;
 use App\Http\Resources\Mobile\UserResource;
+use App\Models\Campaign;
+use App\Models\Notification;
+use App\Models\Post;
+use App\Models\Report;
 use App\Services\Permissions\PermissionCatalogService;
 use App\Services\UserService;
 use App\Support\Mobile\MobileApiResponse;
@@ -42,6 +46,10 @@ class MeController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
+     * @bodyParam name string required The user's display name.
+     * @bodyParam email string required The user's email address.
+     * @bodyParam phone string optional The user's phone number.
+     *
      * @response array{success: bool, message: string, data: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: object{id: string, name: string, email: string|null, phone: string|null, status: string|null, verificationStatus: string|null}|null, createdAt: string|null, lastActiveAt: string|null}, error: null, meta: object{}}
      */
     public function updateProfile(ProfileRequest $request): JsonResponse
@@ -62,6 +70,10 @@ class MeController extends Controller
      * Change the authenticated mobile user password.
      *
      * Requires a Sanctum bearer token.
+     *
+     * @bodyParam currentPassword string required The current password.
+     * @bodyParam password string required The new password.
+     * @bodyParam password_confirmation string required Confirmation of the new password.
      *
      * @response array{success: bool, message: string, data: array{passwordChanged: bool}, error: null, meta: array}
      */
@@ -93,5 +105,64 @@ class MeController extends Controller
             $permissionCatalogService->forUser($request->user()),
             'Permissions retrieved successfully.',
         );
+    }
+
+    /**
+     * Get the authenticated mobile dashboard context.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{profile: array{id: string, name: string, email: string, phone: string|null, userType: string|null, organizationId: string|null, status: string|null, createdAt: string|null, lastActiveAt: string|null}, permissions: array, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: object{}}
+     */
+    public function dashboardContext(Request $request, PermissionCatalogService $permissionCatalogService): JsonResponse
+    {
+        $user = $request->user();
+        $permissions = $permissionCatalogService->forUser($user);
+
+        return MobileApiResponse::success([
+            'profile' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'userType' => $user->user_type,
+                'organizationId' => $user->organization_id,
+                'status' => $user->status,
+                'createdAt' => $user->created_at?->toIso8601String(),
+                'lastActiveAt' => $user->last_active_at?->toIso8601String(),
+            ],
+            'permissions' => $permissions,
+            'counters' => [
+                'unreadNotifications' => Notification::query()
+                    ->where('status', 'unread')
+                    ->where(function ($query) use ($user): void {
+                        $query->where('recipient_id', $user->id);
+
+                        if ($user->organization_id) {
+                            $query->orWhere('organization_id', $user->organization_id);
+                        }
+                    })
+                    ->count(),
+                'pendingReviews' => Post::query()->where('status', 'pending')->count()
+                    + Campaign::query()->where('status', 'pending')->count(),
+                'openReports' => Report::query()
+                    ->whereIn('status', ['new', 'in_progress'])
+                    ->count(),
+            ],
+        ], 'Dashboard context retrieved successfully.');
+    }
+
+    /**
+     * Respond to mobile health checks.
+     *
+     * Requires a Sanctum bearer token.
+     *
+     * @response array{success: bool, message: string, data: array{pong: bool}, error: null, meta: object{}}
+     */
+    public function ping(): JsonResponse
+    {
+        return MobileApiResponse::success([
+            'pong' => true,
+        ], 'Ping successful.');
     }
 }
