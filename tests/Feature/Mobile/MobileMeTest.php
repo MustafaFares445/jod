@@ -7,6 +7,7 @@ namespace Tests\Feature\Mobile;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -80,6 +81,25 @@ class MobileMeTest extends TestCase
             'id' => $user->id,
             'phone' => null,
         ]);
+    }
+
+    public function test_mobile_password_can_be_changed_with_sanctum_authentication(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('current-password'),
+        ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson('/api/mobile/me/change-password', [
+            'currentPassword' => 'current-password',
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('data.passwordChanged', true);
+        $this->assertTrue(Hash::check('new-password', $user->fresh()->password));
     }
 
     public function test_mobile_profile_validation_uses_mobile_error_envelope(): void

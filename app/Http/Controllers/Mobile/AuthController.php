@@ -5,29 +5,72 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Mobile\ForgotPasswordRequest;
 use App\Http\Requests\Mobile\LoginRequest;
+use App\Http\Requests\Mobile\RegisterRequest;
+use App\Http\Requests\Mobile\ResetPasswordRequest;
+use App\Http\Requests\Mobile\VerifyResetCodeRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Models\User;
 use App\Support\Mobile\MobileApiResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /**
+     * Register a mobile account.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
+     */
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $user = User::query()->create([
+            'id' => (string) Str::uuid(),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'password' => $validated['password'],
+            'status' => 'active',
+            'user_type' => 'general',
+        ])->loadMissing('organization');
+
+        $token = $user->createToken('mobile-token')->plainTextToken;
+
+        return MobileApiResponse::success([
+            'token' => $token,
+            'tokenType' => 'Bearer',
+            'user' => UserResource::make($user)->resolve($request),
+        ], 'Registered successfully.');
+    }
+
     /**
      * Log in to the mobile API.
      *
      * Public endpoint that returns a Sanctum bearer token and the current mobile user profile.
      *
-     * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: object{id: string, name: string, email: string|null, phone: string|null, status: string|null, verificationStatus: string|null}|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: object{}}
+     * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
     public function login(LoginRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
         $user = User::query()
-            ->where('email', $validated['email'])
+            ->where(function (Builder $builder) use ($validated): void {
+                if (filled($validated['email'] ?? null)) {
+                    $builder->where('email', $validated['email']);
+                }
+
+                if (filled($validated['phone'] ?? null)) {
+                    $builder->orWhere('phone', $validated['phone']);
+                }
+            })
             ->with('organization')
             ->first();
 
@@ -54,16 +97,115 @@ class AuthController extends Controller
     }
 
     /**
+     * Request a password reset code.
+     *
+     * @response array{success: bool, message: string, data: array{resetCodeSent: bool}, error: null, meta: array}
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $user = $this->resolveUserByLogin($request->validated('login'));
+
+        if (! $user) {
+            return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
+        }
+
+        $code = $this->generateResetCode();
+
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => $code, 'created_at' => now()]
+        );
+
+        return MobileApiResponse::success([
+            'resetCodeSent' => true,
+        ], 'Reset code generated successfully.');
+    }
+
+    /**
+     * Verify a password reset code.
+     *
+     * @response array{success: bool, message: string, data: array{resetCodeVerified: bool}, error: null, meta: array}
+     */
+    public function verifyResetCode(VerifyResetCodeRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $user = $this->resolveUserByLogin($validated['login']);
+
+        if (! $user || ! $this->isValidResetCode($user->email, $validated['code'])) {
+            return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
+        }
+
+        return MobileApiResponse::success([
+            'resetCodeVerified' => true,
+        ], 'Reset code verified successfully.');
+    }
+
+    /**
+     * Reset a mobile account password.
+     *
+     * @response array{success: bool, message: string, data: array{resetPasswordUpdated: bool}, error: null, meta: array}
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+        $user = $this->resolveUserByLogin($validated['login']);
+
+        if (! $user || ! $this->isValidResetCode($user->email, $validated['code'])) {
+            return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
+        }
+
+        $user->forceFill([
+            'password' => $validated['password'],
+        ])->save();
+
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+
+        return MobileApiResponse::success([
+            'resetPasswordUpdated' => true,
+        ], 'Password reset successfully.');
+    }
+
+    /**
      * Log out from the mobile API.
      *
      * Requires a Sanctum bearer token and revokes the current access token.
      *
-     * @response array{success: bool, message: string, data: null, error: null, meta: object{}}
+     * @response array{success: bool, message: string, data: null, error: null, meta: array}
      */
     public function logout(Request $request): JsonResponse
     {
         $request->user()?->currentAccessToken()?->delete();
 
         return MobileApiResponse::success(null, 'Logged out successfully.');
+    }
+
+    private function resolveUserByLogin(string $login): ?User
+    {
+        return User::query()
+            ->where('email', $login)
+            ->orWhere('phone', $login)
+            ->first();
+    }
+
+    private function generateResetCode(): string
+    {
+        return (string) random_int(100000, 999999);
+    }
+
+    private function isValidResetCode(string $email, string $code): bool
+    {
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $email)
+            ->first();
+
+        if (! $record) {
+            return false;
+        }
+
+        if (! isset($record->created_at) || now()->diffInMinutes($record->created_at) > 15) {
+            return false;
+        }
+
+        return hash_equals((string) $record->token, $code);
     }
 }
