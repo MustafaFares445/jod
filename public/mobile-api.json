@@ -692,20 +692,170 @@
                                             "type": "boolean"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Posts retrieved successfully."
+                                            "type": "string"
                                         },
                                         "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "string"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "summary": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "type": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "organizationName": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "authorName": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "location": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "campaignTitle": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "submittedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "createdAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "updatedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "publishedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "reviewedBy": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "rejectionReason": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "viewsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "reactionsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "applicationsCount": {
+                                                        "type": "integer"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "title",
+                                                    "summary",
+                                                    "type",
+                                                    "status",
+                                                    "organizationName",
+                                                    "authorName",
+                                                    "location",
+                                                    "campaignTitle",
+                                                    "submittedAt",
+                                                    "createdAt",
+                                                    "updatedAt",
+                                                    "publishedAt",
+                                                    "reviewedBy",
+                                                    "rejectionReason",
+                                                    "viewsCount",
+                                                    "reactionsCount",
+                                                    "applicationsCount"
+                                                ]
                                             }
                                         },
                                         "error": {
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "string"
+                                            "type": "object",
+                                            "properties": {
+                                                "currentPage": {
+                                                    "type": "integer"
+                                                },
+                                                "perPage": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "lastPage": {
+                                                    "type": "integer"
+                                                },
+                                                "viewer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "isAuthenticated": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "userId": {
+                                                            "type": "string"
+                                                        },
+                                                        "organizationId": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "isAuthenticated",
+                                                        "userId",
+                                                        "organizationId"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "currentPage",
+                                                "perPage",
+                                                "total",
+                                                "lastPage"
+                                            ]
                                         }
                                     },
                                     "required": [
@@ -756,71 +906,149 @@
                                             "type": "boolean"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Post retrieved successfully."
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {}
-                                        },
-                                        "error": {
-                                            "type": "null"
-                                        },
-                                        "meta": {
                                             "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "success",
-                                        "message",
-                                        "data",
-                                        "error",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "The requested post could not be found."
                                         },
                                         "data": {
-                                            "type": "null"
-                                        },
-                                        "error": {
                                             "type": "object",
                                             "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "const": "not_found"
+                                                "id": {
+                                                    "type": "string"
                                                 },
-                                                "message": {
-                                                    "type": "string",
-                                                    "const": "The requested post could not be found."
+                                                "title": {
+                                                    "type": "string"
                                                 },
-                                                "details": {
-                                                    "type": "null"
+                                                "summary": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "organizationName": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "authorName": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "location": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "campaignTitle": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "submittedAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "createdAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "updatedAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "publishedAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "reviewedBy": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "rejectionReason": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "viewsCount": {
+                                                    "type": "integer"
+                                                },
+                                                "reactionsCount": {
+                                                    "type": "integer"
+                                                },
+                                                "applicationsCount": {
+                                                    "type": "integer"
                                                 }
                                             },
                                             "required": [
-                                                "code",
-                                                "message",
-                                                "details"
+                                                "id",
+                                                "title",
+                                                "summary",
+                                                "type",
+                                                "status",
+                                                "organizationName",
+                                                "authorName",
+                                                "location",
+                                                "campaignTitle",
+                                                "submittedAt",
+                                                "createdAt",
+                                                "updatedAt",
+                                                "publishedAt",
+                                                "reviewedBy",
+                                                "rejectionReason",
+                                                "viewsCount",
+                                                "reactionsCount",
+                                                "applicationsCount"
                                             ]
                                         },
+                                        "error": {
+                                            "type": "null"
+                                        },
                                         "meta": {
-                                            "type": "string"
+                                            "type": "object",
+                                            "properties": {
+                                                "viewer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "isAuthenticated": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "userId": {
+                                                            "type": "string"
+                                                        },
+                                                        "organizationId": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "isAuthenticated",
+                                                        "userId",
+                                                        "organizationId"
+                                                    ]
+                                                }
+                                            }
                                         }
                                     },
                                     "required": [
@@ -974,20 +1202,192 @@
                                             "type": "boolean"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Campaigns retrieved successfully."
+                                            "type": "string"
                                         },
                                         "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "string"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": "string"
+                                                    },
+                                                    "summary": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "category": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "organizationName": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "managerName": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "location": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "goalAmount": {
+                                                        "type": "number"
+                                                    },
+                                                    "raisedAmount": {
+                                                        "type": "number"
+                                                    },
+                                                    "beneficiariesCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "donorsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "applicantsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "startDate": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "endDate": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "submittedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "createdAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "updatedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "closedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "closedReason": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "reviewedBy": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "rejectionReason": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "title",
+                                                    "summary",
+                                                    "category",
+                                                    "status",
+                                                    "organizationName",
+                                                    "managerName",
+                                                    "location",
+                                                    "goalAmount",
+                                                    "raisedAmount",
+                                                    "beneficiariesCount",
+                                                    "donorsCount",
+                                                    "applicantsCount",
+                                                    "startDate",
+                                                    "endDate",
+                                                    "submittedAt",
+                                                    "createdAt",
+                                                    "updatedAt",
+                                                    "closedAt",
+                                                    "closedReason",
+                                                    "reviewedBy",
+                                                    "rejectionReason"
+                                                ]
                                             }
                                         },
                                         "error": {
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "string"
+                                            "type": "object",
+                                            "properties": {
+                                                "currentPage": {
+                                                    "type": "integer"
+                                                },
+                                                "perPage": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "lastPage": {
+                                                    "type": "integer"
+                                                },
+                                                "viewer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "isAuthenticated": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "userId": {
+                                                            "type": "string"
+                                                        },
+                                                        "organizationId": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "isAuthenticated",
+                                                        "userId",
+                                                        "organizationId"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "currentPage",
+                                                "perPage",
+                                                "total",
+                                                "lastPage"
+                                            ]
                                         }
                                     },
                                     "required": [
@@ -1038,71 +1438,171 @@
                                             "type": "boolean"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Campaign retrieved successfully."
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {}
-                                        },
-                                        "error": {
-                                            "type": "null"
-                                        },
-                                        "meta": {
                                             "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "success",
-                                        "message",
-                                        "data",
-                                        "error",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "const": "The requested campaign could not be found."
                                         },
                                         "data": {
-                                            "type": "null"
-                                        },
-                                        "error": {
                                             "type": "object",
                                             "properties": {
-                                                "code": {
-                                                    "type": "string",
-                                                    "const": "not_found"
+                                                "id": {
+                                                    "type": "string"
                                                 },
-                                                "message": {
-                                                    "type": "string",
-                                                    "const": "The requested campaign could not be found."
+                                                "title": {
+                                                    "type": "string"
                                                 },
-                                                "details": {
-                                                    "type": "null"
+                                                "summary": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "category": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                },
+                                                "organizationName": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "managerName": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "location": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "goalAmount": {
+                                                    "type": "number"
+                                                },
+                                                "raisedAmount": {
+                                                    "type": "number"
+                                                },
+                                                "beneficiariesCount": {
+                                                    "type": "integer"
+                                                },
+                                                "donorsCount": {
+                                                    "type": "integer"
+                                                },
+                                                "applicantsCount": {
+                                                    "type": "integer"
+                                                },
+                                                "startDate": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "endDate": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "submittedAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "createdAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "updatedAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "closedAt": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "closedReason": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "reviewedBy": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "rejectionReason": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
                                                 }
                                             },
                                             "required": [
-                                                "code",
-                                                "message",
-                                                "details"
+                                                "id",
+                                                "title",
+                                                "summary",
+                                                "category",
+                                                "status",
+                                                "organizationName",
+                                                "managerName",
+                                                "location",
+                                                "goalAmount",
+                                                "raisedAmount",
+                                                "beneficiariesCount",
+                                                "donorsCount",
+                                                "applicantsCount",
+                                                "startDate",
+                                                "endDate",
+                                                "submittedAt",
+                                                "createdAt",
+                                                "updatedAt",
+                                                "closedAt",
+                                                "closedReason",
+                                                "reviewedBy",
+                                                "rejectionReason"
                                             ]
                                         },
+                                        "error": {
+                                            "type": "null"
+                                        },
                                         "meta": {
-                                            "type": "string"
+                                            "type": "object",
+                                            "properties": {
+                                                "viewer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "isAuthenticated": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "userId": {
+                                                            "type": "string"
+                                                        },
+                                                        "organizationId": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "isAuthenticated",
+                                                        "userId",
+                                                        "organizationId"
+                                                    ]
+                                                }
+                                            }
                                         }
                                     },
                                     "required": [
@@ -1220,20 +1720,106 @@
                                             "type": "boolean"
                                         },
                                         "message": {
-                                            "type": "string",
-                                            "const": "Categories retrieved successfully."
+                                            "type": "string"
                                         },
                                         "data": {
-                                            "type": "object",
-                                            "additionalProperties": {
-                                                "type": "string"
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    },
+                                                    "target": {
+                                                        "type": "string"
+                                                    },
+                                                    "description": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "usageCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "createdAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "updatedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "name",
+                                                    "target",
+                                                    "description",
+                                                    "usageCount",
+                                                    "status",
+                                                    "createdAt",
+                                                    "updatedAt"
+                                                ]
                                             }
                                         },
                                         "error": {
                                             "type": "null"
                                         },
                                         "meta": {
-                                            "type": "string"
+                                            "type": "object",
+                                            "properties": {
+                                                "currentPage": {
+                                                    "type": "integer"
+                                                },
+                                                "perPage": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "lastPage": {
+                                                    "type": "integer"
+                                                },
+                                                "viewer": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "isAuthenticated": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "userId": {
+                                                            "type": "string"
+                                                        },
+                                                        "organizationId": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "isAuthenticated",
+                                                        "userId",
+                                                        "organizationId"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "currentPage",
+                                                "perPage",
+                                                "total",
+                                                "lastPage"
+                                            ]
                                         }
                                     },
                                     "required": [

@@ -9,10 +9,14 @@ use App\Models\Campaign;
 use App\Models\Post;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class PostService
 {
+    /**
+     * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, status?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
+     */
     public function discover(array $params): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
@@ -41,6 +45,7 @@ class PostService
             '-updatedAt' => $query->orderByDesc('updated_at'),
             default => $query->orderByDesc('updated_at'),
         };
+        $query->orderBy('id');
 
         return $query->paginate($perPage);
     }
@@ -54,7 +59,10 @@ class PostService
             ->first();
     }
 
-    public function paginate(array $params, int $organizationId): LengthAwarePaginator
+    /**
+     * @param  array{page?: int|string|null, perPage?: int|string|null, sort?: string|null, sortBy?: string|null, filter?: array{status?: string|null, type?: string|null, search?: string|null}, filter_status?: string|null, filter_type?: string|null, filter_search?: string|null, "filter.status"?: string|null, "filter.type"?: string|null, "filter.search"?: string|null}  $params
+     */
+    public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeSort($params);
@@ -79,11 +87,12 @@ class PostService
             '-updatedAt' => $query->orderByDesc('updated_at'),
             default => $query->orderByDesc('updated_at'),
         };
+        $query->orderBy('id');
 
         return $query->paginate($perPage);
     }
 
-    public function create(PostData $data, int $organizationId): Post
+    public function create(PostData $data, string $organizationId): Post
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
@@ -100,7 +109,7 @@ class PostService
         ]);
     }
 
-    public function update(Post $post, PostData $data, int $organizationId): Post
+    public function update(Post $post, PostData $data, string $organizationId): Post
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
@@ -108,13 +117,9 @@ class PostService
             'title' => $data->title,
             'summary' => $data->summary,
             'type' => $data->type,
-            'status' => $data->status,
             'author_name' => $data->authorName,
             'location' => $data->location,
             'campaign_id' => $campaignId,
-            'published_at' => $data->status === 'published'
-                ? ($post->published_at ?? now())
-                : ($data->status === 'draft' ? null : $post->published_at),
         ]);
 
         return $post;
@@ -122,41 +127,32 @@ class PostService
 
     public function publish(Post $post): Post
     {
-        if ($post->status !== 'draft') {
-            throw ValidationException::withMessages([
-                'status' => ['Only draft posts can be published.'],
-            ]);
-        }
-
-        $post->update(['status' => 'published', 'published_at' => now()]);
-
-        return $post;
+        return $this->transitionStatus(
+            $post,
+            'draft',
+            ['status' => 'published', 'published_at' => now()],
+            'Only draft posts can be published.',
+        );
     }
 
     public function archive(Post $post): Post
     {
-        if ($post->status !== 'published') {
-            throw ValidationException::withMessages([
-                'status' => ['Only published posts can be archived.'],
-            ]);
-        }
-
-        $post->update(['status' => 'archived']);
-
-        return $post;
+        return $this->transitionStatus(
+            $post,
+            'published',
+            ['status' => 'archived'],
+            'Only published posts can be archived.',
+        );
     }
 
     public function restore(Post $post): Post
     {
-        if ($post->status !== 'archived') {
-            throw ValidationException::withMessages([
-                'status' => ['Only archived posts can be restored.'],
-            ]);
-        }
-
-        $post->update(['status' => 'draft']);
-
-        return $post;
+        return $this->transitionStatus(
+            $post,
+            'archived',
+            ['status' => 'draft', 'published_at' => null],
+            'Only archived posts can be restored.',
+        );
     }
 
     public function delete(Post $post): void
@@ -164,7 +160,7 @@ class PostService
         $post->delete();
     }
 
-    private function resolveCampaignId(?string $campaignTitle, int $organizationId): ?int
+    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
     {
         if (! $campaignTitle) {
             return null;
@@ -193,6 +189,9 @@ class PostService
         };
     }
 
+    /**
+     * @param  array{sort?: string|null, sortBy?: string|null}  $params
+     */
     private function normalizeDiscoverySort(array $params): string
     {
         $sort = (string) ($params['sort'] ?? '');
@@ -222,5 +221,28 @@ class PostService
         }
 
         return data_get($params, $key);
+    }
+
+    /**
+     * @param  array{status: string, published_at?: mixed}  $attributes
+     */
+    private function transitionStatus(Post $post, string $expectedStatus, array $attributes, string $message): Post
+    {
+        return DB::transaction(function () use ($post, $expectedStatus, $attributes, $message): Post {
+            $lockedPost = Post::query()
+                ->whereKey($post->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedPost->status !== $expectedStatus) {
+                throw ValidationException::withMessages([
+                    'status' => [$message],
+                ]);
+            }
+
+            $lockedPost->update($attributes);
+
+            return $lockedPost;
+        });
     }
 }

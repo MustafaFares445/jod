@@ -25,6 +25,7 @@ Route::prefix('auth')
 
 Route::prefix('discovery')
     ->name('discovery.')
+    ->middleware('throttle:60,1')
     ->group(function (): void {
         Route::get('posts', [DiscoveryController::class, 'posts'])->name('posts');
         Route::get('posts/{post}', [DiscoveryController::class, 'showPost'])->name('posts.show');

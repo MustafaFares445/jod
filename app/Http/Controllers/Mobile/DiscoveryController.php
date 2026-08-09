@@ -40,6 +40,8 @@ class DiscoveryController extends Controller
      * @queryParam organizationId string optional Organization filter.
      * @queryParam sort string optional Sort order.
      * @queryParam sortBy string optional Legacy sort alias.
+     *
+     * @response array{success: bool, message: string, data: array<int, array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function posts(PostDiscoveryRequest $request): JsonResponse
     {
@@ -59,6 +61,8 @@ class DiscoveryController extends Controller
      * Public endpoint.
      *
      * @urlParam post string required The post identifier.
+     *
+     * @response array{success: bool, message: string, data: array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}, error: null, meta: array{viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function showPost(Request $request, string $post): JsonResponse
     {
@@ -89,6 +93,8 @@ class DiscoveryController extends Controller
      * @queryParam organizationId string optional Organization filter.
      * @queryParam sort string optional Sort order.
      * @queryParam sortBy string optional Legacy sort alias.
+     *
+     * @response array{success: bool, message: string, data: array<int, array{id: string, title: string, summary: string|null, category: string, status: string, organizationName: string|null, managerName: string|null, location: string|null, goalAmount: float, raisedAmount: float, beneficiariesCount: int, donorsCount: int, applicantsCount: int, startDate: string|null, endDate: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, closedAt: string|null, closedReason: string|null, reviewedBy: string|null, rejectionReason: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function campaigns(CampaignDiscoveryRequest $request): JsonResponse
     {
@@ -108,6 +114,8 @@ class DiscoveryController extends Controller
      * Public endpoint.
      *
      * @urlParam campaign string required The campaign identifier.
+     *
+     * @response array{success: bool, message: string, data: array{id: string, title: string, summary: string|null, category: string, status: string, organizationName: string|null, managerName: string|null, location: string|null, goalAmount: float, raisedAmount: float, beneficiariesCount: int, donorsCount: int, applicantsCount: int, startDate: string|null, endDate: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, closedAt: string|null, closedReason: string|null, reviewedBy: string|null, rejectionReason: string|null}, error: null, meta: array{viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function showCampaign(Request $request, string $campaign): JsonResponse
     {
@@ -135,6 +143,8 @@ class DiscoveryController extends Controller
      * @queryParam target string optional Category target filter.
      * @queryParam status string optional Public status filter. Allowed value: active.
      * @queryParam sort string optional Sort order.
+     *
+     * @response array{success: bool, message: string, data: array<int, array{id: string, name: string, target: string, description: string|null, usageCount: int, status: string, createdAt: string|null, updatedAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function categories(CategoryDiscoveryRequest $request): JsonResponse
     {
