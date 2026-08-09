@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Mobile\AuthController;
+use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\MeController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,17 @@ Route::prefix('auth')
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot-password');
         Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])->name('verify-reset-code');
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
+    });
+
+Route::prefix('discovery')
+    ->name('discovery.')
+    ->middleware('throttle:60,1')
+    ->group(function (): void {
+        Route::get('posts', [DiscoveryController::class, 'posts'])->name('posts');
+        Route::get('posts/{post}', [DiscoveryController::class, 'showPost'])->name('posts.show');
+        Route::get('campaigns', [DiscoveryController::class, 'campaigns'])->name('campaigns');
+        Route::get('campaigns/{campaign}', [DiscoveryController::class, 'showCampaign'])->name('campaigns.show');
+        Route::get('categories', [DiscoveryController::class, 'categories'])->name('categories');
     });
 
 /*
