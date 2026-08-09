@@ -29,16 +29,18 @@ Route::prefix('mobile')
 
 Route::prefix('v1/auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
     });
 });
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
     Route::prefix('v1/me')->group(function () {
         Route::get('/', ProfileController::class);
         Route::patch('/profile', [ProfileController::class, 'update']);
+        Route::patch('/password', [ProfileController::class, 'updatePassword']);
         Route::get('/permissions', PermissionsController::class);
         Route::get('/dashboard-context', DashboardContextController::class);
     });
@@ -97,11 +99,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('v1/org')->group(function () {
         Route::get('overview', App\Http\Controllers\API\Org\OverviewController::class);
+        Route::get('dashboard/overview', App\Http\Controllers\API\Org\OverviewController::class);
 
         Route::apiResource('campaigns', CampaignController::class);
+        Route::patch('campaigns/{campaign}/status', CampaignController::class.'@updateStatus');
         Route::post('campaigns/{campaign}/close', CampaignController::class.'@close');
 
         Route::apiResource('posts', PostController::class);
+        Route::patch('posts/{post}/status', PostController::class.'@updateStatus');
         Route::post('posts/{post}/publish', PostController::class.'@publish');
         Route::post('posts/{post}/archive', PostController::class.'@archive');
         Route::post('posts/{post}/restore', PostController::class.'@restore');
@@ -110,17 +115,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('applicants', ApplicantController::class);
 
         Route::apiResource('notifications', App\Http\Controllers\API\Org\NotificationController::class);
+        Route::patch('notifications/{notification}/read', App\Http\Controllers\API\Org\NotificationController::class.'@markRead');
         Route::patch('notifications/{notification}/read-state', App\Http\Controllers\API\Org\NotificationController::class.'@updateReadState');
         Route::post('notifications/{notification}/resend', App\Http\Controllers\API\Org\NotificationController::class.'@resend');
 
         Route::get('reports', App\Http\Controllers\API\Org\ReportController::class.'@index');
         Route::get('reports/{report}', App\Http\Controllers\API\Org\ReportController::class.'@show');
+        Route::patch('reports/{report}/status', App\Http\Controllers\API\Org\ReportController::class.'@updateStatus');
+        Route::post('reports/{report}/claim', App\Http\Controllers\API\Org\ReportController::class.'@claim');
+        Route::post('reports/{report}/request-info', App\Http\Controllers\API\Org\ReportController::class.'@requestInfo');
+        Route::post('reports/{report}/close', App\Http\Controllers\API\Org\ReportController::class.'@close');
+        Route::get('audit-logs', App\Http\Controllers\API\Org\AuditLogController::class.'@index');
 
+        Route::get('profile', App\Http\Controllers\API\Org\SettingsController::class.'@profile');
+        Route::put('profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
         Route::get('settings/profile', App\Http\Controllers\API\Org\SettingsController::class.'@profile');
         Route::patch('settings/profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
         Route::get('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@bankAccount');
         Route::patch('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@updateBankAccount');
 
+        Route::apiResource('staff/roles', RoleController::class);
         Route::apiResource('staff', StaffController::class);
         Route::apiResource('roles', RoleController::class);
         Route::get('permissions/catalog', App\Http\Controllers\API\Org\PermissionsController::class);

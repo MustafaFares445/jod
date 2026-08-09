@@ -9,13 +9,12 @@ class ReportSeeder extends Seeder
 {
     public function run(): void
     {
-        // New report
         Report::create([
             'id' => SeedIds::id('reports.suspiciousCampaignActivity'),
             'reporter_id' => SeedIds::id('users.ahmedMohammed'),
             'assignee_id' => null,
-            'title' => 'Suspicious campaign activity',
-            'description' => 'Campaign claims are not matching actual activities on ground',
+            'title' => 'نشاط مشبوه في حملة',
+            'description' => 'المعلومات المعلنة في الحملة لا تتطابق مع الأنشطة المنفذة على أرض الواقع.',
             'category' => 'fraud',
             'severity' => 'high',
             'entity_type' => 'campaign',
@@ -23,22 +22,21 @@ class ReportSeeder extends Seeder
             'status' => 'new',
             'evidence' => json_encode([
                 ['type' => 'url', 'content' => 'https://example.com/campaign-update'],
-                ['type' => 'text', 'content' => 'Campaign shows donations but no activity updates'],
+                ['type' => 'text', 'content' => 'تعرض الحملة تبرعات دون نشر تحديثات واضحة عن الأنشطة.'],
             ]),
             'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now(), 'note' => 'Report submitted'],
+                ['status' => 'new', 'timestamp' => now(), 'note' => 'تم إرسال البلاغ.'],
             ]),
-            'created_at' => now()->subDays(1),
-            'updated_at' => now()->subDays(1),
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
         ]);
 
-        // In progress report
         Report::create([
             'id' => SeedIds::id('reports.inappropriatePostContent'),
             'reporter_id' => SeedIds::id('users.sarahAhmed'),
             'assignee_id' => SeedIds::id('users.johnAdmin'),
-            'title' => 'Inappropriate post content',
-            'description' => 'Post contains offensive language and inappropriate imagery',
+            'title' => 'محتوى غير مناسب في منشور',
+            'description' => 'يحتوي المنشور على عبارات وصور غير مناسبة للنشر على المنصة.',
             'category' => 'inappropriate',
             'severity' => 'high',
             'entity_type' => 'post',
@@ -48,20 +46,19 @@ class ReportSeeder extends Seeder
                 ['type' => 'screenshot', 'content' => 'screenshot_001.jpg'],
             ]),
             'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(2), 'note' => 'Report submitted'],
-                ['status' => 'in_progress', 'timestamp' => now()->subDays(1), 'note' => 'Assigned to admin for review'],
+                ['status' => 'new', 'timestamp' => now()->subDays(2), 'note' => 'تم إرسال البلاغ.'],
+                ['status' => 'in_progress', 'timestamp' => now()->subDay(), 'note' => 'تم إسناد البلاغ إلى مدير للمراجعة.'],
             ]),
             'created_at' => now()->subDays(3),
-            'updated_at' => now()->subDays(1),
+            'updated_at' => now()->subDay(),
         ]);
 
-        // Waiting response
         Report::create([
             'id' => SeedIds::id('reports.userImpersonationAttempt'),
             'reporter_id' => SeedIds::id('users.mohammedAli'),
             'assignee_id' => SeedIds::id('users.johnAdmin'),
-            'title' => 'User impersonation attempt',
-            'description' => 'User account appears to be impersonating another person',
+            'title' => 'محاولة انتحال شخصية مستخدم',
+            'description' => 'يبدو أن حساب المستخدم ينتحل هوية شخص آخر.',
             'category' => 'fraud',
             'severity' => 'critical',
             'entity_type' => 'user',
@@ -69,21 +66,20 @@ class ReportSeeder extends Seeder
             'status' => 'waiting_response',
             'evidence' => json_encode([]),
             'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(3), 'note' => 'Report submitted'],
-                ['status' => 'in_progress', 'timestamp' => now()->subDays(2), 'note' => 'Under investigation'],
-                ['status' => 'waiting_response', 'timestamp' => now()->subDays(1), 'note' => 'Awaiting additional information'],
+                ['status' => 'new', 'timestamp' => now()->subDays(3), 'note' => 'تم إرسال البلاغ.'],
+                ['status' => 'in_progress', 'timestamp' => now()->subDays(2), 'note' => 'البلاغ قيد التحقيق.'],
+                ['status' => 'waiting_response', 'timestamp' => now()->subDay(), 'note' => 'بانتظار معلومات إضافية.'],
             ]),
             'created_at' => now()->subDays(4),
-            'updated_at' => now()->subDays(1),
+            'updated_at' => now()->subDay(),
         ]);
 
-        // Closed report
         Report::create([
             'id' => SeedIds::id('reports.spamPostReported'),
             'reporter_id' => SeedIds::id('users.sarahAhmed'),
             'assignee_id' => SeedIds::id('users.johnAdmin'),
-            'title' => 'Spam post reported',
-            'description' => 'Multiple spam posts from same user',
+            'title' => 'بلاغ عن منشورات مزعجة',
+            'description' => 'نشر المستخدم عدة منشورات مزعجة ومتكررة.',
             'category' => 'spam',
             'severity' => 'medium',
             'entity_type' => 'post',
@@ -91,21 +87,20 @@ class ReportSeeder extends Seeder
             'status' => 'closed',
             'evidence' => json_encode([]),
             'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(7), 'note' => 'Report submitted'],
-                ['status' => 'in_progress', 'timestamp' => now()->subDays(6), 'note' => 'Under review'],
-                ['status' => 'closed', 'timestamp' => now()->subDays(5), 'note' => 'User account suspended'],
+                ['status' => 'new', 'timestamp' => now()->subDays(7), 'note' => 'تم إرسال البلاغ.'],
+                ['status' => 'in_progress', 'timestamp' => now()->subDays(6), 'note' => 'البلاغ قيد المراجعة.'],
+                ['status' => 'closed', 'timestamp' => now()->subDays(5), 'note' => 'تم إيقاف حساب المستخدم.'],
             ]),
             'created_at' => now()->subDays(8),
             'updated_at' => now()->subDays(5),
         ]);
 
-        // Low severity report
         Report::create([
             'id' => SeedIds::id('reports.typoInCampaignDescription'),
             'reporter_id' => SeedIds::id('users.ahmedMohammed'),
             'assignee_id' => null,
-            'title' => 'Typo in campaign description',
-            'description' => 'Campaign has a spelling error in its description',
+            'title' => 'خطأ إملائي في وصف حملة',
+            'description' => 'يوجد خطأ إملائي في وصف الحملة المنشور.',
             'category' => 'other',
             'severity' => 'low',
             'entity_type' => 'campaign',
@@ -113,10 +108,10 @@ class ReportSeeder extends Seeder
             'status' => 'new',
             'evidence' => json_encode([]),
             'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(1), 'note' => 'Report submitted'],
+                ['status' => 'new', 'timestamp' => now()->subDay(), 'note' => 'تم إرسال البلاغ.'],
             ]),
-            'created_at' => now()->subDays(1),
-            'updated_at' => now()->subDays(1),
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
         ]);
     }
 }

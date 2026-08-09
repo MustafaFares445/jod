@@ -10,15 +10,16 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrgNotificationService
 {
-    public function paginate(array $params, int $organizationId): LengthAwarePaginator
+    public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
-        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
-        $sort = (string) ($params['sort'] ?? '-sentAt');
+        $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
+        $sort = $this->normalizeSort($params);
+        $mailbox = $params['mailbox'] ?? $this->param($params, 'filter.mailbox');
 
         $query = Notification::query()
             ->with('createdBy')
             ->where('organization_id', $organizationId)
-            ->when(($mailbox = $this->param($params, 'filter.mailbox')) && $mailbox !== 'all', fn (Builder $builder) => $builder->where('mailbox', $mailbox))
+            ->when($mailbox && $mailbox !== 'all', fn (Builder $builder) => $builder->where('mailbox', $mailbox))
             ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
             ->when(($scope = $this->param($params, 'filter.recipientScope')) && $scope !== 'all', fn (Builder $builder) => $builder->where('recipient_scope', $scope))
@@ -43,7 +44,7 @@ class OrgNotificationService
         return $query->paginate($perPage);
     }
 
-    public function create(array $attributes, int $organizationId, int $userId): Notification
+    public function create(array $attributes, string $organizationId, string $userId): Notification
     {
         return Notification::create([
             'organization_id' => $organizationId,
@@ -81,6 +82,18 @@ class OrgNotificationService
         ]);
 
         return $notification;
+    }
+
+    private function normalizeSort(array $params): string
+    {
+        $sortingField = (string) ($params['sortingField'] ?? '');
+        if ($sortingField !== '') {
+            $direction = ($params['sortingDir'] ?? 'desc') === 'asc' ? '' : '-';
+
+            return $direction.$sortingField;
+        }
+
+        return (string) ($params['sort'] ?? '-sentAt');
     }
 
     private function param(array $params, string $key): mixed

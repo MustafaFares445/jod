@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Article;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 class ArticleSeeder extends Seeder
 {
@@ -12,10 +11,10 @@ class ArticleSeeder extends Seeder
     {
         Article::create([
             'id' => SeedIds::id('articles.howToStartSuccessfulCampaign'),
-            'title' => 'How to Start a Successful Campaign',
+            'title' => 'كيف تبدأ حملة ناجحة',
             'slug' => 'how-to-start-successful-campaign',
-            'excerpt' => 'Tips and best practices for launching your fundraising campaign',
-            'content' => 'Detailed guide on starting campaigns...',
+            'excerpt' => 'نصائح وأفضل الممارسات لإطلاق حملة جمع تبرعات ناجحة.',
+            'content' => 'دليل تفصيلي يوضح خطوات إعداد الحملة وإطلاقها ومتابعة نتائجها.',
             'author_id' => SeedIds::id('users.johnAdmin'),
             'status' => 'published',
             'published_at' => now()->subDays(5),
@@ -25,10 +24,10 @@ class ArticleSeeder extends Seeder
 
         Article::create([
             'id' => SeedIds::id('articles.volunteerSafetyGuidelines'),
-            'title' => 'Volunteer Safety Guidelines',
+            'title' => 'إرشادات سلامة المتطوعين',
             'slug' => 'volunteer-safety-guidelines',
-            'excerpt' => 'Important safety protocols every volunteer should follow',
-            'content' => 'Comprehensive safety guidelines...',
+            'excerpt' => 'إجراءات السلامة الأساسية التي يجب على كل متطوع الالتزام بها.',
+            'content' => 'دليل شامل لإجراءات السلامة قبل وأثناء وبعد الأنشطة التطوعية.',
             'author_id' => SeedIds::id('users.johnAdmin'),
             'status' => 'published',
             'published_at' => now()->subDays(10),
@@ -38,10 +37,10 @@ class ArticleSeeder extends Seeder
 
         Article::create([
             'id' => SeedIds::id('articles.maximizingDonationImpact'),
-            'title' => 'Maximizing Donation Impact',
+            'title' => 'تعظيم أثر التبرعات',
             'slug' => 'maximizing-donation-impact',
-            'excerpt' => 'How to ensure your donations make the maximum impact',
-            'content' => 'Guide on effective giving...',
+            'excerpt' => 'كيف تضمن أن تحقق تبرعاتك أكبر أثر ممكن.',
+            'content' => 'دليل يساعد المتبرعين على اختيار المبادرات وقياس أثر مساهماتهم.',
             'author_id' => SeedIds::id('users.sarahAhmed'),
             'status' => 'published',
             'published_at' => now()->subDays(15),
@@ -51,28 +50,28 @@ class ArticleSeeder extends Seeder
 
         Article::create([
             'id' => SeedIds::id('articles.buildingCommunityTrust'),
-            'title' => 'Building Community Trust',
+            'title' => 'بناء الثقة المجتمعية',
             'slug' => 'building-community-trust',
-            'excerpt' => 'Strategies for NGOs to build trust with their communities',
-            'content' => 'Community engagement strategies...',
+            'excerpt' => 'استراتيجيات تساعد المؤسسات على بناء الثقة مع مجتمعاتها.',
+            'content' => 'ممارسات عملية لتعزيز الشفافية والتواصل والمشاركة المجتمعية.',
             'author_id' => SeedIds::id('users.johnAdmin'),
             'status' => 'draft',
             'published_at' => null,
             'created_at' => now()->subDays(2),
-            'updated_at' => now()->subDays(1),
+            'updated_at' => now()->subDay(),
         ]);
 
         Article::create([
             'id' => SeedIds::id('articles.digitalTransformationForNGOs'),
-            'title' => 'Digital Transformation for NGOs',
+            'title' => 'التحول الرقمي للمؤسسات غير الربحية',
             'slug' => 'digital-transformation-ngos',
-            'excerpt' => 'Embracing technology to improve NGO operations',
-            'content' => 'Digital transformation guide...',
+            'excerpt' => 'توظيف التقنية لتحسين عمليات المؤسسات غير الربحية.',
+            'content' => 'دليل للتحول الرقمي واختيار الأدوات المناسبة وتحسين كفاءة العمل.',
             'author_id' => SeedIds::id('users.sarahAhmed'),
             'status' => 'published',
-            'published_at' => now()->subMonths(1),
-            'created_at' => now()->subMonths(1)->subDays(2),
-            'updated_at' => now()->subMonths(1),
+            'published_at' => now()->subMonth(),
+            'created_at' => now()->subMonth()->subDays(2),
+            'updated_at' => now()->subMonth(),
         ]);
     }
 }

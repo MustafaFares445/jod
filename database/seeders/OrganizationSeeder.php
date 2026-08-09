@@ -9,21 +9,20 @@ class OrganizationSeeder extends Seeder
 {
     public function run(): void
     {
-        // Organization 1: Help Foundation
         Organization::create([
             'id' => SeedIds::id('organizations.helpFoundation'),
-            'name' => 'Help Foundation',
+            'name' => 'مؤسسة العون',
             'email' => 'contact@helpfoundation.org',
             'phone' => '+962796543210',
-            'location' => 'Amman, Jordan',
-            'short_address' => '123 Help Street, Amman',
+            'location' => 'عمّان، الأردن',
+            'short_address' => 'شارع العون 123، عمّان',
             'organization_type' => 'ngo',
             'registration_number' => 'NGO-2023-001',
             'establishment_date' => '2020-03-15',
-            'description' => 'Dedicated to providing humanitarian aid and support to those in need across Jordan',
+            'description' => 'مؤسسة متخصصة في تقديم المساعدات الإنسانية ودعم المحتاجين في مختلف مناطق الأردن.',
             'license_document_name' => 'license_2023.pdf',
             'delegation_document_name' => 'delegation_2023.pdf',
-            'owner_full_name' => 'Sarah Ahmed',
+            'owner_full_name' => 'سارة أحمد',
             'owner_email' => 'sarah@helpfoundation.org',
             'owner_phone' => '+962791234567',
             'website' => 'https://helpfoundation.org',
@@ -39,21 +38,20 @@ class OrganizationSeeder extends Seeder
             'last_active_at' => now()->subHours(3),
         ]);
 
-        // Organization 2: Education Initiative
         Organization::create([
             'id' => SeedIds::id('organizations.educationInitiative'),
-            'name' => 'Education Initiative',
+            'name' => 'مبادرة التعليم',
             'email' => 'info@educationinitiative.org',
             'phone' => '+962796543211',
-            'location' => 'Zarqa, Jordan',
-            'short_address' => '456 Education Ave, Zarqa',
+            'location' => 'الزرقاء، الأردن',
+            'short_address' => 'شارع التعليم 456، الزرقاء',
             'organization_type' => 'charity',
             'registration_number' => 'CHR-2023-002',
             'establishment_date' => '2019-07-20',
-            'description' => 'Providing quality education access to underprivileged communities',
+            'description' => 'مبادرة تهدف إلى توفير تعليم نوعي للمجتمعات الأقل حظاً.',
             'license_document_name' => 'license_ed_2023.pdf',
             'delegation_document_name' => 'delegation_ed_2023.pdf',
-            'owner_full_name' => 'Fatima Mohammed',
+            'owner_full_name' => 'فاطمة محمد',
             'owner_email' => 'fatima@educationinitiative.org',
             'owner_phone' => '+962791234573',
             'website' => 'https://educationinitiative.org',
@@ -69,21 +67,20 @@ class OrganizationSeeder extends Seeder
             'last_active_at' => now()->subDays(2),
         ]);
 
-        // Organization 3: Tech for Good (unverified)
         Organization::create([
             'id' => SeedIds::id('organizations.techForGood'),
-            'name' => 'Tech for Good',
+            'name' => 'التقنية من أجل الخير',
             'email' => 'hello@techforgood.org',
             'phone' => '+962796543212',
-            'location' => 'Irbid, Jordan',
-            'short_address' => '789 Tech Street, Irbid',
+            'location' => 'إربد، الأردن',
+            'short_address' => 'شارع التقنية 789، إربد',
             'organization_type' => 'social_enterprise',
             'registration_number' => 'SE-2024-003',
             'establishment_date' => '2023-01-15',
-            'description' => 'Using technology to solve social problems in Jordan',
+            'description' => 'مؤسسة تستخدم الحلول التقنية لمعالجة المشكلات المجتمعية في الأردن.',
             'license_document_name' => 'license_tech_2024.pdf',
             'delegation_document_name' => 'delegation_tech_2024.pdf',
-            'owner_full_name' => 'Hassan Ahmed',
+            'owner_full_name' => 'حسن أحمد',
             'owner_email' => 'hassan@techforgood.org',
             'owner_phone' => '+962791234574',
             'website' => 'https://techforgood.org',
@@ -98,21 +95,20 @@ class OrganizationSeeder extends Seeder
             'last_active_at' => now()->subDays(5),
         ]);
 
-        // Organization 4: Community Group
         Organization::create([
             'id' => SeedIds::id('organizations.ammanCommunityGroup'),
-            'name' => 'Amman Community Group',
+            'name' => 'مجموعة مجتمع عمّان',
             'email' => 'contact@ammangroup.org',
             'phone' => '+962796543213',
-            'location' => 'Amman, Jordan',
-            'short_address' => '321 Community Lane, Amman',
+            'location' => 'عمّان، الأردن',
+            'short_address' => 'حي المجتمع 321، عمّان',
             'organization_type' => 'community_group',
             'registration_number' => 'CG-2024-004',
             'establishment_date' => '2023-06-01',
-            'description' => 'Building stronger communities through grassroots initiatives',
+            'description' => 'مجموعة مجتمعية تعمل على تعزيز المبادرات المحلية وبناء مجتمعات أكثر ترابطاً.',
             'license_document_name' => 'license_community_2024.pdf',
             'delegation_document_name' => 'delegation_community_2024.pdf',
-            'owner_full_name' => 'Noor Khalil',
+            'owner_full_name' => 'نور خليل',
             'owner_email' => 'noor@ammangroup.org',
             'owner_phone' => '+962791234575',
             'website' => null,

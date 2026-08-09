@@ -55,14 +55,23 @@ class CampaignService
 
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
-        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
         $sort = $this->normalizeSort($params);
+        $status = $params['status'] ?? $this->param($params, 'filter.status');
+        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Campaign::query()
             ->where('organization_id', $organizationId)
-            ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
+            ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
-            ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"));
+            ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
+            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
+                $builder->where(function (Builder $inner) use ($search): void {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('summary', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            });
 
         match ($sort) {
             'updatedAt' => $query->orderBy('updated_at'),
@@ -108,6 +117,33 @@ class CampaignService
         return $campaign;
     }
 
+    public function updateStatus(Campaign $campaign, string $status, ?string $closedReason = null): Campaign
+    {
+        if ($campaign->status === $status) {
+            return $campaign;
+        }
+
+        $transition = "{$campaign->status}:{$status}";
+
+        match ($transition) {
+            'draft:active' => $campaign->update([
+                'status' => 'active',
+                'closed_at' => null,
+                'close_reason' => null,
+            ]),
+            'active:closed' => $campaign->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+                'close_reason' => $closedReason,
+            ]),
+            default => throw ValidationException::withMessages([
+                'status' => ["Campaign status cannot transition from {$campaign->status} to {$status}."],
+            ]),
+        };
+
+        return $campaign;
+    }
+
     public function close(Campaign $campaign, string $reason): Campaign
     {
         if ($campaign->status !== 'active') {
@@ -132,6 +168,13 @@ class CampaignService
 
     private function normalizeSort(array $params): string
     {
+        $sortingField = (string) ($params['sortingField'] ?? '');
+        if ($sortingField !== '') {
+            $direction = ($params['sortingDir'] ?? 'desc') === 'asc' ? '' : '-';
+
+            return $direction.$sortingField;
+        }
+
         $sort = (string) ($params['sort'] ?? '');
         if ($sort !== '') {
             return $sort;

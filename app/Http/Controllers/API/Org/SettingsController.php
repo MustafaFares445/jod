@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API\Org;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\BankAccountRequest;
+use App\Http\Requests\Org\OrganizationProfileRequest;
 use App\Models\Organization;
 use Illuminate\Http\JsonResponse;
 
@@ -31,7 +32,7 @@ class SettingsController extends Controller
         ]);
     }
 
-    public function updateProfile(): JsonResponse
+    public function updateProfile(OrganizationProfileRequest $request): JsonResponse
     {
         /** @var Organization|null $org */
         $org = auth()->user()->organization;
@@ -41,11 +42,7 @@ class SettingsController extends Controller
 
         $this->authorize('updateSettings', $org);
 
-        $data = request()->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'email', 'max:255'],
-            'phone' => ['sometimes', 'nullable', 'string', 'max:20'],
-        ]);
+        $data = $request->validated();
 
         $org->update([
             'name' => $data['name'] ?? $org->name,

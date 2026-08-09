@@ -105,7 +105,7 @@ class BadgeEndpointsTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/admin/badges/{$badge->id}");
 
-        $response->assertNoContent();
+        $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
         $this->assertSoftDeleted('badges', ['id' => $badge->id]);
     }
 

@@ -163,7 +163,9 @@ class OrganizationWorkspaceEndpointsTest extends TestCase
             'name' => 'Donor C Updated',
         ])->assertOk()->assertJsonPath('data.name', 'Donor C Updated');
 
-        $this->deleteJson("/api/v1/org/donors/{$created}")->assertNoContent();
+        $this->deleteJson("/api/v1/org/donors/{$created}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Data deleted successfully.');
     }
 
     public function test_applicant_filtering_and_crud(): void
@@ -211,7 +213,9 @@ class OrganizationWorkspaceEndpointsTest extends TestCase
             'applicantStatus' => 'accepted',
         ])->assertOk()->assertJsonPath('data.applicantStatus', 'accepted');
 
-        $this->deleteJson("/api/v1/org/applicants/{$created}")->assertNoContent();
+        $this->deleteJson("/api/v1/org/applicants/{$created}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Data deleted successfully.');
     }
 
     public function test_org_notifications_read_state_flow(): void

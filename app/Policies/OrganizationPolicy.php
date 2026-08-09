@@ -69,9 +69,8 @@ class OrganizationPolicy
 
     private function authorizeOrganizationAction(User $user, PermissionAction $action): bool
     {
-        return $user->can(
-            PermissionNameResolver::resolve(PermissionGroup::ORG_SETTINGS, $action)
-        );
+        return $user->isOrganizationOwner()
+            || $user->can(PermissionNameResolver::resolve(PermissionGroup::ORG_SETTINGS, $action));
     }
 
     private function sameOrganization(User $user, Organization $model): bool

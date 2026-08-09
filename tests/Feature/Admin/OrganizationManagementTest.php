@@ -117,7 +117,8 @@ class OrganizationManagementTest extends TestCase
         ]);
 
         $this->deleteJson("/api/v1/admin/organizations/{$organization->id}")
-            ->assertNoContent();
+            ->assertOk()
+            ->assertJsonPath('message', 'Data deleted successfully.');
 
         $this->assertSoftDeleted('organizations', ['id' => $organization->id]);
     }

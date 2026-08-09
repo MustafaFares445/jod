@@ -28,25 +28,23 @@ enum PermissionGroup: string
     case ORG_ROLE = 'org.roles';
     case ORG_NOTIFICATION = 'org.notifications';
     case ORG_REPORT = 'org.reports';
+    case ORG_AUDIT_LOG = 'org.audit_logs';
     case ORG_SETTINGS = 'org.settings';
 
     public function definition(): PermissionGroupDefinition
     {
         return match ($this) {
             self::DASHBOARD => new PermissionGroupDefinition(
-                label: 'Dashboard',
+                label: 'لوحة التحكم',
                 module: PermissionModule::CORE,
-                description: 'Access the dashboard.',
+                description: 'الوصول إلى لوحة التحكم.',
                 order: 10,
-                actions: [
-                    PermissionAction::VIEW,
-                ],
+                actions: [PermissionAction::VIEW],
             ),
-
             self::USER => new PermissionGroupDefinition(
-                label: 'Users',
+                label: 'المستخدمون',
                 module: PermissionModule::CORE,
-                description: 'Manage application users.',
+                description: 'إدارة مستخدمي التطبيق.',
                 order: 20,
                 actions: [
                     PermissionAction::VIEW,
@@ -56,11 +54,10 @@ enum PermissionGroup: string
                     PermissionAction::RESET_PASSWORD,
                 ],
             ),
-
             self::ORGANIZATION => new PermissionGroupDefinition(
-                label: 'Organizations',
+                label: 'المؤسسات',
                 module: PermissionModule::ADMIN,
-                description: 'Manage organizations.',
+                description: 'إدارة المؤسسات المسجلة في المنصة.',
                 order: 30,
                 actions: [
                     PermissionAction::VIEW,
@@ -71,35 +68,26 @@ enum PermissionGroup: string
                     PermissionAction::ACCEPT,
                 ],
             ),
-
             self::POST_REVIEW => new PermissionGroupDefinition(
-                label: 'Post Review',
+                label: 'مراجعة المنشورات',
                 module: PermissionModule::ADMIN,
-                description: 'Review and moderate posts.',
+                description: 'مراجعة المنشورات والإشراف عليها.',
                 order: 40,
-                actions: [
-                    PermissionAction::VIEW,
-                    PermissionAction::APPROVE,
-                    PermissionAction::REJECT,
-                ],
+                sectionLabel: 'المراجعة',
+                actions: [PermissionAction::VIEW, PermissionAction::APPROVE, PermissionAction::REJECT],
             ),
-
             self::CAMPAIGN_REVIEW => new PermissionGroupDefinition(
-                label: 'Campaign Review',
+                label: 'مراجعة الحملات',
                 module: PermissionModule::ADMIN,
-                description: 'Review and moderate campaigns.',
+                description: 'مراجعة الحملات والإشراف عليها.',
                 order: 50,
-                actions: [
-                    PermissionAction::VIEW,
-                    PermissionAction::APPROVE,
-                    PermissionAction::REJECT,
-                ],
+                sectionLabel: 'المراجعة',
+                actions: [PermissionAction::VIEW, PermissionAction::APPROVE, PermissionAction::REJECT],
             ),
-
             self::REPORT => new PermissionGroupDefinition(
-                label: 'Reports',
+                label: 'البلاغات',
                 module: PermissionModule::ADMIN,
-                description: 'Manage platform reports.',
+                description: 'إدارة بلاغات المنصة ومتابعتها.',
                 order: 60,
                 actions: [
                     PermissionAction::VIEW,
@@ -108,11 +96,10 @@ enum PermissionGroup: string
                     PermissionAction::CLOSE,
                 ],
             ),
-
             self::NOTIFICATION => new PermissionGroupDefinition(
-                label: 'Notifications',
+                label: 'الإشعارات',
                 module: PermissionModule::ADMIN,
-                description: 'Manage notifications.',
+                description: 'إدارة إشعارات المنصة.',
                 order: 70,
                 actions: [
                     PermissionAction::VIEW,
@@ -122,54 +109,44 @@ enum PermissionGroup: string
                     PermissionAction::RESEND,
                 ],
             ),
-
             self::BADGE => new PermissionGroupDefinition(
-                label: 'Badges',
+                label: 'الشارات',
                 module: PermissionModule::ADMIN,
-                description: 'Manage reward badges.',
+                description: 'إدارة شارات المكافآت.',
                 order: 80,
             ),
-
             self::ARTICLE => new PermissionGroupDefinition(
-                label: 'Articles',
+                label: 'المقالات',
                 module: PermissionModule::ADMIN,
-                description: 'Manage knowledge base articles.',
+                description: 'إدارة مقالات قاعدة المعرفة.',
                 order: 90,
             ),
-
             self::CATEGORY => new PermissionGroupDefinition(
-                label: 'Categories',
+                label: 'التصنيفات',
                 module: PermissionModule::ADMIN,
-                description: 'Manage content categories.',
+                description: 'إدارة تصنيفات المحتوى.',
                 order: 95,
             ),
-
             self::AUDIT_LOG => new PermissionGroupDefinition(
-                label: 'Audit Logs',
+                label: 'سجل التدقيق',
                 module: PermissionModule::ADMIN,
-                description: 'View platform audit logs.',
+                description: 'عرض سجل عمليات المنصة.',
                 order: 100,
-                actions: [
-                    PermissionAction::VIEW,
-                ],
+                actions: [PermissionAction::VIEW],
             ),
-
             self::PLATFORM_SETTINGS => new PermissionGroupDefinition(
-                label: 'Platform Settings',
+                label: 'إعدادات المنصة',
                 module: PermissionModule::ADMIN,
-                description: 'Manage platform configuration.',
+                description: 'إدارة إعدادات المنصة العامة.',
                 order: 110,
-                actions: [
-                    PermissionAction::VIEW,
-                    PermissionAction::UPDATE,
-                ],
+                actions: [PermissionAction::VIEW, PermissionAction::UPDATE],
             ),
-
             self::ORG_CAMPAIGN => new PermissionGroupDefinition(
-                label: 'Campaigns',
+                label: 'الحملات',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization campaigns.',
+                description: 'إدارة حملات المؤسسة.',
                 order: 210,
+                sectionLabel: 'الحملات',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CREATE,
@@ -178,12 +155,12 @@ enum PermissionGroup: string
                     PermissionAction::CLOSE,
                 ],
             ),
-
             self::ORG_POST => new PermissionGroupDefinition(
-                label: 'Posts',
+                label: 'المنشورات',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization posts.',
+                description: 'إدارة منشورات المؤسسة.',
                 order: 220,
+                sectionLabel: 'المنشورات',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CREATE,
@@ -194,12 +171,12 @@ enum PermissionGroup: string
                     PermissionAction::RESTORE,
                 ],
             ),
-
             self::ORG_DONOR => new PermissionGroupDefinition(
-                label: 'Donors',
+                label: 'المتبرعون',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization donors.',
+                description: 'إدارة متبرعي المؤسسة.',
                 order: 230,
+                sectionLabel: 'المتبرعون',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CREATE,
@@ -208,12 +185,12 @@ enum PermissionGroup: string
                     PermissionAction::MANAGE,
                 ],
             ),
-
             self::ORG_APPLICANT => new PermissionGroupDefinition(
-                label: 'Applicants',
+                label: 'المتقدمون',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization applicants.',
+                description: 'إدارة المتقدمين إلى حملات المؤسسة.',
                 order: 240,
+                sectionLabel: 'المتقدمون',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CREATE,
@@ -222,12 +199,12 @@ enum PermissionGroup: string
                     PermissionAction::MANAGE,
                 ],
             ),
-
             self::ORG_STAFF => new PermissionGroupDefinition(
-                label: 'Staff',
+                label: 'فريق العمل',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization staff.',
+                description: 'إدارة فريق عمل المؤسسة.',
                 order: 250,
+                sectionLabel: 'فريق العمل',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CREATE,
@@ -236,19 +213,19 @@ enum PermissionGroup: string
                     PermissionAction::MANAGE,
                 ],
             ),
-
             self::ORG_ROLE => new PermissionGroupDefinition(
-                label: 'Roles',
+                label: 'الأدوار',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization roles.',
+                description: 'إدارة أدوار المؤسسة والصلاحيات المرتبطة بها.',
                 order: 260,
+                sectionLabel: 'الأدوار',
             ),
-
             self::ORG_NOTIFICATION => new PermissionGroupDefinition(
-                label: 'Notifications',
+                label: 'الإشعارات',
                 module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization notifications.',
+                description: 'إدارة إشعارات المؤسسة.',
                 order: 270,
+                sectionLabel: 'الإشعارات',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CREATE,
@@ -258,26 +235,35 @@ enum PermissionGroup: string
                     PermissionAction::RESEND,
                 ],
             ),
-
             self::ORG_REPORT => new PermissionGroupDefinition(
-                label: 'Reports',
+                label: 'التقارير',
                 module: PermissionModule::ORGANIZATION,
-                description: 'View organization reports.',
+                description: 'عرض تقارير المؤسسة وتحديث حالتها.',
                 order: 280,
-                actions: [
-                    PermissionAction::VIEW,
-                ],
-            ),
-
-            self::ORG_SETTINGS => new PermissionGroupDefinition(
-                label: 'Settings',
-                module: PermissionModule::ORGANIZATION,
-                description: 'Manage organization settings.',
-                order: 290,
+                sectionLabel: 'التقارير',
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::UPDATE,
+                    PermissionAction::CLAIM,
+                    PermissionAction::REQUEST_INFO,
+                    PermissionAction::CLOSE,
                 ],
+            ),
+            self::ORG_AUDIT_LOG => new PermissionGroupDefinition(
+                label: 'سجل نشاط المؤسسة',
+                module: PermissionModule::ORGANIZATION,
+                description: 'عرض سجل نشاط المؤسسة.',
+                order: 285,
+                sectionLabel: 'سجل النشاط',
+                actions: [PermissionAction::VIEW],
+            ),
+            self::ORG_SETTINGS => new PermissionGroupDefinition(
+                label: 'الإعدادات',
+                module: PermissionModule::ORGANIZATION,
+                description: 'إدارة إعدادات المؤسسة.',
+                order: 290,
+                sectionLabel: 'الإعدادات',
+                actions: [PermissionAction::VIEW, PermissionAction::UPDATE],
             ),
         };
     }
@@ -324,9 +310,7 @@ enum PermissionGroup: string
         return $this->definition()->order;
     }
 
-    /**
-     * @return list<PermissionAction>
-     */
+    /** @return list<PermissionAction> */
     public function actions(): array
     {
         return $this->definition()->actions ?? PermissionAction::crud();

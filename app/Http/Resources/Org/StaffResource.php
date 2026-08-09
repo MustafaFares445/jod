@@ -16,6 +16,7 @@ class StaffResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
+            'roleId' => $this->organization_role_id,
             'role' => $this->role?->name,
             'status' => $this->status,
             'invitedAt' => $this->invited_at?->toIso8601String(),

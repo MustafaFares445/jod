@@ -13,9 +13,9 @@ enum PermissionModule: string
     public function label(): string
     {
         return match ($this) {
-            self::CORE => 'Core',
-            self::ADMIN => 'Admin',
-            self::ORGANIZATION => 'Organization',
+            self::CORE => 'الأساسيات',
+            self::ADMIN => 'إدارة المنصة',
+            self::ORGANIZATION => 'إدارة المؤسسة',
         };
     }
 
