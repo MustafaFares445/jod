@@ -112,14 +112,53 @@ class MeController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{profile: array{id: string, name: string, email: string, phone: string|null, userType: string|null, organizationId: string|null, status: string|null, createdAt: string|null, lastActiveAt: string|null}, permissions: array, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: object{}}
+     * @response array{success: bool, message: string, data: array{profile: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: object{id: string, name: string, email: string|null, phone: string|null, status: string|null, verificationStatus: string|null}|null, createdAt: string|null, lastActiveAt: string|null}, permissions: array<string, mixed>, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: object{}}
      */
+    public function dashboardContext(Request $request, PermissionCatalogService $permissionCatalogService): JsonResponse
+    {
+        $user = $request->user()->loadMissing('organization');
+        $organizationId = $user->organization_id;
+
+        return MobileApiResponse::success([
+            'profile' => UserResource::make($user)->resolve($request),
+            'permissions' => $permissionCatalogService->forUser($user),
+            'counters' => [
+                'unreadNotifications' => Notification::query()
+                    ->where('status', 'unread')
+                    ->where('user_id', $user->id)
+                    ->count(),
+                'pendingReviews' => $organizationId
+                    ? Post::query()
+                        ->where('organization_id', $organizationId)
+                        ->where('status', 'pending')
+                        ->count()
+                        + Campaign::query()
+                            ->where('organization_id', $organizationId)
+                            ->where('status', 'pending')
+                            ->count()
+                    : 0,
+                'openReports' => $organizationId
+                    ? Report::query()
+                        ->where('organization_id', $organizationId)
+                        ->whereIn('status', ['new', 'in_progress'])
+                        ->count()
+                    : 0,
+            ],
+        ], 'Dashboard context retrieved successfully.');
+    }
+
     /**
      * Respond to mobile health checks.
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{pong: bool}, error: null, meta: object{}}
+     * @response array{success: bool, message: string, data: array{pong: bool, userId: string}, error: null, meta: object{}}
      */
-
+    public function ping(Request $request): JsonResponse
+    {
+        return MobileApiResponse::success([
+            'pong' => true,
+            'userId' => (string) $request->user()->id,
+        ], 'Pong.');
+    }
 }

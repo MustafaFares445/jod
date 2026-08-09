@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\MeController;
+use App\Http\Controllers\Mobile\UserPostController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -51,10 +52,22 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->name('me.')
         ->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
+            Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
             Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
             Route::get('dashboard-context', [MeController::class, 'dashboardContext'])->name('dashboard-context');
             Route::get('ping', [MeController::class, 'ping'])->name('ping');
+        });
+
+    Route::prefix('posts')
+        ->name('posts.')
+        ->group(function (): void {
+            Route::post('/', [UserPostController::class, 'store'])->name('store');
+            Route::patch('{post}', [UserPostController::class, 'update'])->name('update');
+            Route::post('{post}/submit', [UserPostController::class, 'submit'])->name('submit');
+            Route::post('{post}/archive', [UserPostController::class, 'archive'])->name('archive');
+            Route::post('{post}/repost', [UserPostController::class, 'repost'])->name('repost');
+            Route::delete('{post}', [UserPostController::class, 'destroy'])->name('destroy');
         });
 });
