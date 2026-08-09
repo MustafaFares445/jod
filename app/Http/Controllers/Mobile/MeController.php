@@ -114,44 +114,6 @@ class MeController extends Controller
      *
      * @response array{success: bool, message: string, data: array{profile: array{id: string, name: string, email: string, phone: string|null, userType: string|null, organizationId: string|null, status: string|null, createdAt: string|null, lastActiveAt: string|null}, permissions: array, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: object{}}
      */
-    public function dashboardContext(Request $request, PermissionCatalogService $permissionCatalogService): JsonResponse
-    {
-        $user = $request->user();
-        $permissions = $permissionCatalogService->forUser($user);
-
-        return MobileApiResponse::success([
-            'profile' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'userType' => $user->user_type,
-                'organizationId' => $user->organization_id,
-                'status' => $user->status,
-                'createdAt' => $user->created_at?->toIso8601String(),
-                'lastActiveAt' => $user->last_active_at?->toIso8601String(),
-            ],
-            'permissions' => $permissions,
-            'counters' => [
-                'unreadNotifications' => Notification::query()
-                    ->where('status', 'unread')
-                    ->where(function ($query) use ($user): void {
-                        $query->where('recipient_id', $user->id);
-
-                        if ($user->organization_id) {
-                            $query->orWhere('organization_id', $user->organization_id);
-                        }
-                    })
-                    ->count(),
-                'pendingReviews' => Post::query()->where('status', 'pending')->count()
-                    + Campaign::query()->where('status', 'pending')->count(),
-                'openReports' => Report::query()
-                    ->whereIn('status', ['new', 'in_progress'])
-                    ->count(),
-            ],
-        ], 'Dashboard context retrieved successfully.');
-    }
-
     /**
      * Respond to mobile health checks.
      *
@@ -159,10 +121,5 @@ class MeController extends Controller
      *
      * @response array{success: bool, message: string, data: array{pong: bool}, error: null, meta: object{}}
      */
-    public function ping(): JsonResponse
-    {
-        return MobileApiResponse::success([
-            'pong' => true,
-        ], 'Ping successful.');
-    }
+
 }
