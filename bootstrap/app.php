@@ -7,10 +7,10 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
-use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -33,5 +33,39 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->shouldRenderJsonWhen(static function (Request $request): bool {
+            return $request->is('api/mobile/*') || $request->is('api/mobile');
+        });
+
+        $exceptions->render(static function (AuthenticationException $exception, Request $request): ?JsonResponse {
+            if (! $request->is('api/mobile/*') && ! $request->is('api/mobile')) {
+                return null;
+            }
+
+            return MobileApiResponse::error('unauthenticated', 'Unauthenticated.', null, 401);
+        });
+
+        $exceptions->render(static function (ValidationException $exception, Request $request): ?JsonResponse {
+            if (! $request->is('api/mobile/*') && ! $request->is('api/mobile')) {
+                return null;
+            }
+
+            return MobileApiResponse::error('validation_error', $exception->getMessage(), $exception->errors(), 422);
+        });
+
+        $exceptions->render(static function (AccessDeniedHttpException $exception, Request $request): ?JsonResponse {
+            if (! $request->is('api/mobile/*') && ! $request->is('api/mobile')) {
+                return null;
+            }
+
+            return MobileApiResponse::error('forbidden', 'This action is unauthorized.', null, 403);
+        });
+
+        $exceptions->render(static function (NotFoundHttpException $exception, Request $request): ?JsonResponse {
+            if (! $request->is('api/mobile/*') && ! $request->is('api/mobile')) {
+                return null;
+            }
+
+            return MobileApiResponse::error('not_found', 'The requested resource could not be found.', null, 404);
+        });
     })->create();

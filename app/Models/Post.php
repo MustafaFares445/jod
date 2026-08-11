@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'location',
     'organization_id',
     'campaign_id',
+    'category_id',
     'author_id',
     'rejection_reason',
     'views_count',
@@ -54,6 +55,11 @@ class Post extends Model
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(Campaign::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function author(): BelongsTo

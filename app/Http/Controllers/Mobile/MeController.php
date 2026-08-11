@@ -112,42 +112,37 @@ class MeController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{profile: array{id: string, name: string, email: string, phone: string|null, userType: string|null, organizationId: string|null, status: string|null, createdAt: string|null, lastActiveAt: string|null}, permissions: array, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: object{}}
+     * @response array{success: bool, message: string, data: array{profile: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: object{id: string, name: string, email: string|null, phone: string|null, status: string|null, verificationStatus: string|null}|null, createdAt: string|null, lastActiveAt: string|null}, permissions: array<string, mixed>, counters: array{unreadNotifications: int, pendingReviews: int, openReports: int}}, error: null, meta: object{}}
      */
     public function dashboardContext(Request $request, PermissionCatalogService $permissionCatalogService): JsonResponse
     {
-        $user = $request->user();
-        $permissions = $permissionCatalogService->forUser($user);
+        $user = $request->user()->loadMissing('organization');
+        $organizationId = $user->organization_id;
 
         return MobileApiResponse::success([
-            'profile' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'userType' => $user->user_type,
-                'organizationId' => $user->organization_id,
-                'status' => $user->status,
-                'createdAt' => $user->created_at?->toIso8601String(),
-                'lastActiveAt' => $user->last_active_at?->toIso8601String(),
-            ],
-            'permissions' => $permissions,
+            'profile' => UserResource::make($user)->resolve($request),
+            'permissions' => $permissionCatalogService->forUser($user),
             'counters' => [
                 'unreadNotifications' => Notification::query()
                     ->where('status', 'unread')
-                    ->where(function ($query) use ($user): void {
-                        $query->where('recipient_id', $user->id);
-
-                        if ($user->organization_id) {
-                            $query->orWhere('organization_id', $user->organization_id);
-                        }
-                    })
+                    ->where('user_id', $user->id)
                     ->count(),
-                'pendingReviews' => Post::query()->where('status', 'pending')->count()
-                    + Campaign::query()->where('status', 'pending')->count(),
-                'openReports' => Report::query()
-                    ->whereIn('status', ['new', 'in_progress'])
-                    ->count(),
+                'pendingReviews' => $organizationId
+                    ? Post::query()
+                        ->where('organization_id', $organizationId)
+                        ->where('status', 'pending')
+                        ->count()
+                        + Campaign::query()
+                            ->where('organization_id', $organizationId)
+                            ->where('status', 'pending')
+                            ->count()
+                    : 0,
+                'openReports' => $organizationId
+                    ? Report::query()
+                        ->where('organization_id', $organizationId)
+                        ->whereIn('status', ['new', 'in_progress'])
+                        ->count()
+                    : 0,
             ],
         ], 'Dashboard context retrieved successfully.');
     }
@@ -157,12 +152,13 @@ class MeController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{pong: bool}, error: null, meta: object{}}
+     * @response array{success: bool, message: string, data: array{pong: bool, userId: string}, error: null, meta: object{}}
      */
-    public function ping(): JsonResponse
+    public function ping(Request $request): JsonResponse
     {
         return MobileApiResponse::success([
             'pong' => true,
-        ], 'Ping successful.');
+            'userId' => (string) $request->user()->id,
+        ], 'Pong.');
     }
 }
