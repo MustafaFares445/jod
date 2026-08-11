@@ -36,8 +36,7 @@ return new class extends Migration
     public function down(): void
     {
         if (DB::getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE posts MODIFY title VARCHAR(255) NOT NULL');
-            DB::statement("ALTER TABLE posts MODIFY type ENUM('general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary', 'help_request', 'awareness') NOT NULL DEFAULT 'general'");
+            throw new RuntimeException('This migration is irreversible on MySQL because restoring the previous title/type constraints would reject valid mobile publishing data.');
         }
 
         Schema::table('posts', function (Blueprint $table) {

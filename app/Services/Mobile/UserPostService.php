@@ -51,7 +51,7 @@ class UserPostService
     }
 
     /**
-     * @param  array{type: string, title?: string|null, details?: string|null, city?: string|null, categoryId?: string|null}  $data
+     * @param  array{type?: string|null, title?: string|null, details?: string|null, city?: string|null, categoryId?: string|null}  $data
      */
     public function update(Post $post, array $data): Post
     {

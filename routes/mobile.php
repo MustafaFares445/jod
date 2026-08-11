@@ -56,8 +56,6 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
             Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
-            Route::get('dashboard-context', [MeController::class, 'dashboardContext'])->name('dashboard-context');
-            Route::get('ping', [MeController::class, 'ping'])->name('ping');
         });
 
     Route::prefix('posts')
