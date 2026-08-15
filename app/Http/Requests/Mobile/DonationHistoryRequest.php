@@ -9,7 +9,11 @@ use Illuminate\Foundation\Http\FormRequest;
 class DonationHistoryRequest extends FormRequest
 {
     /**
-     * @return array<string, list<mixed>>
+     * @return array{
+     *     page: list<mixed>,
+     *     perPage: list<mixed>,
+     *     campaignId: list<mixed>
+     * }
      */
     public function rules(): array
     {
