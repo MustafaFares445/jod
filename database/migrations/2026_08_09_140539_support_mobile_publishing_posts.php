@@ -35,15 +35,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (DB::getDriverName() === 'mysql') {
-            throw new RuntimeException('This migration is irreversible on MySQL because restoring the previous title/type constraints would reject valid mobile publishing data.');
-        }
-
-        Schema::table('posts', function (Blueprint $table) {
-            if (Schema::hasColumn('posts', 'category_id')) {
+        if (Schema::hasColumn('posts', 'category_id')) {
+            Schema::table('posts', function (Blueprint $table) {
                 $table->dropForeign(['category_id']);
-                $table->dropColumn('category_id');
-            }
-        });
+            });
+        }
     }
 };
