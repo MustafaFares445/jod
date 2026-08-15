@@ -17,7 +17,23 @@ class DonationFactory extends Factory
     protected $model = Donation::class;
 
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     organization_id: Factory<Organization>,
+     *     campaign_id: null,
+     *     name: string,
+     *     email: string,
+     *     phone: string,
+     *     campaign_title: string,
+     *     amount_or_type: float,
+     *     donated_at: \Illuminate\Support\Carbon,
+     *     city: string,
+     *     source: string,
+     *     payment_method: string,
+     *     campaign_ref: null,
+     *     assigned_to: null,
+     *     internal_notes: null,
+     *     created_by: Factory<User>
+     * }
      */
     public function definition(): array
     {
