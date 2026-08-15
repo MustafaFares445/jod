@@ -263,8 +263,8 @@ class MobilePublishingTest extends TestCase
             ->assertJsonPath('data', null);
 
         $this->assertSoftDeleted('posts', ['id' => $post->id]);
-        $this->getJson('/api/mobile/me/posts')->assertJsonMissing(['id' => $post->id]);
-        $this->getJson('/api/mobile/discovery/posts')->assertJsonMissing(['id' => $post->id]);
+        $this->getJson('/api/mobile/me/posts')->assertOk()->assertJsonMissing(['id' => $post->id]);
+        $this->getJson('/api/mobile/discovery/posts')->assertOk()->assertJsonMissing(['id' => $post->id]);
     }
 
     public function test_archive_repost_and_delete_deny_non_owner(): void

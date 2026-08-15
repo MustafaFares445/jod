@@ -26,8 +26,6 @@ class MobileRouteCompatibilityTest extends TestCase
             'mobile.me.profile.update' => ['PATCH', 'api/mobile/me/profile'],
             'mobile.me.change-password' => ['PATCH', 'api/mobile/me/change-password'],
             'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
-            'mobile.me.dashboard-context' => ['GET', 'api/mobile/me/dashboard-context'],
-            'mobile.me.ping' => ['GET', 'api/mobile/me/ping'],
         ];
 
         foreach ($expectedRoutes as $routeName => [$method, $uri]) {

@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Mobile;
+
+use App\Models\SavedPost;
+use App\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+class SavedPostService
+{
+    /**
+     * @param  array{page?: int|string|null, perPage?: int|string|null}  $params
+     */
+    public function paginate(User $user, array $params): LengthAwarePaginator
+    {
+        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+
+        return SavedPost::query()
+            ->with(['post.organization', 'post.campaign'])
+            ->where('user_id', $user->id)
+            ->whereHas('post', fn ($query) => $query->where('status', 'published'))
+            ->orderByDesc('created_at')
+            ->orderBy('id')
+            ->paginate($perPage);
+    }
+}

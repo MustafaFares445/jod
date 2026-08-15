@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\MeController;
+use App\Http\Controllers\Mobile\PostEngagementController;
+use App\Http\Controllers\Mobile\PostReportController;
+use App\Http\Controllers\Mobile\SavedPostController;
 use App\Http\Controllers\Mobile\UserPostController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,11 +56,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
             Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
+            Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
             Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
-            Route::get('dashboard-context', [MeController::class, 'dashboardContext'])->name('dashboard-context');
-            Route::get('ping', [MeController::class, 'ping'])->name('ping');
         });
 
     Route::prefix('posts')
@@ -65,6 +67,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->group(function (): void {
             Route::post('/', [UserPostController::class, 'store'])->name('store');
             Route::patch('{post}', [UserPostController::class, 'update'])->name('update');
+            Route::post('{post}/like', [PostEngagementController::class, 'like'])->name('like');
+            Route::delete('{post}/like', [PostEngagementController::class, 'unlike'])->name('unlike');
+            Route::post('{post}/save', [PostEngagementController::class, 'save'])->name('save');
+            Route::delete('{post}/save', [PostEngagementController::class, 'unsave'])->name('unsave');
+            Route::post('{post}/reports', [PostReportController::class, 'store'])->name('reports.store');
             Route::post('{post}/submit', [UserPostController::class, 'submit'])->name('submit');
             Route::post('{post}/archive', [UserPostController::class, 'archive'])->name('archive');
             Route::post('{post}/repost', [UserPostController::class, 'repost'])->name('repost');

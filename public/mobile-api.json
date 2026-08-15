@@ -2202,214 +2202,6 @@
                 }
             }
         },
-        "/me/dashboard-context": {
-            "get": {
-                "operationId": "mobile.me.dashboard-context",
-                "description": "Requires a Sanctum bearer token.",
-                "summary": "Get the authenticated mobile dashboard context",
-                "tags": [
-                    "Me"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "profile": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "id": {
-                                                            "type": "string"
-                                                        },
-                                                        "name": {
-                                                            "type": "string"
-                                                        },
-                                                        "email": {
-                                                            "type": "string"
-                                                        },
-                                                        "phone": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        },
-                                                        "userType": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        },
-                                                        "status": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        },
-                                                        "organizationId": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        },
-                                                        "organization": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        },
-                                                        "createdAt": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        },
-                                                        "lastActiveAt": {
-                                                            "type": [
-                                                                "string",
-                                                                "null"
-                                                            ]
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "id",
-                                                        "name",
-                                                        "email",
-                                                        "phone",
-                                                        "userType",
-                                                        "status",
-                                                        "organizationId",
-                                                        "organization",
-                                                        "createdAt",
-                                                        "lastActiveAt"
-                                                    ]
-                                                },
-                                                "permissions": {
-                                                    "type": "object",
-                                                    "additionalProperties": {}
-                                                },
-                                                "counters": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "unreadNotifications": {
-                                                            "type": "integer"
-                                                        },
-                                                        "pendingReviews": {
-                                                            "type": "integer"
-                                                        },
-                                                        "openReports": {
-                                                            "type": "integer"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "unreadNotifications",
-                                                        "pendingReviews",
-                                                        "openReports"
-                                                    ]
-                                                }
-                                            },
-                                            "required": [
-                                                "profile",
-                                                "permissions",
-                                                "counters"
-                                            ]
-                                        },
-                                        "error": {
-                                            "type": "null"
-                                        },
-                                        "meta": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "success",
-                                        "message",
-                                        "data",
-                                        "error",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                }
-            }
-        },
-        "/me/ping": {
-            "get": {
-                "operationId": "mobile.me.ping",
-                "description": "Requires a Sanctum bearer token.",
-                "summary": "Respond to mobile health checks",
-                "tags": [
-                    "Me"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "type": "object",
-                                            "properties": {
-                                                "pong": {
-                                                    "type": "boolean"
-                                                },
-                                                "userId": {
-                                                    "type": "string"
-                                                }
-                                            },
-                                            "required": [
-                                                "pong",
-                                                "userId"
-                                            ]
-                                        },
-                                        "error": {
-                                            "type": "null"
-                                        },
-                                        "meta": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "success",
-                                        "message",
-                                        "data",
-                                        "error",
-                                        "meta"
-                                    ]
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
-                    }
-                }
-            }
-        },
         "/me/posts": {
             "get": {
                 "operationId": "mobile.me.posts.index",
@@ -2778,11 +2570,11 @@
                             }
                         }
                     },
-                    "403": {
-                        "$ref": "#/components/responses/AuthorizationException"
-                    },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
@@ -2946,14 +2738,14 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
@@ -3019,14 +2811,14 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }
@@ -3177,14 +2969,14 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
@@ -3338,14 +3130,14 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/AuthenticationException"
                     }
                 }
             }
@@ -3496,14 +3288,636 @@
                             }
                         }
                     },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/posts/{post}/like": {
+            "post": {
+                "operationId": "mobile.posts.like",
+                "description": "Requires a Sanctum bearer token. Repeated calls are idempotent.",
+                "summary": "Like a public active post",
+                "tags": [
+                    "PostEngagement"
+                ],
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "description": "The post identifier.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "postId": {
+                                                    "type": "string"
+                                                },
+                                                "isLiked": {
+                                                    "type": "boolean"
+                                                },
+                                                "likesCount": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "postId",
+                                                "isLiked",
+                                                "likesCount"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "error",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "mobile.posts.unlike",
+                "description": "Requires a Sanctum bearer token. Repeated calls are idempotent.",
+                "summary": "Unlike a public active post",
+                "tags": [
+                    "PostEngagement"
+                ],
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "description": "The post identifier.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "postId": {
+                                                    "type": "string"
+                                                },
+                                                "isLiked": {
+                                                    "type": "boolean"
+                                                },
+                                                "likesCount": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "postId",
+                                                "isLiked",
+                                                "likesCount"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "error",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/posts/{post}/save": {
+            "post": {
+                "operationId": "mobile.posts.save",
+                "description": "Requires a Sanctum bearer token. Repeated calls are idempotent.",
+                "summary": "Save a public active post",
+                "tags": [
+                    "PostEngagement"
+                ],
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "description": "The post identifier.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "postId": {
+                                                    "type": "string"
+                                                },
+                                                "isSaved": {
+                                                    "type": "boolean"
+                                                },
+                                                "savesCount": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "postId",
+                                                "isSaved",
+                                                "savesCount"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "error",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "mobile.posts.unsave",
+                "description": "Requires a Sanctum bearer token. Repeated calls are idempotent.",
+                "summary": "Unsave a public active post",
+                "tags": [
+                    "PostEngagement"
+                ],
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "description": "The post identifier.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "postId": {
+                                                    "type": "string"
+                                                },
+                                                "isSaved": {
+                                                    "type": "boolean"
+                                                },
+                                                "savesCount": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "postId",
+                                                "isSaved",
+                                                "savesCount"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "error",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/me/saved-posts": {
+            "get": {
+                "operationId": "mobile.me.saved-posts.index",
+                "description": "Requires a Sanctum bearer token.",
+                "summary": "List the authenticated user's saved public posts",
+                "tags": [
+                    "SavedPost"
+                ],
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "perPage",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "title": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "summary": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "type": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "organizationName": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "authorName": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "location": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "campaignTitle": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "submittedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "createdAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "updatedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "publishedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "reviewedBy": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "rejectionReason": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "viewsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "reactionsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "applicationsCount": {
+                                                        "type": "integer"
+                                                    },
+                                                    "savedAt": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "error": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "currentPage": {
+                                                    "type": "integer"
+                                                },
+                                                "perPage": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "lastPage": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "currentPage",
+                                                "perPage",
+                                                "total",
+                                                "lastPage"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "error",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/posts/{post}/reports": {
+            "post": {
+                "operationId": "mobile.posts.reports.store",
+                "description": "Requires a Sanctum bearer token. Every valid submission creates a new moderation report.",
+                "summary": "Report a public active post",
+                "tags": [
+                    "PostReport"
+                ],
+                "parameters": [
+                    {
+                        "name": "post",
+                        "in": "path",
+                        "required": true,
+                        "description": "The post identifier.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "minLength": 3,
+                                        "maxLength": 100
+                                    },
+                                    "details": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 180
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "postId": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "postId",
+                                                "status"
+                                            ]
+                                        },
+                                        "error": {
+                                            "type": "null"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message",
+                                        "data",
+                                        "error",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -3626,11 +4040,27 @@
                     }
                 },
                 "required": [
-                    "type",
-                    "title",
-                    "details",
-                    "city"
+                    "type"
                 ],
+                "if": {
+                    "not": {
+                        "properties": {
+                            "saveAsDraft": {
+                                "const": true
+                            }
+                        },
+                        "required": [
+                            "saveAsDraft"
+                        ]
+                    }
+                },
+                "then": {
+                    "required": [
+                        "title",
+                        "details",
+                        "city"
+                    ]
+                },
                 "title": "PostRequest"
             },
             "ProfileRequest": {
@@ -3752,24 +4182,50 @@
                         "schema": {
                             "type": "object",
                             "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "const": false
+                                },
                                 "message": {
                                     "type": "string",
-                                    "description": "Errors overview."
+                                    "description": "Error overview."
                                 },
-                                "errors": {
+                                "data": {
+                                    "type": "null"
+                                },
+                                "error": {
                                     "type": "object",
-                                    "description": "A detailed description of each field that failed validation.",
-                                    "additionalProperties": {
-                                        "type": "array",
-                                        "items": {
+                                    "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "const": "validation_error"
+                                        },
+                                        "message": {
                                             "type": "string"
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "A detailed description of each field that failed validation.",
+                                            "additionalProperties": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "details"
+                                    ]
                                 }
                             },
                             "required": [
+                                "success",
                                 "message",
-                                "errors"
+                                "data",
+                                "error"
                             ]
                         }
                     }
@@ -3801,13 +4257,43 @@
                         "schema": {
                             "type": "object",
                             "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "const": false
+                                },
                                 "message": {
                                     "type": "string",
                                     "description": "Error overview."
+                                },
+                                "data": {
+                                    "type": "null"
+                                },
+                                "error": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "const": "forbidden"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "details": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "details"
+                                    ]
                                 }
                             },
                             "required": [
-                                "message"
+                                "success",
+                                "message",
+                                "data",
+                                "error"
                             ]
                         }
                     }
@@ -3820,13 +4306,43 @@
                         "schema": {
                             "type": "object",
                             "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "const": false
+                                },
                                 "message": {
                                     "type": "string",
                                     "description": "Error overview."
+                                },
+                                "data": {
+                                    "type": "null"
+                                },
+                                "error": {
+                                    "type": "object",
+                                    "properties": {
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "details": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "code",
+                                        "message",
+                                        "details"
+                                    ]
                                 }
                             },
                             "required": [
-                                "message"
+                                "success",
+                                "message",
+                                "data",
+                                "error"
                             ]
                         }
                     }
