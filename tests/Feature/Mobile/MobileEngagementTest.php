@@ -44,7 +44,7 @@ class MobileEngagementTest extends TestCase
     {
         $user = User::factory()->create();
         $post = $this->createPost();
-        PostLike::query()->create(['user_id' => $user->id, 'post_id' => $post->id]);
+        PostLike::factory()->create(['user_id' => $user->id, 'post_id' => $post->id]);
         $post->update(['reactions_count' => 1]);
         Sanctum::actingAs($user);
 
@@ -101,7 +101,7 @@ class MobileEngagementTest extends TestCase
     {
         $user = User::factory()->create();
         $post = $this->createPost();
-        SavedPost::query()->create(['user_id' => $user->id, 'post_id' => $post->id]);
+        SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $post->id]);
         Sanctum::actingAs($user);
 
         $this->deleteJson("/api/mobile/posts/{$post->id}/save")
@@ -127,10 +127,10 @@ class MobileEngagementTest extends TestCase
         $otherPost = $this->createPost(['title' => 'Other saved']);
         $draftPost = $this->createPost(['title' => 'Draft saved', 'status' => 'draft']);
 
-        SavedPost::query()->create(['user_id' => $user->id, 'post_id' => $firstPost->id]);
-        SavedPost::query()->create(['user_id' => $user->id, 'post_id' => $secondPost->id]);
-        SavedPost::query()->create(['user_id' => $user->id, 'post_id' => $draftPost->id]);
-        SavedPost::query()->create(['user_id' => $otherUser->id, 'post_id' => $otherPost->id]);
+        SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $firstPost->id]);
+        SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $secondPost->id]);
+        SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $draftPost->id]);
+        SavedPost::factory()->create(['user_id' => $otherUser->id, 'post_id' => $otherPost->id]);
         Sanctum::actingAs($user);
 
         $response = $this->getJson('/api/mobile/me/saved-posts?perPage=10');
