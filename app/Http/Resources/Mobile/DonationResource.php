@@ -10,7 +10,19 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class DonationResource extends JsonResource
 {
     /**
-     * @return array<string, mixed>
+     * @return array{
+     *     id: string,
+     *     campaignId: string,
+     *     campaignTitle: string,
+     *     organizationName: string|null,
+     *     amount: float,
+     *     paymentMethod: string|null,
+     *     phone: string|null,
+     *     city: string|null,
+     *     source: string|null,
+     *     donatedAt: string|null,
+     *     createdAt: string|null
+     * }
      */
     public function toArray(Request $request): array
     {
