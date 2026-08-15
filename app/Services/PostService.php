@@ -23,7 +23,7 @@ class PostService
         $sort = $this->normalizeDiscoverySort($params);
 
         $query = Post::query()
-            ->with(['organization', 'campaign'])
+            ->with(['organization', 'campaign', 'images'])
             ->where('status', 'published')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
@@ -53,7 +53,7 @@ class PostService
     public function findPublicPost(string $id): ?Post
     {
         return Post::query()
-            ->with(['organization', 'campaign'])
+            ->with(['organization', 'campaign', 'images'])
             ->whereKey($id)
             ->where('status', 'published')
             ->first();
@@ -70,7 +70,7 @@ class PostService
         $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Post::query()
-            ->with('campaign')
+            ->with(['campaign', 'images'])
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
