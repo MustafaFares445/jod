@@ -6,6 +6,7 @@ use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\MeController;
+use App\Http\Controllers\Mobile\MobileDeviceController;
 use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostImageController;
@@ -25,6 +26,7 @@ Route::prefix('auth')
     ->group(function (): void {
         Route::post('register', [AuthController::class, 'register'])->name('register');
         Route::post('login', [AuthController::class, 'login'])->name('login');
+        Route::post('refresh', [AuthController::class, 'refresh'])->name('refresh');
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot-password');
         Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])->name('verify-reset-code');
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
@@ -47,7 +49,7 @@ Route::prefix('discovery')
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): void {
     Route::prefix('auth')
         ->name('auth.')
         ->group(function (): void {
@@ -62,6 +64,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
             Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
             Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
+            Route::put('devices', [MobileDeviceController::class, 'store'])->name('devices.store');
+            Route::delete('devices/{device}', [MobileDeviceController::class, 'destroy'])->name('devices.destroy');
 
             Route::prefix('notifications')
                 ->name('notifications.')
