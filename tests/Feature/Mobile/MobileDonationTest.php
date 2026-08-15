@@ -154,7 +154,18 @@ class MobileDonationTest extends TestCase
     }
 
     /**
-     * @param  array<string, mixed>  $overrides
+     * @param  array{
+     *     id?: string,
+     *     title?: string,
+     *     summary?: string|null,
+     *     category?: string,
+     *     status?: string,
+     *     location?: string|null,
+     *     organization_id?: string,
+     *     goal_amount?: int|float|string,
+     *     raised_amount?: int|float|string,
+     *     donors_count?: int
+     * }  $overrides
      */
     private function createCampaign(array $overrides = []): Campaign
     {
