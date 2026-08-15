@@ -6,6 +6,7 @@ use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\MeController;
+use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostReportController;
 use App\Http\Controllers\Mobile\SavedPostController;
@@ -60,6 +61,18 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
             Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
             Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
+
+            Route::prefix('notifications')
+                ->name('notifications.')
+                ->group(function (): void {
+                    Route::get('/', [NotificationController::class, 'index'])->name('index');
+                    Route::get('unread-count', [NotificationController::class, 'unreadCount'])->name('unread-count');
+                    Route::patch('read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
+                    Route::get('{notification}', [NotificationController::class, 'show'])->name('show');
+                    Route::patch('{notification}/read', [NotificationController::class, 'markRead'])->name('read');
+                    Route::patch('{notification}/unread', [NotificationController::class, 'markUnread'])->name('unread');
+                });
+
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
             Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');

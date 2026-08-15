@@ -28,6 +28,12 @@ class MobileRouteCompatibilityTest extends TestCase
             'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
             'mobile.me.donations.index' => ['GET', 'api/mobile/me/donations'],
             'mobile.me.donations.show' => ['GET', 'api/mobile/me/donations/{donation}'],
+            'mobile.me.notifications.index' => ['GET', 'api/mobile/me/notifications'],
+            'mobile.me.notifications.unread-count' => ['GET', 'api/mobile/me/notifications/unread-count'],
+            'mobile.me.notifications.read-all' => ['PATCH', 'api/mobile/me/notifications/read-all'],
+            'mobile.me.notifications.show' => ['GET', 'api/mobile/me/notifications/{notification}'],
+            'mobile.me.notifications.read' => ['PATCH', 'api/mobile/me/notifications/{notification}/read'],
+            'mobile.me.notifications.unread' => ['PATCH', 'api/mobile/me/notifications/{notification}/unread'],
             'mobile.campaigns.donations.store' => ['POST', 'api/mobile/campaigns/{campaign}/donations'],
         ];
 
