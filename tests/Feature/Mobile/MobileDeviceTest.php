@@ -29,6 +29,7 @@ class MobileDeviceTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Mobile device registered successfully.')
+            ->assertJsonPath('data.pushTargetType', 'token')
             ->assertJsonPath('data.platform', 'android')
             ->assertJsonPath('data.deviceId', 'installation-1')
             ->assertJsonPath('data.appVersion', '1.4.0')
@@ -39,9 +40,36 @@ class MobileDeviceTest extends TestCase
             'id' => $response->json('data.id'),
             'user_id' => $user->id,
             'push_token' => 'push-token-1',
+            'push_target_type' => 'token',
             'platform' => 'android',
             'device_id' => 'installation-1',
             'app_version' => '1.4.0',
+        ]);
+    }
+
+    public function test_user_can_register_firebase_installation_id_target(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
+
+        $response = $this->putJson('/api/mobile/me/devices', [
+            'pushToken' => 'firebase-installation-id',
+            'pushTargetType' => 'fid',
+            'platform' => 'ios',
+            'deviceId' => 'installation-fid',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.pushTargetType', 'fid')
+            ->assertJsonPath('data.platform', 'ios')
+            ->assertJsonMissingPath('data.pushToken');
+
+        $this->assertDatabaseHas('mobile_devices', [
+            'id' => $response->json('data.id'),
+            'user_id' => $user->id,
+            'push_token' => 'firebase-installation-id',
+            'push_target_type' => 'fid',
+            'platform' => 'ios',
         ]);
     }
 
@@ -69,6 +97,7 @@ class MobileDeviceTest extends TestCase
         $this->assertDatabaseHas('mobile_devices', [
             'id' => $first->json('data.id'),
             'push_token' => 'push-token-new',
+            'push_target_type' => 'token',
             'app_version' => '2.1.0',
         ]);
         $this->assertDatabaseMissing('mobile_devices', [
@@ -108,9 +137,10 @@ class MobileDeviceTest extends TestCase
 
         $this->putJson('/api/mobile/me/devices', [
             'pushToken' => '',
+            'pushTargetType' => 'apns-token',
             'platform' => 'windows-phone',
         ])->assertUnprocessable()
-            ->assertJsonValidationErrors(['pushToken', 'platform'], 'error.details');
+            ->assertJsonValidationErrors(['pushToken', 'pushTargetType', 'platform'], 'error.details');
     }
 
     public function test_mobile_device_endpoints_require_authentication(): void
