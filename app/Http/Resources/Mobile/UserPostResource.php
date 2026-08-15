@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Mobile;
 
+use App\Models\PostImage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserPostResource extends JsonResource
 {
     /**
-     * @return array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}
+     * @return array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}
      */
     public function toArray(Request $request): array
     {
@@ -22,7 +23,9 @@ class UserPostResource extends JsonResource
             'city' => $this->location,
             'type' => $this->type,
             'categoryId' => $this->category_id ? (string) $this->category_id : null,
-            'images' => [],
+            'images' => $this->relationLoaded('images')
+                ? $this->images->map(static fn (PostImage $image): string => $image->publicUrl())->values()->all()
+                : [],
             'status' => $this->status === 'published' ? 'active' : $this->status,
             'rejectionReason' => $this->rejection_reason,
             'createdAt' => $this->created_at?->toISOString(),
