@@ -13,6 +13,7 @@ class MobileRouteCompatibilityTest extends TestCase
         $expectedRoutes = [
             'mobile.auth.register' => ['POST', 'api/mobile/auth/register'],
             'mobile.auth.login' => ['POST', 'api/mobile/auth/login'],
+            'mobile.auth.refresh' => ['POST', 'api/mobile/auth/refresh'],
             'mobile.auth.logout' => ['POST', 'api/mobile/auth/logout'],
             'mobile.auth.forgot-password' => ['POST', 'api/mobile/auth/forgot-password'],
             'mobile.auth.verify-reset-code' => ['POST', 'api/mobile/auth/verify-reset-code'],
@@ -28,6 +29,8 @@ class MobileRouteCompatibilityTest extends TestCase
             'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
             'mobile.me.donations.index' => ['GET', 'api/mobile/me/donations'],
             'mobile.me.donations.show' => ['GET', 'api/mobile/me/donations/{donation}'],
+            'mobile.me.devices.store' => ['PUT', 'api/mobile/me/devices'],
+            'mobile.me.devices.destroy' => ['DELETE', 'api/mobile/me/devices/{device}'],
             'mobile.me.notifications.index' => ['GET', 'api/mobile/me/notifications'],
             'mobile.me.notifications.unread-count' => ['GET', 'api/mobile/me/notifications/unread-count'],
             'mobile.me.notifications.read-all' => ['PATCH', 'api/mobile/me/notifications/read-all'],
@@ -64,6 +67,17 @@ class MobileRouteCompatibilityTest extends TestCase
 
             $this->assertNotNull($route, "Route [{$routeName}] is not registered.");
             $this->assertContains('throttle:60,1', $route->gatherMiddleware());
+        }
+    }
+
+    public function test_authenticated_mobile_routes_require_access_token_ability(): void
+    {
+        foreach (['mobile.auth.logout', 'mobile.me.profile', 'mobile.me.devices.store', 'mobile.posts.images.store'] as $routeName) {
+            $route = app('router')->getRoutes()->getByName($routeName);
+
+            $this->assertNotNull($route, "Route [{$routeName}] is not registered.");
+            $this->assertContains('auth:sanctum', $route->gatherMiddleware());
+            $this->assertContains('mobile-access-token', $route->gatherMiddleware());
         }
     }
 }

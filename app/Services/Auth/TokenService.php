@@ -68,6 +68,19 @@ final class TokenService
         });
     }
 
+    public function isAccessToken(PersonalAccessToken $token): bool
+    {
+        if (! str_starts_with($token->name, self::ACCESS_TOKEN_PREFIX)) {
+            return false;
+        }
+
+        if (! $token->can(self::ACCESS_ABILITY)) {
+            return false;
+        }
+
+        return $token->expires_at === null || $token->expires_at->isFuture();
+    }
+
     public function revokeTokenSession(User $user, PersonalAccessToken $token): void
     {
         $sessionId = $this->sessionIdFromToken($token);

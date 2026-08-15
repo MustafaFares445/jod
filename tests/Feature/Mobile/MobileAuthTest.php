@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace Tests\Feature\Mobile;
 
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class MobileAuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_mobile_registration_issues_token_with_mobile_envelope(): void
+    public function test_mobile_registration_issues_rotating_token_pair_with_mobile_envelope(): void
     {
         $response = $this->postJson('/api/mobile/auth/register', [
             'name' => 'Mobile Register User',
@@ -30,13 +32,22 @@ class MobileAuthTest extends TestCase
         $response->assertJsonPath('data.tokenType', 'Bearer');
         $response->assertJsonPath('data.user.email', 'register@example.com');
         $this->assertNotEmpty($response->json('data.token'));
+        $this->assertNotEmpty($response->json('data.refreshToken'));
+        $this->assertIsInt($response->json('data.expiresIn'));
+        $this->assertIsInt($response->json('data.refreshExpiresIn'));
+
+        $accessToken = PersonalAccessToken::findToken($response->json('data.token'));
+        $refreshToken = PersonalAccessToken::findToken($response->json('data.refreshToken'));
+        $this->assertTrue($accessToken?->can(TokenService::ACCESS_ABILITY) ?? false);
+        $this->assertTrue($refreshToken?->can(TokenService::REFRESH_ABILITY) ?? false);
+
         $this->assertDatabaseHas('users', [
             'email' => 'register@example.com',
             'phone' => '+962790000111',
         ]);
     }
 
-    public function test_mobile_login_issues_token_with_mobile_envelope(): void
+    public function test_mobile_login_issues_rotating_token_pair_with_mobile_envelope(): void
     {
         $user = User::factory()->create([
             'email' => 'mobile@example.com',
@@ -57,6 +68,7 @@ class MobileAuthTest extends TestCase
         $response->assertJsonPath('data.user.id', $user->id);
         $response->assertJsonPath('error', null);
         $this->assertNotEmpty($response->json('data.token'));
+        $this->assertNotEmpty($response->json('data.refreshToken'));
         $this->assertNotNull($user->fresh()->last_active_at);
     }
 
@@ -76,6 +88,7 @@ class MobileAuthTest extends TestCase
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.user.id', $user->id);
         $this->assertNotEmpty($response->json('data.token'));
+        $this->assertNotEmpty($response->json('data.refreshToken'));
     }
 
     public function test_mobile_login_rejects_invalid_credentials_with_mobile_error_envelope(): void
@@ -94,6 +107,60 @@ class MobileAuthTest extends TestCase
         $response->assertJsonPath('success', false);
         $response->assertJsonPath('data', null);
         $response->assertJsonPath('error.code', 'invalid_credentials');
+    }
+
+    public function test_mobile_refresh_rotates_once_and_revokes_previous_session_pair(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'rotate@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $login = $this->postJson('/api/mobile/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+        $oldAccessToken = $login->json('data.token');
+        $oldRefreshToken = $login->json('data.refreshToken');
+        $oldAccessId = explode('|', $oldAccessToken, 2)[0];
+        $oldRefreshId = explode('|', $oldRefreshToken, 2)[0];
+
+        $response = $this->postJson('/api/mobile/auth/refresh', [
+            'refreshToken' => $oldRefreshToken,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Token refreshed successfully.')
+            ->assertJsonPath('data.tokenType', 'Bearer');
+        $this->assertNotEmpty($response->json('data.token'));
+        $this->assertNotEmpty($response->json('data.refreshToken'));
+        $this->assertNotSame($oldAccessToken, $response->json('data.token'));
+        $this->assertNotSame($oldRefreshToken, $response->json('data.refreshToken'));
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $oldAccessId]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $oldRefreshId]);
+
+        $this->postJson('/api/mobile/auth/refresh', [
+            'refreshToken' => $oldRefreshToken,
+        ])->assertUnauthorized()
+            ->assertJsonPath('error.code', 'invalid_refresh_token');
+    }
+
+    public function test_mobile_refresh_token_cannot_access_normal_authenticated_routes(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'refresh-only@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $login = $this->postJson('/api/mobile/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer '.$login->json('data.refreshToken'))
+            ->getJson('/api/mobile/me')
+            ->assertForbidden()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('error.code', 'access_token_required');
     }
 
     public function test_mobile_forgot_password_generates_reset_code_for_email_or_phone_login(): void
@@ -138,12 +205,15 @@ class MobileAuthTest extends TestCase
         $response->assertJsonPath('data.resetCodeVerified', true);
     }
 
-    public function test_mobile_reset_password_updates_the_password_and_clears_the_reset_token(): void
+    public function test_mobile_reset_password_updates_password_clears_code_and_revokes_sessions(): void
     {
         $user = User::factory()->create([
             'email' => 'reset-password@example.com',
             'password' => Hash::make('password'),
         ]);
+        $tokens = app(TokenService::class)->issueTokenPair($user);
+        $accessId = explode('|', (string) $tokens['token'], 2)[0];
+        $refreshId = explode('|', (string) $tokens['refreshToken'], 2)[0];
 
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $user->email],
@@ -164,9 +234,11 @@ class MobileAuthTest extends TestCase
         $this->assertDatabaseMissing('password_reset_tokens', [
             'email' => $user->email,
         ]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $accessId]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $refreshId]);
     }
 
-    public function test_mobile_logout_revokes_current_token(): void
+    public function test_mobile_logout_revokes_current_access_and_refresh_tokens(): void
     {
         $loginResponse = $this->postJson('/api/mobile/auth/login', [
             'email' => User::factory()->create([
@@ -176,7 +248,9 @@ class MobileAuthTest extends TestCase
         ]);
 
         $plainTextToken = $loginResponse->json('data.token');
+        $refreshToken = $loginResponse->json('data.refreshToken');
         $tokenId = explode('|', $plainTextToken, 2)[0];
+        $refreshTokenId = explode('|', $refreshToken, 2)[0];
 
         $response = $this->withHeader('Authorization', 'Bearer '.$plainTextToken)
             ->postJson('/api/mobile/auth/logout');
@@ -185,8 +259,7 @@ class MobileAuthTest extends TestCase
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('message', 'Logged out successfully.');
 
-        $this->assertDatabaseMissing('personal_access_tokens', [
-            'id' => $tokenId,
-        ]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $tokenId]);
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $refreshTokenId]);
     }
 }

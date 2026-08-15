@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureAccessToken;
 use App\Http\Middleware\EnsureApiResponseMessage;
+use App\Http\Middleware\EnsureMobileAccessToken;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'access-token' => EnsureAccessToken::class,
+            'mobile-access-token' => EnsureMobileAccessToken::class,
         ]);
 
         $middleware->api(append: [
