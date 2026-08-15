@@ -35,6 +35,9 @@ class MobileRouteCompatibilityTest extends TestCase
             'mobile.me.notifications.read' => ['PATCH', 'api/mobile/me/notifications/{notification}/read'],
             'mobile.me.notifications.unread' => ['PATCH', 'api/mobile/me/notifications/{notification}/unread'],
             'mobile.campaigns.donations.store' => ['POST', 'api/mobile/campaigns/{campaign}/donations'],
+            'mobile.posts.images.store' => ['POST', 'api/mobile/posts/{post}/images'],
+            'mobile.posts.images.reorder' => ['PATCH', 'api/mobile/posts/{post}/images/order'],
+            'mobile.posts.images.destroy' => ['DELETE', 'api/mobile/posts/{post}/images/{image}'],
         ];
 
         foreach ($expectedRoutes as $routeName => [$method, $uri]) {
