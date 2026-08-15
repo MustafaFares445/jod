@@ -41,7 +41,7 @@ class DiscoveryController extends Controller
      * @queryParam sort string optional Sort order.
      * @queryParam sortBy string optional Legacy sort alias.
      *
-     * @response array{success: bool, message: string, data: array<int, array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
+     * @response array{success: bool, message: string, data: array<int, array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, images: list<string>, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function posts(PostDiscoveryRequest $request): JsonResponse
     {
@@ -62,7 +62,7 @@ class DiscoveryController extends Controller
      *
      * @urlParam post string required The post identifier.
      *
-     * @response array{success: bool, message: string, data: array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}, error: null, meta: array{viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
+     * @response array{success: bool, message: string, data: array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, images: list<string>, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}, error: null, meta: array{viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function showPost(Request $request, string $post): JsonResponse
     {
