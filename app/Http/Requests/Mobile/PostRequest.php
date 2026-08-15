@@ -15,7 +15,7 @@ class PostRequest extends FormRequest
     }
 
     /**
-     * @return array<string, list<mixed>>
+     * @return array{type: list<mixed>, title: list<mixed>, details: list<mixed>, city: list<mixed>, categoryId: list<mixed>, images: list<mixed>, "images.*"?: list<mixed>, saveAsDraft?: list<mixed>}
      */
     public function rules(): array
     {
@@ -26,7 +26,7 @@ class PostRequest extends FormRequest
                 'details' => ['sometimes', 'nullable', 'string', 'min:10'],
                 'city' => ['sometimes', 'nullable', 'string', 'min:2', 'max:100'],
                 'categoryId' => ['sometimes', 'nullable', 'string', 'exists:categories,id'],
-                'images' => ['sometimes', 'nullable', 'array', 'max:0'],
+                'images' => ['prohibited'],
             ];
         }
 
@@ -39,7 +39,8 @@ class PostRequest extends FormRequest
             'details' => [$requiredWhenSubmitting, 'string', 'min:10'],
             'city' => [$requiredWhenSubmitting, 'string', 'min:2', 'max:100'],
             'categoryId' => ['nullable', 'string', 'exists:categories,id'],
-            'images' => ['nullable', 'array', 'max:0'],
+            'images' => ['sometimes', 'array', 'max:5'],
+            'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'saveAsDraft' => ['sometimes', 'boolean'],
         ];
     }
