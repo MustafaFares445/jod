@@ -10,12 +10,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class MobileDeviceResource extends JsonResource
 {
     /**
-     * @return array{id: string, platform: string, deviceId: string|null, appVersion: string|null, lastSeenAt: string|null, createdAt: string|null, updatedAt: string|null}
+     * @return array{id: string, pushTargetType: string, platform: string, deviceId: string|null, appVersion: string|null, lastSeenAt: string|null, createdAt: string|null, updatedAt: string|null}
      */
     public function toArray(Request $request): array
     {
         return [
             'id' => (string) $this->id,
+            'pushTargetType' => (string) ($this->push_target_type ?: 'token'),
             'platform' => (string) $this->platform,
             'deviceId' => $this->device_id,
             'appVersion' => $this->app_version,
