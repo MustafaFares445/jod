@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Mobile;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 
 class PostRequest extends FormRequest
@@ -39,7 +40,24 @@ class PostRequest extends FormRequest
             'details' => [$requiredWhenSubmitting, 'string', 'min:10'],
             'city' => [$requiredWhenSubmitting, 'string', 'min:2', 'max:100'],
             'categoryId' => ['nullable', 'string', 'exists:categories,id'],
-            'images' => ['sometimes', 'array', 'max:5'],
+            'images' => [
+                'sometimes',
+                'array',
+                'max:5',
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! is_array($value)) {
+                        return;
+                    }
+
+                    foreach ($value as $image) {
+                        if (! $image instanceof UploadedFile) {
+                            $fail('Every image must be an uploaded image file.');
+
+                            return;
+                        }
+                    }
+                },
+            ],
             'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'saveAsDraft' => ['sometimes', 'boolean'],
         ];
