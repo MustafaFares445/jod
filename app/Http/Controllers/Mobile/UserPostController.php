@@ -25,7 +25,7 @@ class UserPostController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array<int, array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int}}
+     * @response array{success: bool, message: string, data: array<int, array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int}}
      */
     public function index(MyPostRequest $request): JsonResponse
     {
@@ -40,9 +40,10 @@ class UserPostController extends Controller
     /**
      * Create a draft or submit a new post for review.
      *
-     * Requires a Sanctum bearer token.
+     * Requires a Sanctum bearer token. Send images as multipart/form-data when present.
      *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * @bodyParam images file[] optional Up to five JPEG, PNG, or WebP images, 5 MB each.
+     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
      */
     public function store(PostRequest $request): JsonResponse
     {
@@ -60,9 +61,9 @@ class UserPostController extends Controller
     /**
      * Update the authenticated user's draft or rejected post.
      *
-     * Requires a Sanctum bearer token.
+     * Requires a Sanctum bearer token. Manage images through the dedicated post image endpoints.
      *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
      */
     public function update(PostRequest $request, Post $post): JsonResponse
     {
@@ -79,7 +80,7 @@ class UserPostController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
      */
     public function submit(PostSubmitRequest $request, Post $post): JsonResponse
     {
@@ -96,7 +97,7 @@ class UserPostController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
      */
     public function archive(Request $request, Post $post): JsonResponse
     {
@@ -113,7 +114,7 @@ class UserPostController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: array<int, string>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
      */
     public function repost(Request $request, Post $post): JsonResponse
     {
