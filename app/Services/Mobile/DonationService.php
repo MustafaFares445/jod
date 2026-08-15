@@ -15,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 class DonationService
 {
     /**
-     * @param  array<string, mixed>  $params
+     * @param  array{perPage?: int, campaignId?: string}  $params
      */
     public function paginateForUser(User $user, array $params): LengthAwarePaginator
     {
