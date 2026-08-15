@@ -122,6 +122,32 @@ class MobilePushDeliveryTest extends TestCase
         });
     }
 
+    public function test_fcm_gateway_targets_firebase_installation_id_when_requested(): void
+    {
+        $this->mock(FirebaseAccessTokenProvider::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('token')->once()->andReturn('oauth-token');
+        });
+        Http::fake([
+            'https://fcm.googleapis.com/*' => Http::response([
+                'name' => 'projects/jod-test/messages/fid-message',
+            ]),
+        ]);
+
+        $user = User::factory()->create();
+        $device = $this->createDevice($user, 'firebase-installation-id', 'fid');
+        $notification = Notification::factory()->create(['recipient_id' => $user->id]);
+
+        $result = app(FcmPushGateway::class)->send($device, $notification);
+
+        $this->assertTrue($result->isSent());
+        Http::assertSent(function (Request $request): bool {
+            $message = data_get($request->data(), 'message', []);
+
+            return ($message['fid'] ?? null) === 'firebase-installation-id'
+                && ! array_key_exists('token', $message);
+        });
+    }
+
     public function test_fcm_gateway_marks_unregistered_registration_token_as_stale(): void
     {
         $this->mock(FirebaseAccessTokenProvider::class, function (MockInterface $mock): void {
@@ -142,6 +168,33 @@ class MobilePushDeliveryTest extends TestCase
 
         $user = User::factory()->create();
         $device = $this->createDevice($user, 'stale-fcm-token');
+        $notification = Notification::factory()->create(['recipient_id' => $user->id]);
+
+        $result = app(FcmPushGateway::class)->send($device, $notification);
+
+        $this->assertTrue($result->isStale());
+    }
+
+    public function test_fcm_gateway_marks_fcm_specific_invalid_target_as_stale(): void
+    {
+        $this->mock(FirebaseAccessTokenProvider::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('token')->once()->andReturn('oauth-token');
+        });
+        Http::fake([
+            'https://fcm.googleapis.com/*' => Http::response([
+                'error' => [
+                    'code' => 400,
+                    'status' => 'INVALID_ARGUMENT',
+                    'details' => [[
+                        '@type' => 'type.googleapis.com/google.firebase.fcm.v1.FcmError',
+                        'errorCode' => 'INVALID_ARGUMENT',
+                    ]],
+                ],
+            ], 400),
+        ]);
+
+        $user = User::factory()->create();
+        $device = $this->createDevice($user, 'invalid-target');
         $notification = Notification::factory()->create(['recipient_id' => $user->id]);
 
         $result = app(FcmPushGateway::class)->send($device, $notification);
@@ -224,12 +277,13 @@ class MobilePushDeliveryTest extends TestCase
         }
     }
 
-    private function createDevice(User $user, string $pushToken): MobileDevice
+    private function createDevice(User $user, string $pushToken, string $pushTargetType = 'token'): MobileDevice
     {
         return MobileDevice::query()->create([
             'id' => (string) Str::uuid(),
             'user_id' => $user->id,
             'push_token' => $pushToken,
+            'push_target_type' => $pushTargetType,
             'platform' => 'android',
             'device_id' => (string) Str::uuid(),
             'app_version' => '1.0.0',
