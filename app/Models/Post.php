@@ -74,6 +74,11 @@ class Post extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function images(): HasMany
+    {
+        return $this->hasMany(PostImage::class)->orderBy('position')->orderBy('id');
+    }
+
     public function likes(): HasMany
     {
         return $this->hasMany(PostLike::class);

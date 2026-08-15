@@ -7,18 +7,21 @@ namespace App\Services\Mobile;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class UserPostService
 {
+    public function __construct(private readonly PostImageService $imageService) {}
+
     /**
      * @param  array{page?: int, perPage?: int, filter?: array{status?: string}, sort?: string}  $params
      */
     public function paginate(User $user, array $params): LengthAwarePaginator
     {
-        $query = Post::query()->where('author_id', $user->id);
+        $query = Post::query()->with('images')->where('author_id', $user->id);
         $status = $params['filter']['status'] ?? null;
 
         if ($status) {
@@ -34,20 +37,27 @@ class UserPostService
     }
 
     /**
-     * @param  array{type: string, title?: string|null, details?: string|null, city?: string|null, categoryId?: string|null, saveAsDraft?: bool}  $data
+     * @param  array{type: string, title?: string|null, details?: string|null, city?: string|null, categoryId?: string|null, images?: list<UploadedFile>, saveAsDraft?: bool}  $data
      */
     public function create(User $user, array $data): Post
     {
-        return Post::query()->create([
-            'title' => $data['title'] ?? null,
-            'summary' => $this->summaryFromDetails($data['details'] ?? null),
-            'content' => $data['details'] ?? null,
-            'type' => $data['type'],
-            'status' => ($data['saveAsDraft'] ?? false) ? 'draft' : 'pending',
-            'location' => $data['city'] ?? null,
-            'category_id' => $data['categoryId'] ?? null,
-            'author_id' => $user->id,
-        ]);
+        return DB::transaction(function () use ($user, $data): Post {
+            $post = Post::query()->create([
+                'title' => $data['title'] ?? null,
+                'summary' => $this->summaryFromDetails($data['details'] ?? null),
+                'content' => $data['details'] ?? null,
+                'type' => $data['type'],
+                'status' => ($data['saveAsDraft'] ?? false) ? 'draft' : 'pending',
+                'location' => $data['city'] ?? null,
+                'category_id' => $data['categoryId'] ?? null,
+                'author_id' => $user->id,
+            ]);
+
+            /** @var list<UploadedFile> $images */
+            $images = $data['images'] ?? [];
+
+            return $this->imageService->add($post, $images);
+        });
     }
 
     /**
@@ -80,7 +90,7 @@ class UserPostService
 
         $post->update($attributes);
 
-        return $post->refresh();
+        return $post->refresh()->load('images');
     }
 
     public function submit(Post $post): Post
@@ -101,7 +111,7 @@ class UserPostService
                 'reviewed_by' => null,
             ]);
 
-            return $lockedPost->refresh();
+            return $lockedPost->refresh()->load('images');
         });
     }
 
@@ -126,12 +136,13 @@ class UserPostService
                 'published_at' => Carbon::now(),
             ]);
 
-            return $lockedPost->refresh();
+            return $lockedPost->refresh()->load('images');
         });
     }
 
     public function delete(Post $post): void
     {
+        $this->imageService->purge($post);
         $post->delete();
     }
 
@@ -148,7 +159,7 @@ class UserPostService
 
             $lockedPost->update(['status' => $toStatus]);
 
-            return $lockedPost->refresh();
+            return $lockedPost->refresh()->load('images');
         });
     }
 

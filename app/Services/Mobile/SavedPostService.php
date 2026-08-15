@@ -18,7 +18,7 @@ class SavedPostService
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
 
         return SavedPost::query()
-            ->with(['post.organization', 'post.campaign'])
+            ->with(['post.organization', 'post.campaign', 'post.images'])
             ->where('user_id', $user->id)
             ->whereHas('post', fn ($query) => $query->where('status', 'published'))
             ->orderByDesc('created_at')

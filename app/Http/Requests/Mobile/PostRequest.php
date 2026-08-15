@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Mobile;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 
 class PostRequest extends FormRequest
@@ -15,7 +16,7 @@ class PostRequest extends FormRequest
     }
 
     /**
-     * @return array<string, list<mixed>>
+     * @return array{type: list<mixed>, title: list<mixed>, details: list<mixed>, city: list<mixed>, categoryId: list<mixed>, images: list<mixed>, "images.*"?: list<mixed>, saveAsDraft?: list<mixed>}
      */
     public function rules(): array
     {
@@ -26,7 +27,7 @@ class PostRequest extends FormRequest
                 'details' => ['sometimes', 'nullable', 'string', 'min:10'],
                 'city' => ['sometimes', 'nullable', 'string', 'min:2', 'max:100'],
                 'categoryId' => ['sometimes', 'nullable', 'string', 'exists:categories,id'],
-                'images' => ['sometimes', 'nullable', 'array', 'max:0'],
+                'images' => ['prohibited'],
             ];
         }
 
@@ -39,7 +40,25 @@ class PostRequest extends FormRequest
             'details' => [$requiredWhenSubmitting, 'string', 'min:10'],
             'city' => [$requiredWhenSubmitting, 'string', 'min:2', 'max:100'],
             'categoryId' => ['nullable', 'string', 'exists:categories,id'],
-            'images' => ['nullable', 'array', 'max:0'],
+            'images' => [
+                'sometimes',
+                'array',
+                'max:5',
+                static function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! is_array($value)) {
+                        return;
+                    }
+
+                    foreach ($value as $image) {
+                        if (! $image instanceof UploadedFile) {
+                            $fail('Every image must be an uploaded image file.');
+
+                            return;
+                        }
+                    }
+                },
+            ],
+            'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'saveAsDraft' => ['sometimes', 'boolean'],
         ];
     }
