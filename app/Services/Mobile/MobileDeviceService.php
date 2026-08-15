@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 class MobileDeviceService
 {
     /**
-     * @param  array{pushToken: string, platform: string, deviceId?: string|null, appVersion?: string|null}  $attributes
+     * @param  array{pushToken: string, pushTargetType?: string, platform: string, deviceId?: string|null, appVersion?: string|null}  $attributes
      */
     public function register(User $user, array $attributes): MobileDevice
     {
@@ -32,6 +32,7 @@ class MobileDeviceService
             $device->forceFill([
                 'user_id' => $user->id,
                 'push_token' => $attributes['pushToken'],
+                'push_target_type' => $attributes['pushTargetType'] ?? 'token',
                 'platform' => $attributes['platform'],
                 'device_id' => $attributes['deviceId'] ?? null,
                 'app_version' => $attributes['appVersion'] ?? null,
