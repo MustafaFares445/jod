@@ -8,6 +8,7 @@ use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\PostEngagementController;
+use App\Http\Controllers\Mobile\PostImageController;
 use App\Http\Controllers\Mobile\PostReportController;
 use App\Http\Controllers\Mobile\SavedPostController;
 use App\Http\Controllers\Mobile\UserPostController;
@@ -86,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         ->group(function (): void {
             Route::post('/', [UserPostController::class, 'store'])->name('store');
             Route::patch('{post}', [UserPostController::class, 'update'])->name('update');
+            Route::post('{post}/images', [PostImageController::class, 'store'])->name('images.store');
+            Route::patch('{post}/images/order', [PostImageController::class, 'reorder'])->name('images.reorder');
+            Route::delete('{post}/images/{image}', [PostImageController::class, 'destroy'])->name('images.destroy');
             Route::post('{post}/like', [PostEngagementController::class, 'like'])->name('like');
             Route::delete('{post}/like', [PostEngagementController::class, 'unlike'])->name('unlike');
             Route::post('{post}/save', [PostEngagementController::class, 'save'])->name('save');
