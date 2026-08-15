@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\DiscoveryController;
+use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostReportController;
@@ -57,10 +58,15 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
             Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
             Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
+            Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
+            Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
             Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
             Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
         });
+
+    Route::post('campaigns/{campaign}/donations', [DonationController::class, 'store'])
+        ->name('campaigns.donations.store');
 
     Route::prefix('posts')
         ->name('posts.')
