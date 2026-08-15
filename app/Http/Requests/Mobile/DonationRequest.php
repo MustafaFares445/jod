@@ -10,7 +10,12 @@ use Illuminate\Validation\Rule;
 class DonationRequest extends FormRequest
 {
     /**
-     * @return array<string, list<mixed>>
+     * @return array{
+     *     amount: list<mixed>,
+     *     paymentMethod: list<mixed>,
+     *     phone: list<mixed>,
+     *     city: list<mixed>
+     * }
      */
     public function rules(): array
     {
