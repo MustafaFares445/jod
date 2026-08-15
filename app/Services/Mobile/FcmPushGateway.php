@@ -38,7 +38,7 @@ class FcmPushGateway implements MobilePushGateway
             return PushDeliveryResult::sent(is_string($messageId) ? $messageId : null);
         }
 
-        if ($this->isUnregistered($response)) {
+        if ($this->isInvalidRegistration($response)) {
             return PushDeliveryResult::stale();
         }
 
@@ -75,9 +75,6 @@ class FcmPushGateway implements MobilePushGateway
                 ],
             ],
             'apns' => [
-                'headers' => [
-                    'apns-priority' => $priority === 'HIGH' ? '10' : '5',
-                ],
                 'payload' => [
                     'aps' => [
                         'sound' => 'default',
@@ -87,7 +84,7 @@ class FcmPushGateway implements MobilePushGateway
         ];
     }
 
-    private function isUnregistered(Response $response): bool
+    private function isInvalidRegistration(Response $response): bool
     {
         $details = $response->json('error.details', []);
 
@@ -96,7 +93,12 @@ class FcmPushGateway implements MobilePushGateway
         }
 
         foreach ($details as $detail) {
-            if (is_array($detail) && ($detail['errorCode'] ?? null) === 'UNREGISTERED') {
+            if (! is_array($detail)
+                || ($detail['@type'] ?? null) !== 'type.googleapis.com/google.firebase.fcm.v1.FcmError') {
+                continue;
+            }
+
+            if (in_array($detail['errorCode'] ?? null, ['UNREGISTERED', 'INVALID_ARGUMENT'], true)) {
                 return true;
             }
         }
