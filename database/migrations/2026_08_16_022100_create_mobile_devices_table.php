@@ -13,13 +13,12 @@ return new class extends Migration
             $table->string('user_id');
             $table->string('push_token', 512)->unique();
             $table->string('platform', 20);
-            $table->string('device_id')->nullable();
+            $table->string('device_id')->nullable()->unique();
             $table->string('app_version', 64)->nullable();
             $table->timestamp('last_seen_at')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-            $table->unique(['user_id', 'device_id']);
             $table->index(['user_id', 'platform']);
         });
     }
