@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -29,6 +30,24 @@ class User extends Authenticatable
     public $incrementing = false;
 
     protected $keyType = 'string';
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (filled($user->username)) {
+                return;
+            }
+
+            $base = filled($user->email)
+                ? Str::before((string) $user->email, '@')
+                : Str::slug((string) $user->name, '.');
+            $base = Str::lower(preg_replace('/[^a-zA-Z0-9._-]+/', '', $base) ?: 'jod');
+            $base = substr($base, 0, 60) ?: 'jod';
+            $suffix = substr(str_replace('-', '', (string) $user->id), 0, 8);
+
+            $user->username = $base.'-'.$suffix;
+        });
+    }
 
     protected function casts(): array
     {
