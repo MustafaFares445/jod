@@ -145,20 +145,21 @@ test('resend creates a fresh batch without mutating existing read history', func
     $firstInbox->update(['status' => 'read', 'read_at' => now()]);
 
     $source = $service->resend($source);
-    $this->assertNotSame($firstBatch, $source->distribution_batch_id);
-    expect($service->fanOut($source->id, $source->distribution_batch_id))->toBe(1);
+    $secondBatch = $source->distribution_batch_id;
+    $this->assertNotSame($firstBatch, $secondBatch);
+    expect($service->fanOut($source->id, $secondBatch))->toBe(1);
 
     $copies = Notification::query()
         ->where('source_notification_id', $source->id)
         ->where('recipient_id', $recipient->id)
-        ->orderBy('created_at')
-        ->get();
+        ->get()
+        ->keyBy('distribution_batch_id');
 
     expect($copies)->toHaveCount(2);
-    expect($copies->first()->status)->toBe('read');
-    expect($copies->first()->read_at)->not->toBeNull();
-    expect($copies->last()->status)->toBe('unread');
-    expect($copies->last()->read_at)->toBeNull();
+    expect($copies->get($firstBatch)?->status)->toBe('read');
+    expect($copies->get($firstBatch)?->read_at)->not->toBeNull();
+    expect($copies->get($secondBatch)?->status)->toBe('unread');
+    expect($copies->get($secondBatch)?->read_at)->toBeNull();
 });
 test('organization dashboard service hides recipient copies and keeps creator', function () {
     Queue::fake();
