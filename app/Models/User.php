@@ -15,10 +15,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['id', 'name', 'email', 'password', 'phone', 'city', 'bio', 'status', 'user_type', 'organization_id', 'last_active_at'])]
+#[Fillable(['id', 'name', 'username', 'email', 'password', 'phone', 'city', 'bio', 'avatar_disk', 'avatar_path', 'status', 'user_type', 'organization_id', 'last_active_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -36,6 +37,15 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_active_at' => 'datetime',
         ];
+    }
+
+    public function avatarUrl(): ?string
+    {
+        if (! filled($this->avatar_disk) || ! filled($this->avatar_path)) {
+            return null;
+        }
+
+        return Storage::disk((string) $this->avatar_disk)->url((string) $this->avatar_path);
     }
 
     public function organization(): BelongsTo
