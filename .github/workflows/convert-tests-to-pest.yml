@@ -32,6 +32,45 @@ jobs:
       - name: Convert PHPUnit tests to Pest syntax
         run: ./vendor/bin/pest --drift tests
 
+      - name: Resolve colliding helper functions
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from collections import defaultdict
+          from pathlib import Path
+          import re
+
+          files = sorted(Path('tests').rglob('*Test.php'))
+          declaration = re.compile(r'(?m)^\s*function\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(')
+          declarations = defaultdict(list)
+
+          for path in files:
+              text = path.read_text()
+              for name in declaration.findall(text):
+                  declarations[name].append(path)
+
+          for name, paths in sorted(declarations.items()):
+              if len(paths) < 2:
+                  continue
+
+              print(f'Renaming duplicate helper {name}: {", ".join(str(path) for path in paths)}')
+              for path in paths:
+                  prefix = re.sub(r'(?<!^)(?=[A-Z])', '_', path.stem).lower()
+                  replacement = f'{prefix}_{name}'
+                  text = path.read_text()
+                  text = re.sub(
+                      rf'(?m)^(\s*function\s+){re.escape(name)}(\s*\()',
+                      rf'\1{replacement}\2',
+                      text,
+                  )
+                  text = re.sub(
+                      rf'(?<!->)(?<!::)\b{re.escape(name)}\s*(?=\()',
+                      replacement,
+                      text,
+                  )
+                  path.write_text(text)
+          PY
+
       - name: Restore dependency manifests
         run: git checkout -- composer.json composer.lock
 
