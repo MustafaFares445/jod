@@ -1,9 +1,6 @@
 name: Tests
 
 on:
-  push:
-    branches:
-      - test
   pull_request:
     branches:
       - main
@@ -54,4 +51,16 @@ jobs:
         with:
           name: test-output
           path: test-output.txt
+          if-no-files-found: error
+
+      - name: Upload source snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-snapshot
+          path: |
+            app
+            bootstrap
+            database/factories
+            tests
           if-no-files-found: error

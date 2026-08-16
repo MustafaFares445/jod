@@ -36,7 +36,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(static function (Request $request): bool {
-            return $request->is('api/mobile/*') || $request->is('api/mobile');
+            return $request->is('api/mobile/*')
+                || $request->is('api/mobile')
+                || $request->expectsJson();
         });
 
         $exceptions->render(static function (AuthenticationException $exception, Request $request): ?JsonResponse {
