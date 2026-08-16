@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'id',
     'user_id',
     'push_token',
+    'push_target_type',
     'platform',
     'device_id',
     'app_version',
