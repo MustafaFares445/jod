@@ -15,20 +15,32 @@ use Illuminate\Validation\ValidationException;
 class DonationService
 {
     /**
-     * @param  array{perPage?: int, campaignId?: string}  $params
+     * @param  array{perPage?: int, campaignId?: string, flow?: 'contributed'|'received'}  $params
      */
     public function paginateForUser(User $user, array $params): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $flow = (string) ($params['flow'] ?? 'contributed');
 
-        return Donation::query()
-            ->with('campaign.organization')
-            ->where('created_by', $user->id)
+        $query = Donation::query()->with('campaign.organization');
+
+        if ($flow === 'received') {
+            if ($user->organization_id === null) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('organization_id', $user->organization_id);
+            }
+        } else {
+            $query->where('created_by', $user->id);
+        }
+
+        return $query
             ->when(
                 filled($params['campaignId'] ?? null),
-                fn (Builder $query) => $query->where('campaign_id', $params['campaignId']),
+                fn (Builder $builder) => $builder->where('campaign_id', $params['campaignId']),
             )
             ->orderByDesc('donated_at')
+            ->orderByDesc('id')
             ->paginate($perPage);
     }
 
@@ -36,8 +48,14 @@ class DonationService
     {
         return Donation::query()
             ->with('campaign.organization')
-            ->where('created_by', $user->id)
             ->whereKey($donationId)
+            ->where(function (Builder $query) use ($user): void {
+                $query->where('created_by', $user->id);
+
+                if ($user->organization_id !== null) {
+                    $query->orWhere('organization_id', $user->organization_id);
+                }
+            })
             ->first();
     }
 
@@ -74,7 +92,7 @@ class DonationService
                 'campaign_title' => $campaign->title,
                 'amount_or_type' => $amount,
                 'donated_at' => now(),
-                'city' => $attributes['city'] ?? null,
+                'city' => $attributes['city'] ?? $user->city,
                 'source' => 'mobile_app',
                 'payment_method' => $attributes['paymentMethod'],
                 'campaign_ref' => $campaign->id,
