@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mobile;
 
+use App\Models\Campaign;
+use App\Models\Organization;
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class MobileAuthAlignmentTest extends TestCase
@@ -53,6 +58,62 @@ class MobileAuthAlignmentTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.user.id', $user->id)
             ->assertJsonPath('data.user.phone', $user->phone);
+    }
+
+    public function test_phone_first_account_can_apply_and_donate_without_placeholder_email(): void
+    {
+        $user = User::factory()->create([
+            'email' => null,
+            'phone' => '0999999993',
+        ]);
+        $organization = Organization::factory()->create();
+        $volunteerCampaign = Campaign::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Volunteer Campaign',
+            'category' => 'volunteer',
+            'status' => 'active',
+            'organization_id' => $organization->id,
+        ]);
+        Post::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Volunteer with us',
+            'type' => 'volunteer_opportunity',
+            'status' => 'published',
+            'organization_id' => $organization->id,
+            'campaign_id' => $volunteerCampaign->id,
+            'published_at' => now(),
+        ]);
+        $donationCampaign = Campaign::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Donation Campaign',
+            'category' => 'donation',
+            'status' => 'active',
+            'organization_id' => $organization->id,
+            'goal_amount' => 1000,
+            'raised_amount' => 0,
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/mobile/campaigns/{$volunteerCampaign->id}/applications", [])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending');
+
+        $this->postJson("/api/mobile/campaigns/{$donationCampaign->id}/donations", [
+            'amount' => 25,
+            'paymentMethod' => 'cash',
+        ])->assertOk()
+            ->assertJsonPath('data.amount', 25);
+
+        $this->assertDatabaseHas('campaign_applications', [
+            'created_by' => $user->id,
+            'campaign_id' => $volunteerCampaign->id,
+            'email' => null,
+        ]);
+        $this->assertDatabaseHas('donations', [
+            'created_by' => $user->id,
+            'campaign_id' => $donationCampaign->id,
+            'email' => null,
+        ]);
     }
 
     public function test_phone_first_account_can_complete_four_digit_password_reset_flow(): void
