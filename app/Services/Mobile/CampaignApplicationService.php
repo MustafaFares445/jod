@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class CampaignApplicationService
 {
-    private const INACTIVE_STATUSES = ['rejected', 'withdrawn'];
+    public const INACTIVE_STATUSES = ['rejected', 'withdrawn'];
 
     /**
      * @param  array{page?: int, perPage?: int, campaignId?: string|null, status?: string|null}  $params
@@ -76,6 +76,7 @@ class CampaignApplicationService
                 ->where('campaign_id', $campaign->id)
                 ->where('created_by', $user->id)
                 ->where('source', 'mobile_app')
+                ->lockForUpdate()
                 ->first();
 
             if ($application !== null && ! in_array($application->applicant_status, self::INACTIVE_STATUSES, true)) {
@@ -115,6 +116,20 @@ class CampaignApplicationService
     public function withdraw(User $user, string $applicationId): ?CampaignApplication
     {
         return DB::transaction(function () use ($user, $applicationId): ?CampaignApplication {
+            $snapshot = CampaignApplication::query()
+                ->where('created_by', $user->id)
+                ->where('source', 'mobile_app')
+                ->whereKey($applicationId)
+                ->first();
+
+            if ($snapshot === null) {
+                return null;
+            }
+
+            $campaign = $snapshot->campaign_id !== null
+                ? Campaign::query()->whereKey($snapshot->campaign_id)->lockForUpdate()->first()
+                : null;
+
             $application = CampaignApplication::query()
                 ->where('created_by', $user->id)
                 ->where('source', 'mobile_app')
@@ -130,11 +145,8 @@ class CampaignApplicationService
                 $application->update(['applicant_status' => 'withdrawn']);
             }
 
-            if ($application->campaign_id !== null) {
-                $campaign = Campaign::query()->whereKey($application->campaign_id)->lockForUpdate()->first();
-                if ($campaign !== null) {
-                    $this->syncApplicantCount($campaign);
-                }
+            if ($campaign !== null) {
+                $this->syncApplicantCount($campaign);
             }
 
             return $application->refresh()->load(['campaign.organization', 'organization']);
