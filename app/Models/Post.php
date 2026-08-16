@@ -28,6 +28,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'rejection_reason',
     'views_count',
     'reactions_count',
+    'comments_count',
+    'shares_count',
     'applications_count',
     'published_at',
     'reviewed_at',
@@ -87,6 +89,16 @@ class Post extends Model
     public function saves(): HasMany
     {
         return $this->hasMany(SavedPost::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(PostComment::class)->orderByDesc('created_at')->orderByDesc('id');
+    }
+
+    public function shares(): HasMany
+    {
+        return $this->hasMany(PostShare::class);
     }
 
     /**
