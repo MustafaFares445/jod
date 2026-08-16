@@ -21,10 +21,10 @@ class PublisherService
             ->first();
 
         if ($organization !== null) {
-            return $organization;
+            return $this->withPublicStats($organization);
         }
 
-        return User::query()
+        $user = User::query()
             ->whereKey($id)
             ->where('status', 'active')
             ->whereHas('posts', function (Builder $post): void {
@@ -32,6 +32,8 @@ class PublisherService
                     ->whereNull('organization_id');
             })
             ->first();
+
+        return $user === null ? null : $this->withPublicStats($user);
     }
 
     /**
@@ -45,14 +47,7 @@ class PublisherService
             ->with($this->postRelations($viewer))
             ->where('status', 'published');
 
-        if ($publisher instanceof Organization) {
-            $query->where('organization_id', $publisher->id);
-        } else {
-            // Organization-backed posts render the organization as publisher,
-            // so a user publisher page only contains truly individual posts.
-            $query->where('author_id', $publisher->id)
-                ->whereNull('organization_id');
-        }
+        $this->scopePublisherPosts($query, $publisher);
 
         $query
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
@@ -78,6 +73,38 @@ class PublisherService
         };
 
         return $query->orderBy('id')->paginate($perPage);
+    }
+
+    private function withPublicStats(Organization|User $publisher): Organization|User
+    {
+        $query = Post::query()->where('status', 'published');
+        $this->scopePublisherPosts($query, $publisher);
+
+        $stats = $query
+            ->selectRaw('COUNT(*) as posts_count')
+            ->selectRaw('COALESCE(SUM(reactions_count), 0) as likes_count')
+            ->selectRaw('COALESCE(SUM(shares_count), 0) as shares_count')
+            ->first();
+
+        $publisher->setAttribute('published_posts_count', (int) ($stats?->posts_count ?? 0));
+        $publisher->setAttribute('published_likes_count', (int) ($stats?->likes_count ?? 0));
+        $publisher->setAttribute('published_shares_count', (int) ($stats?->shares_count ?? 0));
+
+        return $publisher;
+    }
+
+    private function scopePublisherPosts(Builder $query, Organization|User $publisher): void
+    {
+        if ($publisher instanceof Organization) {
+            $query->where('organization_id', $publisher->id);
+
+            return;
+        }
+
+        // Organization-backed posts render the organization as publisher,
+        // so a user publisher page only contains truly individual posts.
+        $query->where('author_id', $publisher->id)
+            ->whereNull('organization_id');
     }
 
     /**
