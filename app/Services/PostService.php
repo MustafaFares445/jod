@@ -58,7 +58,9 @@ class PostService
             'updatedAt' => $query->orderBy('updated_at'),
             '-updatedAt' => $query->orderByDesc('updated_at'),
             'newest' => $query->orderByDesc('published_at')->orderByDesc('updated_at'),
-            'most_engaged' => $query->orderByDesc('reactions_count')->orderByDesc('updated_at'),
+            'most_engaged' => $query
+                ->orderByRaw('(COALESCE(reactions_count, 0) + COALESCE(comments_count, 0) + COALESCE(shares_count, 0)) DESC')
+                ->orderByDesc('updated_at'),
             default => $query->orderByDesc('updated_at'),
         };
         $query->orderBy('id');
