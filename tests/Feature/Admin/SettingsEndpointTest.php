@@ -1,104 +1,81 @@
 <?php
 
 declare(strict_types=1);
-
-namespace Tests\Feature\Admin;
-
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\PlatformSetting;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-class SettingsEndpointTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->user = User::factory()->create();
+    $this->grantPermissions($this->user, [
+        [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::VIEW],
+        [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::UPDATE],
+    ]);
+    Sanctum::actingAs($this->user);
+    PlatformSetting::truncate();
+});
+test('returns platform settings', function () {
+    PlatformSetting::create(['key' => 'siteName', 'value' => json_encode('Test Site')]);
+    PlatformSetting::create(['key' => 'allowNewPosts', 'value' => json_encode(true)]);
 
-    private User $user;
+    $response = $this->getJson('/api/v1/admin/platform-settings');
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->user = User::factory()->create();
-        $this->grantPermissions($this->user, [
-            [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::VIEW],
-            [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::UPDATE],
-        ]);
-        Sanctum::actingAs($this->user);
-        PlatformSetting::truncate();
-    }
+    $response->assertOk();
+    expect($response->json('data.siteName'))->toEqual('Test Site');
+    expect($response->json('data.allowNewPosts'))->toBeTrue();
+});
+test('returns empty settings with defaults', function () {
+    $response = $this->getJson('/api/v1/admin/platform-settings');
 
-    public function test_returns_platform_settings(): void
-    {
-        PlatformSetting::create(['key' => 'siteName', 'value' => json_encode('Test Site')]);
-        PlatformSetting::create(['key' => 'allowNewPosts', 'value' => json_encode(true)]);
+    $response->assertOk();
+    $data = $response->json('data');
+    expect($data)->toHaveKey('siteName');
+    expect($data)->toHaveKey('allowNewPosts');
+    expect($data)->toHaveKey('requirePostReview');
+});
+test('updates platform settings', function () {
+    $payload = [
+        'siteName' => 'Updated Site',
+        'allowNewPosts' => false,
+        'requirePostReview' => true,
+    ];
 
-        $response = $this->getJson('/api/v1/admin/platform-settings');
+    $response = $this->patchJson('/api/v1/admin/platform-settings', $payload);
 
-        $response->assertOk();
-        $this->assertEquals('Test Site', $response->json('data.siteName'));
-        $this->assertTrue($response->json('data.allowNewPosts'));
-    }
+    $response->assertOk();
+    expect($response->json('data.siteName'))->toEqual('Updated Site');
+    expect($response->json('data.allowNewPosts'))->toBeFalse();
+    expect($response->json('data.requirePostReview'))->toBeTrue();
 
-    public function test_returns_empty_settings_with_defaults(): void
-    {
-        $response = $this->getJson('/api/v1/admin/platform-settings');
+    $this->assertDatabaseHas('platform_settings', [
+        'key' => 'siteName',
+        'value' => json_encode('Updated Site'),
+    ]);
+});
+test('updates partial settings', function () {
+    PlatformSetting::create(['key' => 'siteName', 'value' => json_encode('Original Site')]);
 
-        $response->assertOk();
-        $data = $response->json('data');
-        $this->assertArrayHasKey('siteName', $data);
-        $this->assertArrayHasKey('allowNewPosts', $data);
-        $this->assertArrayHasKey('requirePostReview', $data);
-    }
+    $response = $this->patchJson('/api/v1/admin/platform-settings', ['allowNewPosts' => false]);
 
-    public function test_updates_platform_settings(): void
-    {
-        $payload = [
-            'siteName' => 'Updated Site',
-            'allowNewPosts' => false,
-            'requirePostReview' => true,
-        ];
+    $response->assertOk();
 
-        $response = $this->patchJson('/api/v1/admin/platform-settings', $payload);
+    $this->assertDatabaseHas('platform_settings', [
+        'key' => 'siteName',
+        'value' => json_encode('Original Site'),
+    ]);
 
-        $response->assertOk();
-        $this->assertEquals('Updated Site', $response->json('data.siteName'));
-        $this->assertFalse($response->json('data.allowNewPosts'));
-        $this->assertTrue($response->json('data.requirePostReview'));
+    $this->assertDatabaseHas('platform_settings', [
+        'key' => 'allowNewPosts',
+        'value' => json_encode(false),
+    ]);
+});
+test('validates settings update', function () {
+    $response = $this->patchJson('/api/v1/admin/platform-settings', [
+        'siteName' => str_repeat('a', 256),
+    ]);
 
-        $this->assertDatabaseHas('platform_settings', [
-            'key' => 'siteName',
-            'value' => json_encode('Updated Site'),
-        ]);
-    }
-
-    public function test_updates_partial_settings(): void
-    {
-        PlatformSetting::create(['key' => 'siteName', 'value' => json_encode('Original Site')]);
-
-        $response = $this->patchJson('/api/v1/admin/platform-settings', ['allowNewPosts' => false]);
-
-        $response->assertOk();
-
-        $this->assertDatabaseHas('platform_settings', [
-            'key' => 'siteName',
-            'value' => json_encode('Original Site'),
-        ]);
-
-        $this->assertDatabaseHas('platform_settings', [
-            'key' => 'allowNewPosts',
-            'value' => json_encode(false),
-        ]);
-    }
-
-    public function test_validates_settings_update(): void
-    {
-        $response = $this->patchJson('/api/v1/admin/platform-settings', [
-            'siteName' => str_repeat('a', 256),
-        ]);
-
-        $response->assertUnprocessable();
-    }
-}
+    $response->assertUnprocessable();
+});

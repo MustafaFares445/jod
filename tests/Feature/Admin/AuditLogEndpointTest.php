@@ -1,105 +1,80 @@
 <?php
 
 declare(strict_types=1);
-
-namespace Tests\Feature\Admin;
-
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\AuditLog;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-class AuditLogEndpointTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->user = User::factory()->create();
+    $this->grantPermissions($this->user, [
+        [PermissionGroup::AUDIT_LOG, PermissionAction::VIEW],
+    ]);
+    Sanctum::actingAs($this->user);
+});
+test('lists audit logs', function () {
+    AuditLog::factory()->count(5)->create();
 
-    private User $user;
+    $response = $this->getJson('/api/v1/admin/audit-logs');
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->user = User::factory()->create();
-        $this->grantPermissions($this->user, [
-            [PermissionGroup::AUDIT_LOG, PermissionAction::VIEW],
-        ]);
-        Sanctum::actingAs($this->user);
-    }
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(5);
+});
+test('filters audit logs by action', function () {
+    AuditLog::factory()->create(['action' => 'create']);
+    AuditLog::factory()->create(['action' => 'create']);
+    AuditLog::factory()->create(['action' => 'delete']);
 
-    public function test_lists_audit_logs(): void
-    {
-        AuditLog::factory()->count(5)->create();
+    $response = $this->getJson('/api/v1/admin/audit-logs?filter.action=create');
 
-        $response = $this->getJson('/api/v1/admin/audit-logs');
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+});
+test('filters audit logs by user', function () {
+    $user1 = User::factory()->create();
+    $user2 = User::factory()->create();
 
-        $response->assertOk();
-        $this->assertCount(5, $response->json('data'));
-    }
+    AuditLog::factory()->create(['actor_user_id' => $user1->id]);
+    AuditLog::factory()->create(['actor_user_id' => $user1->id]);
+    AuditLog::factory()->create(['actor_user_id' => $user2->id]);
 
-    public function test_filters_audit_logs_by_action(): void
-    {
-        AuditLog::factory()->create(['action' => 'create']);
-        AuditLog::factory()->create(['action' => 'create']);
-        AuditLog::factory()->create(['action' => 'delete']);
+    $response = $this->getJson("/api/v1/admin/audit-logs?filter.actorUserId={$user1->id}");
 
-        $response = $this->getJson('/api/v1/admin/audit-logs?filter.action=create');
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+});
+test('filters audit logs by date range', function () {
+    AuditLog::factory()->create(['at' => now()->subDays(10)]);
+    AuditLog::factory()->create(['at' => now()->subDays(5)]);
+    AuditLog::factory()->create(['at' => now()]);
 
-        $response->assertOk();
-        $this->assertCount(2, $response->json('data'));
-    }
+    $from = now()->subDays(7)->toDateString();
+    $to = now()->toDateString();
 
-    public function test_filters_audit_logs_by_user(): void
-    {
-        $user1 = User::factory()->create();
-        $user2 = User::factory()->create();
+    $response = $this->getJson("/api/v1/admin/audit-logs?filter.from={$from}&filter.to={$to}");
 
-        AuditLog::factory()->create(['actor_user_id' => $user1->id]);
-        AuditLog::factory()->create(['actor_user_id' => $user1->id]);
-        AuditLog::factory()->create(['actor_user_id' => $user2->id]);
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(2);
+});
+test('returns audit logs with actor info', function () {
+    $log = AuditLog::factory()->create();
 
-        $response = $this->getJson("/api/v1/admin/audit-logs?filter.actorUserId={$user1->id}");
+    $response = $this->getJson('/api/v1/admin/audit-logs');
 
-        $response->assertOk();
-        $this->assertCount(2, $response->json('data'));
-    }
+    $response->assertOk();
+    expect($response->json('data.0.user.id'))->toEqual($log->actor_user_id);
+    expect($response->json('data.0.user.name'))->not->toBeEmpty();
+    expect($response->json('data.0.action'))->toEqual($log->action);
+});
+test('paginates audit logs', function () {
+    AuditLog::factory()->count(25)->create();
 
-    public function test_filters_audit_logs_by_date_range(): void
-    {
-        AuditLog::factory()->create(['at' => now()->subDays(10)]);
-        AuditLog::factory()->create(['at' => now()->subDays(5)]);
-        AuditLog::factory()->create(['at' => now()]);
+    $response = $this->getJson('/api/v1/admin/audit-logs?perPage=10');
 
-        $from = now()->subDays(7)->toDateString();
-        $to = now()->toDateString();
-
-        $response = $this->getJson("/api/v1/admin/audit-logs?filter.from={$from}&filter.to={$to}");
-
-        $response->assertOk();
-        $this->assertCount(2, $response->json('data'));
-    }
-
-    public function test_returns_audit_logs_with_actor_info(): void
-    {
-        $log = AuditLog::factory()->create();
-
-        $response = $this->getJson('/api/v1/admin/audit-logs');
-
-        $response->assertOk();
-        $this->assertEquals($log->actor_user_id, $response->json('data.0.user.id'));
-        $this->assertNotEmpty($response->json('data.0.user.name'));
-        $this->assertEquals($log->action, $response->json('data.0.action'));
-    }
-
-    public function test_paginates_audit_logs(): void
-    {
-        AuditLog::factory()->count(25)->create();
-
-        $response = $this->getJson('/api/v1/admin/audit-logs?perPage=10');
-
-        $response->assertOk();
-        $this->assertCount(10, $response->json('data'));
-        $this->assertEquals(25, $response->json('meta.total'));
-    }
-}
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(10);
+    expect($response->json('meta.total'))->toEqual(25);
+});
