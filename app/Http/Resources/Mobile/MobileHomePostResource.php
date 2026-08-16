@@ -100,15 +100,24 @@ class MobileHomePostResource extends JsonResource
         $phone = $organization?->phone ?? $author?->phone;
         $city = $organization?->location ?? $author?->city ?? $this->location;
         $bio = $organization?->description ?? $author?->bio;
+        $username = $organization !== null
+            ? $this->derivedUsername($email, (string) $name)
+            : (filled($author?->username)
+                ? (string) $author->username
+                : $this->derivedUsername($email, (string) $name));
 
         $publisher = [
             'id' => (string) $publisherId,
             'name' => (string) $name,
-            'username' => $this->username($email, (string) $name),
+            'username' => $username,
             'verified' => $organization !== null
                 ? $organization->verification_status === 'verified'
                 : $author?->email_verified_at !== null,
         ];
+
+        if ($organization === null && $author !== null && ($avatarUrl = $author->avatarUrl()) !== null) {
+            $publisher['avatarUrl'] = $avatarUrl;
+        }
 
         if (filled($bio)) {
             $publisher['bio'] = $bio;
@@ -125,7 +134,7 @@ class MobileHomePostResource extends JsonResource
         return $publisher;
     }
 
-    private function username(?string $email, string $name): string
+    private function derivedUsername(?string $email, string $name): string
     {
         if (filled($email)) {
             return Str::before($email, '@');

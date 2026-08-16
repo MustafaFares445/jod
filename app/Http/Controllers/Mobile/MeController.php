@@ -40,8 +40,9 @@ class MeController extends Controller
      * Requires a Sanctum bearer token.
      *
      * @bodyParam name string required The user's display name.
-     * @bodyParam email string required The user's email address.
-     * @bodyParam phone string optional The user's phone number.
+     * @bodyParam username string optional A unique public username.
+     * @bodyParam email string optional The user's email address. Email or phone must remain present.
+     * @bodyParam phone string optional The user's phone number. Email or phone must remain present.
      * @bodyParam city string optional The user's city.
      * @bodyParam bio string optional The user's biography, up to 180 characters.
      */
@@ -49,7 +50,7 @@ class MeController extends Controller
     {
         $validated = $request->validated();
         $preserveNullAttributes = array_values(array_intersect(
-            ['phone', 'city', 'bio'],
+            ['email', 'phone', 'city', 'bio'],
             array_keys($validated),
         ));
 

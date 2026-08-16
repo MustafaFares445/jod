@@ -15,10 +15,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['id', 'name', 'email', 'password', 'phone', 'city', 'bio', 'status', 'user_type', 'organization_id', 'last_active_at'])]
+#[Fillable(['id', 'name', 'username', 'email', 'password', 'phone', 'city', 'bio', 'avatar_disk', 'avatar_path', 'status', 'user_type', 'organization_id', 'last_active_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -29,6 +31,24 @@ class User extends Authenticatable
 
     protected $keyType = 'string';
 
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (filled($user->username)) {
+                return;
+            }
+
+            $base = filled($user->email)
+                ? Str::before((string) $user->email, '@')
+                : Str::slug((string) $user->name, '.');
+            $base = Str::lower(preg_replace('/[^a-zA-Z0-9._-]+/', '', $base) ?: 'jod');
+            $base = substr($base, 0, 60) ?: 'jod';
+            $suffix = substr(str_replace('-', '', (string) $user->id), 0, 8);
+
+            $user->username = $base.'-'.$suffix;
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -36,6 +56,15 @@ class User extends Authenticatable
             'password' => 'hashed',
             'last_active_at' => 'datetime',
         ];
+    }
+
+    public function avatarUrl(): ?string
+    {
+        if (! filled($this->avatar_disk) || ! filled($this->avatar_path)) {
+            return null;
+        }
+
+        return Storage::disk((string) $this->avatar_disk)->url((string) $this->avatar_path);
     }
 
     public function organization(): BelongsTo

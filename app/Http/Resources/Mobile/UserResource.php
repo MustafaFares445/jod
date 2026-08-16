@@ -14,10 +14,10 @@ class UserResource extends JsonResource
     {
         $organization = $this->relationLoaded('organization') ? $this->organization : null;
 
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
-            'username' => $this->username(),
+            'username' => $this->publicUsername(),
             'email' => $this->email,
             'phone' => $this->phone,
             'city' => $this->city,
@@ -46,10 +46,20 @@ class UserResource extends JsonResource
             'createdAt' => $this->created_at?->toIso8601String(),
             'lastActiveAt' => $this->last_active_at?->toIso8601String(),
         ];
+
+        if (($avatarUrl = $this->avatarUrl()) !== null) {
+            $data['avatarUrl'] = $avatarUrl;
+        }
+
+        return $data;
     }
 
-    private function username(): string
+    private function publicUsername(): string
     {
+        if (filled($this->username)) {
+            return (string) $this->username;
+        }
+
         if (filled($this->email)) {
             return Str::before((string) $this->email, '@');
         }

@@ -10,6 +10,7 @@ class UserData extends Data
 {
     public function __construct(
         public ?string $name = null,
+        public ?string $username = null,
         public ?string $email = null,
         public ?string $phone = null,
         public ?string $city = null,
@@ -28,6 +29,7 @@ class UserData extends Data
     {
         return array_filter([
             'name' => $this->name,
+            'username' => $this->username,
             'email' => $this->email,
             'phone' => $this->phone,
             'city' => $this->city,

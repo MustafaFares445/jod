@@ -5,13 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Requests\Mobile;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class ProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('username') && is_string($this->input('username'))) {
+            $this->merge([
+                'username' => Str::lower(trim((string) $this->input('username'))),
+            ]);
+        }
     }
 
     /**
@@ -23,8 +34,16 @@ class ProfileRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255'],
+            'username' => [
+                'sometimes',
+                'string',
+                'min:3',
+                'max:80',
+                'regex:/^[a-z0-9._-]+$/',
+                Rule::unique('users', 'username')->ignore($userId),
+            ],
             'email' => [
-                'required',
+                'nullable',
                 'email',
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userId),
@@ -38,5 +57,21 @@ class ProfileRequest extends FormRequest
             'city' => ['nullable', 'string', 'min:2', 'max:100'],
             'bio' => ['nullable', 'string', 'max:180'],
         ];
+    }
+
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $email = $this->exists('email') ? $this->input('email') : $this->user()?->email;
+            $phone = $this->exists('phone') ? $this->input('phone') : $this->user()?->phone;
+
+            if (! filled($email) && ! filled($phone)) {
+                $validator->errors()->add('email', 'An email address or phone number is required.');
+                $validator->errors()->add('phone', 'An email address or phone number is required.');
+            }
+        }];
     }
 }

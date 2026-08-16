@@ -17,10 +17,20 @@ class BlogResource extends JsonResource
     {
         $author = $this->relationLoaded('author') ? $this->author : null;
         $authorName = (string) ($author?->name ?? $this->author_name ?? 'JOD');
-        $authorEmail = $author?->email;
-        $username = filled($authorEmail)
-            ? Str::before((string) $authorEmail, '@')
-            : (Str::slug($authorName, '.') ?: 'jod');
+        $username = filled($author?->username)
+            ? (string) $author->username
+            : $this->derivedUsername($author?->email, $authorName);
+
+        $authorData = [
+            'id' => $author?->id ? (string) $author->id : 'article-author-'.(Str::slug($authorName) ?: 'jod'),
+            'name' => $authorName,
+            'username' => $username,
+            'verified' => $author?->email_verified_at !== null,
+        ];
+
+        if ($author !== null && ($avatarUrl = $author->avatarUrl()) !== null) {
+            $authorData['avatarUrl'] = $avatarUrl;
+        }
 
         return [
             'id' => (string) $this->id,
@@ -31,13 +41,17 @@ class BlogResource extends JsonResource
             'category' => $this->category,
             'readTimeMinutes' => $this->readTimeMinutes(),
             'publishedAt' => $this->published_at?->toIso8601String(),
-            'author' => [
-                'id' => $author?->id ? (string) $author->id : 'article-author-'.(Str::slug($authorName) ?: 'jod'),
-                'name' => $authorName,
-                'username' => $username,
-                'verified' => $author?->email_verified_at !== null,
-            ],
+            'author' => $authorData,
         ];
+    }
+
+    private function derivedUsername(?string $email, string $name): string
+    {
+        if (filled($email)) {
+            return Str::before((string) $email, '@');
+        }
+
+        return Str::slug($name, '.') ?: 'jod';
     }
 
     private function readTimeMinutes(): int

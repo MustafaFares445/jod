@@ -35,8 +35,9 @@ class MobilePublisherResource extends JsonResource
         $data = [
             'id' => (string) $organization->id,
             'name' => (string) $organization->name,
-            'username' => $this->username($organization->email, (string) $organization->name),
+            'username' => $this->derivedUsername($organization->email, (string) $organization->name),
             'verified' => $organization->verification_status === 'verified',
+            'stats' => $this->stats($organization),
         ];
 
         if (filled($organization->description)) {
@@ -62,9 +63,16 @@ class MobilePublisherResource extends JsonResource
         $data = [
             'id' => (string) $user->id,
             'name' => (string) $user->name,
-            'username' => $this->username($user->email, (string) $user->name),
+            'username' => filled($user->username)
+                ? (string) $user->username
+                : $this->derivedUsername($user->email, (string) $user->name),
             'verified' => $user->email_verified_at !== null,
+            'stats' => $this->stats($user),
         ];
+
+        if (($avatarUrl = $user->avatarUrl()) !== null) {
+            $data['avatarUrl'] = $avatarUrl;
+        }
 
         if (filled($user->bio)) {
             $data['bio'] = $user->bio;
@@ -81,7 +89,19 @@ class MobilePublisherResource extends JsonResource
         return $data;
     }
 
-    private function username(?string $email, string $name): string
+    /**
+     * @return array{postsCount: int, likesCount: int, sharesCount: int}
+     */
+    private function stats(Organization|User $publisher): array
+    {
+        return [
+            'postsCount' => (int) ($publisher->published_posts_count ?? 0),
+            'likesCount' => (int) ($publisher->published_likes_count ?? 0),
+            'sharesCount' => (int) ($publisher->published_shares_count ?? 0),
+        ];
+    }
+
+    private function derivedUsername(?string $email, string $name): string
     {
         if (filled($email)) {
             return Str::before((string) $email, '@');
