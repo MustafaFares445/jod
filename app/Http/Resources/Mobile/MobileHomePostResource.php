@@ -153,7 +153,7 @@ class MobileHomePostResource extends JsonResource
 
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
 
-        if ($campaign !== null && $campaign->status !== 'active') {
+        if ($campaign === null || $campaign->status !== 'active') {
             return 'closed';
         }
 
