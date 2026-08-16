@@ -9,11 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class DonationHistoryRequest extends FormRequest
 {
     /**
-     * @return array{
-     *     page: list<mixed>,
-     *     perPage: list<mixed>,
-     *     campaignId: list<mixed>
-     * }
+     * @return array<string, list<mixed>>
      */
     public function rules(): array
     {
@@ -21,6 +17,7 @@ class DonationHistoryRequest extends FormRequest
             'page' => ['sometimes', 'integer', 'min:1'],
             'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'campaignId' => ['sometimes', 'string', 'exists:campaigns,id'],
+            'flow' => ['sometimes', 'string', 'in:contributed,received'],
         ];
     }
 }
