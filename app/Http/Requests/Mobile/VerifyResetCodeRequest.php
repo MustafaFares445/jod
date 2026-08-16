@@ -24,7 +24,7 @@ class VerifyResetCodeRequest extends FormRequest
     {
         return [
             'login' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
+            'code' => ['required', 'string', 'regex:/^(?:\d{4}|\d{6})$/'],
         ];
     }
 }
