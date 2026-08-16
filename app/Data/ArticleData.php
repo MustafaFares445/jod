@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Data;
 
 use Carbon\Carbon;
-use Spatie\LaravelData\Data;
-use Spatie\LaravelData\Attributes\Validation\Max;
 use Spatie\LaravelData\Attributes\Validation\In;
+use Spatie\LaravelData\Attributes\Validation\Max;
+use Spatie\LaravelData\Data;
 
 class ArticleData extends Data
 {
@@ -19,6 +19,10 @@ class ArticleData extends Data
         #[Max(500)]
         public ?string $excerpt = null,
         public ?string $content = null,
+        #[In('awareness', 'success_stories', 'campaign_updates', 'volunteer_guides')]
+        public ?string $category = 'awareness',
+        #[Max(2048)]
+        public ?string $coverImage = null,
         #[In('draft', 'published')]
         public ?string $status = 'draft',
         public ?Carbon $publishedAt = null,
@@ -33,6 +37,8 @@ class ArticleData extends Data
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
             'content' => $this->content,
+            'category' => $this->category,
+            'cover_image' => $this->coverImage,
             'status' => $this->status,
             'published_at' => $this->publishedAt?->toDateTimeString(),
             'author_name' => $this->authorName,
