@@ -233,11 +233,10 @@ class PostService
         }
 
         if ($state === 'closed') {
+            // Donation/volunteer posts without a campaign now render a contact CTA,
+            // so only campaign-backed inactive posts belong in the closed state.
             $query->whereIn('type', ['volunteer_opportunity', 'donation_campaign'])
-                ->where(function (Builder $campaignState): void {
-                    $campaignState->whereDoesntHave('campaign')
-                        ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
-                });
+                ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
 
             return;
         }
