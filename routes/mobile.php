@@ -27,12 +27,24 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')
     ->name('auth.')
     ->group(function (): void {
-        Route::post('register', [AuthController::class, 'register'])->name('register');
-        Route::post('login', [AuthController::class, 'login'])->name('login');
-        Route::post('refresh', [AuthController::class, 'refresh'])->name('refresh');
-        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot-password');
-        Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])->name('verify-reset-code');
-        Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
+        Route::post('register', [AuthController::class, 'register'])
+            ->middleware('throttle:5,1')
+            ->name('register');
+        Route::post('login', [AuthController::class, 'login'])
+            ->middleware('throttle:10,1')
+            ->name('login');
+        Route::post('refresh', [AuthController::class, 'refresh'])
+            ->middleware('throttle:30,1')
+            ->name('refresh');
+        Route::post('forgot-password', [AuthController::class, 'forgotPassword'])
+            ->middleware('throttle:5,1')
+            ->name('forgot-password');
+        Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])
+            ->middleware('throttle:10,1')
+            ->name('verify-reset-code');
+        Route::post('reset-password', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:5,1')
+            ->name('reset-password');
     });
 
 Route::middleware('throttle:60,1')->group(function (): void {
