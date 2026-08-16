@@ -20,6 +20,8 @@ class ArticleRequest extends FormRequest
             'slug' => ['sometimes', 'string', 'max:255', 'unique:articles,slug,' . ($this->article->id ?? 'NULL')],
             'excerpt' => ['required', 'string', 'max:500'],
             'content' => ['sometimes', 'string'],
+            'category' => ['sometimes', 'string', 'in:awareness,success_stories,campaign_updates,volunteer_guides'],
+            'coverImage' => ['sometimes', 'nullable', 'url', 'max:2048'],
             'status' => ['required', 'in:draft,published'],
             'authorName' => ['required', 'string', 'max:255'],
         ];
