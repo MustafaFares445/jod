@@ -206,7 +206,6 @@ class PostService
         }
 
         $relations['saves'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
-        $relations['likes'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
         $relations['campaignApplications'] = static fn (Builder $builder) => $builder->where('created_by', $viewer->id);
 
         return $relations;
