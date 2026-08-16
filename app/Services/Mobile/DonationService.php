@@ -10,35 +10,57 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class DonationService
 {
     /**
-     * @param  array{perPage?: int, campaignId?: string}  $params
+     * @param  array{perPage?: int, campaignId?: string, flow?: 'contributed'|'received'}  $params
      */
     public function paginateForUser(User $user, array $params): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $flow = (string) ($params['flow'] ?? 'contributed');
 
-        return Donation::query()
-            ->with('campaign.organization')
-            ->where('created_by', $user->id)
+        $query = Donation::query()->with('campaign.organization');
+
+        if ($flow === 'received') {
+            if (! Gate::forUser($user)->allows('viewAny', Donation::class)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('organization_id', $user->organization_id);
+            }
+        } else {
+            $query->where('created_by', $user->id);
+        }
+
+        return $query
             ->when(
                 filled($params['campaignId'] ?? null),
-                fn (Builder $query) => $query->where('campaign_id', $params['campaignId']),
+                fn (Builder $builder) => $builder->where('campaign_id', $params['campaignId']),
             )
             ->orderByDesc('donated_at')
+            ->orderByDesc('id')
             ->paginate($perPage);
     }
 
     public function findForUser(User $user, string $donationId): ?Donation
     {
-        return Donation::query()
+        $donation = Donation::query()
             ->with('campaign.organization')
-            ->where('created_by', $user->id)
             ->whereKey($donationId)
             ->first();
+
+        if ($donation === null) {
+            return null;
+        }
+
+        if ((string) $donation->created_by === (string) $user->id) {
+            return $donation;
+        }
+
+        return Gate::forUser($user)->allows('view', $donation) ? $donation : null;
     }
 
     /**
@@ -74,7 +96,7 @@ class DonationService
                 'campaign_title' => $campaign->title,
                 'amount_or_type' => $amount,
                 'donated_at' => now(),
-                'city' => $attributes['city'] ?? null,
+                'city' => $attributes['city'] ?? $user->city,
                 'source' => 'mobile_app',
                 'payment_method' => $attributes['paymentMethod'],
                 'campaign_ref' => $campaign->id,
