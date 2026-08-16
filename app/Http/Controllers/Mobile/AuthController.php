@@ -14,6 +14,7 @@ use App\Http\Requests\Mobile\VerifyResetCodeRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Models\User;
 use App\Services\Auth\TokenService;
+use App\Services\Mobile\MobilePasswordResetService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -25,18 +26,17 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly TokenService $tokenService) {}
+    public function __construct(
+        private readonly TokenService $tokenService,
+        private readonly MobilePasswordResetService $passwordResetService,
+    ) {}
 
     /**
      * Register a mobile account.
      *
-     * @bodyParam name string required The user's display name.
-     * @bodyParam email string required The user's email address.
-     * @bodyParam phone string optional The user's phone number.
-     * @bodyParam password string required The password.
-     * @bodyParam password_confirmation string required Confirmation of the password.
-     *
-     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
+     * Supports the mobile screen aliases `firstName`, `lastName`,
+     * `phoneNumber`, and `confirmPassword`. Email is optional for phone-first
+     * mobile accounts and can be added later from profile settings.
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -45,7 +45,7 @@ class AuthController extends Controller
         $user = User::query()->create([
             'id' => (string) Str::uuid(),
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => $validated['email'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'password' => $validated['password'],
             'status' => 'active',
@@ -62,12 +62,6 @@ class AuthController extends Controller
      * Log in to the mobile API.
      *
      * Public endpoint that returns a short-lived access token, a rotating refresh token, and the current mobile user profile.
-     *
-     * @bodyParam email string optional The account email address. Required when phone is omitted.
-     * @bodyParam phone string optional The account phone number. Required when email is omitted.
-     * @bodyParam password string required The account password.
-     *
-     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -107,12 +101,6 @@ class AuthController extends Controller
 
     /**
      * Rotate a mobile refresh token and issue a new token pair.
-     *
-     * Refresh tokens are single-use. Rotating one revokes the previous access and refresh token pair.
-     *
-     * @bodyParam refreshToken string required The current refresh token.
-     *
-     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string}, error: null, meta: array}
      */
     public function refresh(RefreshTokenRequest $request): JsonResponse
     {
@@ -133,47 +121,62 @@ class AuthController extends Controller
     }
 
     /**
-     * Request a password reset code.
+     * Request a password reset code by email or phone number.
      *
-     * @bodyParam login string required The email address or phone number for the account.
-     *
-     * @response array{success: bool, message: string, data: array{resetCodeSent: bool}, error: null, meta: array}
+     * `phoneNumber` is accepted as an alias for `login`.
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        $user = $this->resolveUserByLogin($request->validated('login'));
+        $login = $request->validated('login');
 
-        if (! $user) {
-            return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
+        if (! $this->passwordResetService->canDeliverTo($login)) {
+            return MobileApiResponse::error(
+                'reset_delivery_unavailable',
+                'Password reset delivery is not configured for this login channel.',
+                null,
+                503,
+            );
         }
 
-        $code = $this->generateResetCode();
+        $user = $this->resolveUserByLogin($login);
 
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $user->email],
-            ['token' => $code, 'created_at' => now()]
-        );
+        // Keep account lookup private: an unknown login receives the same public
+        // success shape without creating or sending a reset code.
+        if ($user === null) {
+            return MobileApiResponse::success([
+                'resetCodeSent' => true,
+            ], 'If an account matches the provided login, a reset code has been sent.');
+        }
+
+        if (! $this->passwordResetService->issue($user, $login)) {
+            return MobileApiResponse::error(
+                'reset_delivery_failed',
+                'The reset code could not be delivered. Please try again later.',
+                null,
+                503,
+            );
+        }
 
         return MobileApiResponse::success([
             'resetCodeSent' => true,
-        ], 'Reset code generated successfully.');
+        ], 'Reset code sent successfully.');
     }
 
     /**
-     * Verify a password reset code.
-     *
-     * @bodyParam login string required The email address or phone number for the account.
-     * @bodyParam code string required The 6-digit reset code.
-     *
-     * @response array{success: bool, message: string, data: array{resetCodeVerified: bool}, error: null, meta: array}
+     * Verify a 4-digit mobile password reset code.
      */
     public function verifyResetCode(VerifyResetCodeRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $user = $this->resolveUserByLogin($validated['login']);
 
-        if (! $user || ! $this->isValidResetCode($user->email, $validated['code'])) {
-            return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
+        if ($user === null || ! $this->passwordResetService->verify($user, $validated['code'])) {
+            return MobileApiResponse::error(
+                'invalid_reset_code',
+                'The provided reset code is invalid or expired.',
+                null,
+                422,
+            );
         }
 
         return MobileApiResponse::success([
@@ -182,24 +185,21 @@ class AuthController extends Controller
     }
 
     /**
-     * Reset a mobile account password.
-     *
+     * Reset a mobile account password using a valid 4-digit reset code.
      * A successful reset revokes all existing API sessions for the account.
-     *
-     * @bodyParam login string required The email address or phone number for the account.
-     * @bodyParam code string required The 6-digit reset code.
-     * @bodyParam password string required The new password.
-     * @bodyParam password_confirmation string required Confirmation of the new password.
-     *
-     * @response array{success: bool, message: string, data: array{resetPasswordUpdated: bool}, error: null, meta: array}
      */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $validated = $request->validated();
         $user = $this->resolveUserByLogin($validated['login']);
 
-        if (! $user || ! $this->isValidResetCode($user->email, $validated['code'])) {
-            return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
+        if ($user === null || ! $this->passwordResetService->verify($user, $validated['code'])) {
+            return MobileApiResponse::error(
+                'invalid_reset_code',
+                'The provided reset code is invalid or expired.',
+                null,
+                422,
+            );
         }
 
         DB::transaction(function () use ($user, $validated): void {
@@ -208,7 +208,7 @@ class AuthController extends Controller
             ])->save();
 
             $user->tokens()->delete();
-            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            $this->passwordResetService->consume($user);
         });
 
         return MobileApiResponse::success([
@@ -220,8 +220,6 @@ class AuthController extends Controller
      * Log out from the mobile API.
      *
      * Requires a mobile access token and revokes both tokens belonging to the current session.
-     *
-     * @response array{success: bool, message: string, data: null, error: null, meta: array}
      */
     public function logout(Request $request): JsonResponse
     {
@@ -241,27 +239,5 @@ class AuthController extends Controller
             ->where('email', $login)
             ->orWhere('phone', $login)
             ->first();
-    }
-
-    private function generateResetCode(): string
-    {
-        return (string) random_int(100000, 999999);
-    }
-
-    private function isValidResetCode(string $email, string $code): bool
-    {
-        $record = DB::table('password_reset_tokens')
-            ->where('email', $email)
-            ->first();
-
-        if (! $record) {
-            return false;
-        }
-
-        if (! isset($record->created_at) || now()->diffInMinutes($record->created_at) > 15) {
-            return false;
-        }
-
-        return hash_equals((string) $record->token, $code);
     }
 }
