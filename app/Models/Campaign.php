@@ -27,7 +27,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'beneficiaries_count',
     'donors_count',
     'applicants_count',
+    'required_volunteers',
     'start_date',
+    'event_time',
     'end_date',
     'submitted_at',
     'closed_at',
@@ -52,6 +54,7 @@ class Campaign extends Model
             'closed_at' => 'datetime',
             'goal_amount' => 'decimal:2',
             'raised_amount' => 'decimal:2',
+            'required_volunteers' => 'integer',
         ];
     }
 
@@ -63,6 +66,11 @@ class Campaign extends Model
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
+    }
+
+    public function applications(): HasMany
+    {
+        return $this->hasMany(CampaignApplication::class);
     }
 
     public function reviewedBy(): BelongsTo
