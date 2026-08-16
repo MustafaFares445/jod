@@ -18,7 +18,8 @@ class CampaignService
         $sort = $this->normalizeDiscoverySort($params);
 
         $query = Campaign::query()
-            ->with(['organization', 'creator'])
+            ->with($this->publicRelations())
+            ->withCount($this->publicCounts())
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->where('category', $params['category']))
@@ -47,7 +48,8 @@ class CampaignService
     public function findPublicCampaign(string $id): ?Campaign
     {
         return Campaign::query()
-            ->with(['organization', 'creator'])
+            ->with($this->publicRelations())
+            ->withCount($this->publicCounts())
             ->whereKey($id)
             ->where('status', 'active')
             ->first();
@@ -95,14 +97,16 @@ class CampaignService
             'organization_id' => $organizationId,
             'goal_amount' => $data->goalAmount,
             'beneficiaries_count' => $data->beneficiariesCount,
+            'required_volunteers' => $data->requiredVolunteers ?? 0,
             'start_date' => $data->startDate,
+            'event_time' => $data->eventTime,
             'end_date' => $data->endDate,
         ]);
     }
 
     public function update(Campaign $campaign, CampaignData $data): Campaign
     {
-        $campaign->update([
+        $attributes = [
             'title' => $data->title,
             'summary' => $data->summary,
             'category' => $data->category,
@@ -112,7 +116,17 @@ class CampaignService
             'beneficiaries_count' => $data->beneficiariesCount,
             'start_date' => $data->startDate,
             'end_date' => $data->endDate,
-        ]);
+        ];
+
+        if ($data->requiredVolunteers !== null) {
+            $attributes['required_volunteers'] = $data->requiredVolunteers;
+        }
+
+        if ($data->eventTime !== null) {
+            $attributes['event_time'] = $data->eventTime;
+        }
+
+        $campaign->update($attributes);
 
         return $campaign;
     }
@@ -164,6 +178,31 @@ class CampaignService
     public function delete(Campaign $campaign): void
     {
         $campaign->delete();
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function publicRelations(): array
+    {
+        return [
+            'organization',
+            'creator',
+            'posts' => static fn (Builder $post) => $post
+                ->where('status', 'published')
+                ->select(['id', 'campaign_id', 'type']),
+        ];
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function publicCounts(): array
+    {
+        return [
+            'applications as joined_volunteers_count' => static fn (Builder $application) => $application
+                ->whereIn('applicant_status', ['approved', 'accepted']),
+        ];
     }
 
     private function normalizeSort(array $params): string
