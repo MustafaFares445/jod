@@ -12,7 +12,16 @@ use Throwable;
 
 class MobilePasswordResetService
 {
-    public function issue(User $user): bool
+    public function canDeliverTo(string $login): bool
+    {
+        if ($this->isEmailLogin($login)) {
+            return true;
+        }
+
+        return filled(config('mobile_auth.password_reset.webhook_url'));
+    }
+
+    public function issue(User $user, string $login): bool
     {
         $code = $this->generateCode();
         $expiresMinutes = max(1, (int) config('mobile_auth.password_reset.expires_minutes', 15));
@@ -28,7 +37,7 @@ class MobilePasswordResetService
             ],
         );
 
-        if ($this->deliver($user, $code, $expiresMinutes)) {
+        if ($this->deliver($user, $login, $code, $expiresMinutes)) {
             return true;
         }
 
@@ -97,48 +106,68 @@ class MobilePasswordResetService
         return hash_hmac('sha256', $code, (string) config('app.key'));
     }
 
-    private function deliver(User $user, string $code, int $expiresMinutes): bool
+    private function deliver(User $user, string $login, string $code, int $expiresMinutes): bool
     {
-        if (filled($user->phone)) {
-            $webhookUrl = config('mobile_auth.password_reset.webhook_url');
-
-            if (filled($webhookUrl)) {
-                try {
-                    $request = Http::asJson()
-                        ->timeout(max(1, (int) config('mobile_auth.password_reset.webhook_timeout_seconds', 5)));
-
-                    if (filled($token = config('mobile_auth.password_reset.webhook_token'))) {
-                        $request = $request->withToken((string) $token);
-                    }
-
-                    return $request->post((string) $webhookUrl, [
-                        'phone' => $user->phone,
-                        'code' => $code,
-                        'purpose' => 'password_reset',
-                        'expiresInMinutes' => $expiresMinutes,
-                    ])->successful();
-                } catch (Throwable) {
-                    return false;
-                }
-            }
+        if (! $this->isEmailLogin($login)) {
+            return $this->deliverToPhone($user, $code, $expiresMinutes);
         }
 
-        if (filled($user->email)) {
-            try {
-                Mail::raw(
-                    "Your JOD password reset code is {$code}. It expires in {$expiresMinutes} minutes.",
-                    static function ($message) use ($user): void {
-                        $message->to((string) $user->email)
-                            ->subject('JOD password reset code');
-                    },
-                );
+        return $this->deliverToEmail($user, $code, $expiresMinutes);
+    }
 
-                return true;
-            } catch (Throwable) {
-                return false;
-            }
+    private function deliverToPhone(User $user, string $code, int $expiresMinutes): bool
+    {
+        if (! filled($user->phone)) {
+            return false;
         }
 
-        return false;
+        $webhookUrl = config('mobile_auth.password_reset.webhook_url');
+        if (! filled($webhookUrl)) {
+            return false;
+        }
+
+        try {
+            $request = Http::asJson()
+                ->timeout(max(1, (int) config('mobile_auth.password_reset.webhook_timeout_seconds', 5)));
+
+            if (filled($token = config('mobile_auth.password_reset.webhook_token'))) {
+                $request = $request->withToken((string) $token);
+            }
+
+            return $request->post((string) $webhookUrl, [
+                'phone' => $user->phone,
+                'code' => $code,
+                'purpose' => 'password_reset',
+                'expiresInMinutes' => $expiresMinutes,
+            ])->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function deliverToEmail(User $user, string $code, int $expiresMinutes): bool
+    {
+        if (! filled($user->email)) {
+            return false;
+        }
+
+        try {
+            Mail::raw(
+                "Your JOD password reset code is {$code}. It expires in {$expiresMinutes} minutes.",
+                static function ($message) use ($user): void {
+                    $message->to((string) $user->email)
+                        ->subject('JOD password reset code');
+                },
+            );
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function isEmailLogin(string $login): bool
+    {
+        return filter_var($login, FILTER_VALIDATE_EMAIL) !== false;
     }
 }
