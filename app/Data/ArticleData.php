@@ -20,7 +20,7 @@ class ArticleData extends Data
         public ?string $excerpt = null,
         public ?string $content = null,
         #[In('awareness', 'success_stories', 'campaign_updates', 'volunteer_guides')]
-        public ?string $category = 'awareness',
+        public ?string $category = null,
         #[Max(2048)]
         public ?string $coverImage = null,
         #[In('draft', 'published')]
