@@ -24,32 +24,33 @@ class MobileHomePostResource extends JsonResource
         $ctaState = $this->ctaState($ctaType);
         $publisher = $this->publisher();
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
+        $targetId = in_array($ctaType, ['apply', 'donate'], true)
+            ? ($campaign?->id ? (string) $campaign->id : null)
+            : (string) $this->id;
 
         $cta = [
             'type' => $ctaType,
             'label' => $this->ctaLabel($ctaType),
-            'targetId' => in_array($ctaType, ['apply', 'donate'], true)
-                ? ($campaign?->id ? (string) $campaign->id : null)
-                : (string) $this->id,
         ];
+
+        if ($targetId !== null) {
+            $cta['targetId'] = $targetId;
+        }
 
         if ($ctaState !== null) {
             $cta['state'] = $ctaState;
         }
 
-        return [
+        $data = [
             'id' => (string) $this->id,
             'publisher' => $publisher,
             'postType' => $postType,
-            'title' => $this->title,
             'content' => (string) ($this->content ?? $this->summary ?? ''),
             'createdAt' => ($this->published_at ?? $this->created_at)?->toIso8601String(),
             'images' => $this->relationLoaded('images')
                 ? $this->images->map(static fn (PostImage $image): string => $image->publicUrl())->values()->all()
                 : [],
             'cta' => $cta,
-            'phoneNumber' => $publisher['phoneNumber'],
-            'whatsappNumber' => $publisher['whatsappNumber'],
             'stats' => [
                 'likes' => (int) $this->reactions_count,
                 'comments' => 0,
@@ -63,10 +64,24 @@ class MobileHomePostResource extends JsonResource
             'campaignId' => $campaign?->id ? (string) $campaign->id : null,
             'location' => $this->location,
         ];
+
+        if ($this->title !== null) {
+            $data['title'] = $this->title;
+        }
+
+        if (isset($publisher['phoneNumber'])) {
+            $data['phoneNumber'] = $publisher['phoneNumber'];
+        }
+
+        if (isset($publisher['whatsappNumber'])) {
+            $data['whatsappNumber'] = $publisher['whatsappNumber'];
+        }
+
+        return $data;
     }
 
     /**
-     * @return array{id: string, name: string, username: string, avatarUrl: null, bio: string|null, city: string|null, verified: bool, phoneNumber: string|null, whatsappNumber: null}
+     * @return array<string, mixed>
      */
     private function publisher(): array
     {
@@ -84,20 +99,30 @@ class MobileHomePostResource extends JsonResource
         $email = $organization?->email ?? $author?->email;
         $phone = $organization?->phone ?? $author?->phone;
         $city = $organization?->location ?? $this->location;
+        $bio = $organization?->description;
 
-        return [
+        $publisher = [
             'id' => (string) $publisherId,
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
-            'avatarUrl' => null,
-            'bio' => $organization?->description,
-            'city' => $city,
             'verified' => $organization !== null
                 ? $organization->verification_status === 'verified'
                 : $author?->email_verified_at !== null,
-            'phoneNumber' => $phone,
-            'whatsappNumber' => null,
         ];
+
+        if (filled($bio)) {
+            $publisher['bio'] = $bio;
+        }
+
+        if (filled($city)) {
+            $publisher['city'] = $city;
+        }
+
+        if (filled($phone)) {
+            $publisher['phoneNumber'] = $phone;
+        }
+
+        return $publisher;
     }
 
     private function username(?string $email, string $name): string
