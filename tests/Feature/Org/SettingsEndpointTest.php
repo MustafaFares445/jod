@@ -5,6 +5,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -25,7 +26,7 @@ beforeEach(function () {
         [PermissionGroup::ORG_SETTINGS, PermissionAction::UPDATE],
     ]);
 
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('returns organization profile and bank account', function () {
     $this->getJson('/api/v1/org/settings/profile')

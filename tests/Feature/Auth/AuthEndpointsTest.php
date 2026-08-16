@@ -19,6 +19,7 @@ test('login issues access and refresh tokens and returns dashboard permissions',
         'email' => 'admin@example.com',
         'password' => Hash::make('password'),
         'last_active_at' => null,
+        'user_type' => 'admin',
     ]);
 
     $this->grantPermissions($user, [

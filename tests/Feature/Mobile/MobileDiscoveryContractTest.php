@@ -6,6 +6,7 @@ use App\Models\CampaignApplication;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -72,7 +73,7 @@ test('action state filters follow campaign and viewer application state', functi
         'applied_at' => now(),
         'created_by' => $user->id,
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->getJson('/api/mobile/discovery/posts?actionState=submitted')
         ->assertOk()
@@ -97,7 +98,7 @@ function mobile_discovery_contract_test_createCampaign(Organization $organizatio
     return Campaign::query()->create([
         'id' => (string) Str::uuid(),
         'title' => $title,
-        'category' => 'community',
+        'category' => 'health',
         'status' => $status,
         'organization_id' => $organization->id,
     ]);

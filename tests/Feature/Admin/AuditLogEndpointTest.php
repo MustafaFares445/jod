@@ -5,6 +5,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -13,7 +14,7 @@ beforeEach(function () {
     $this->grantPermissions($this->user, [
         [PermissionGroup::AUDIT_LOG, PermissionAction::VIEW],
     ]);
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('lists audit logs', function () {
     AuditLog::factory()->count(5)->create();

@@ -7,6 +7,7 @@ use App\Models\PostLike;
 use App\Models\Report;
 use App\Models\SavedPost;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -14,7 +15,7 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 test('like is idempotent and syncs count', function () {
     $user = User::factory()->create();
     $post = mobile_engagement_test_createPost(['reactions_count' => 7]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$post->id}/like")
         ->assertOk()
@@ -35,7 +36,7 @@ test('unlike is idempotent and syncs count', function () {
     $post = mobile_engagement_test_createPost();
     PostLike::factory()->create(['user_id' => $user->id, 'post_id' => $post->id]);
     $post->update(['reactions_count' => 1]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->deleteJson("/api/mobile/posts/{$post->id}/like")
         ->assertOk()
@@ -58,7 +59,7 @@ test('like and unlike require authentication and public posts', function () {
     $this->postJson("/api/mobile/posts/{$publicPost->id}/like")->assertUnauthorized();
     $this->deleteJson("/api/mobile/posts/{$publicPost->id}/like")->assertUnauthorized();
 
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$draftPost->id}/like")->assertNotFound();
     $this->deleteJson("/api/mobile/posts/{$draftPost->id}/like")->assertNotFound();
@@ -66,7 +67,7 @@ test('like and unlike require authentication and public posts', function () {
 test('save is idempotent and returns count', function () {
     $user = User::factory()->create();
     $post = mobile_engagement_test_createPost();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$post->id}/save")
         ->assertOk()
@@ -85,7 +86,7 @@ test('unsave is idempotent and returns count', function () {
     $user = User::factory()->create();
     $post = mobile_engagement_test_createPost();
     SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $post->id]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->deleteJson("/api/mobile/posts/{$post->id}/save")
         ->assertOk()
@@ -112,7 +113,7 @@ test('saved posts are paginated scoped to user and public posts', function () {
     SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $secondPost->id]);
     SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $draftPost->id]);
     SavedPost::factory()->create(['user_id' => $otherUser->id, 'post_id' => $otherPost->id]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->getJson('/api/mobile/me/saved-posts?perPage=10');
 
@@ -133,14 +134,14 @@ test('save unsave and saved posts require authentication and public posts', func
     $this->deleteJson("/api/mobile/posts/{$publicPost->id}/save")->assertUnauthorized();
     $this->getJson('/api/mobile/me/saved-posts')->assertUnauthorized();
 
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$draftPost->id}/save")->assertNotFound();
     $this->deleteJson("/api/mobile/posts/{$draftPost->id}/save")->assertNotFound();
 });
 test('report validation errors are returned', function () {
     $post = mobile_engagement_test_createPost();
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$post->id}/reports", [])
         ->assertUnprocessable()
@@ -160,7 +161,7 @@ test('report creates new moderation report with context', function () {
     $user = User::factory()->create();
     $organization = Organization::factory()->create();
     $post = mobile_engagement_test_createPost(['organization_id' => $organization->id]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->postJson("/api/mobile/posts/{$post->id}/reports", [
         'reason' => 'spam',
@@ -184,7 +185,7 @@ test('report creates new moderation report with context', function () {
 test('duplicate reports create separate records', function () {
     $user = User::factory()->create();
     $post = mobile_engagement_test_createPost();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$post->id}/reports", ['reason' => 'Unsafe claim'])->assertOk();
     $this->postJson("/api/mobile/posts/{$post->id}/reports", ['reason' => 'Unsafe claim'])->assertOk();
@@ -201,7 +202,7 @@ test('report requires authentication and public posts', function () {
 
     $this->postJson("/api/mobile/posts/{$publicPost->id}/reports", ['reason' => 'spam'])->assertUnauthorized();
 
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/posts/{$draftPost->id}/reports", ['reason' => 'spam'])->assertNotFound();
 });

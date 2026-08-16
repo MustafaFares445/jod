@@ -5,6 +5,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Badge;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -16,7 +17,7 @@ beforeEach(function () {
         [PermissionGroup::BADGE, PermissionAction::UPDATE],
         [PermissionGroup::BADGE, PermissionAction::DELETE],
     ]);
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('lists badges', function () {
     Badge::factory()->count(3)->create();

@@ -9,6 +9,7 @@ use App\Models\CampaignApplication;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -24,7 +25,7 @@ class MobileCampaignApplicationTest extends TestCase
             'phone' => '0999999999',
             'city' => 'Damascus',
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $first = $this->postJson("/api/mobile/campaigns/{$campaign->id}/applications", [])
             ->assertOk()
@@ -70,7 +71,7 @@ class MobileCampaignApplicationTest extends TestCase
             'created_by' => $other->id,
         ]);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
         $created = $this->postJson("/api/mobile/campaigns/{$campaign->id}/applications", [])
             ->assertOk()
             ->json('data.id');
@@ -92,7 +93,7 @@ class MobileCampaignApplicationTest extends TestCase
     {
         [$campaign, $post] = $this->volunteerCampaign();
         $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $applicationId = $this->postJson("/api/mobile/campaigns/{$campaign->id}/applications", [])
             ->assertOk()
@@ -127,7 +128,7 @@ class MobileCampaignApplicationTest extends TestCase
         $campaign = Campaign::query()->create([
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'title' => 'Donation only campaign',
-            'category' => 'donation',
+            'category' => 'health',
             'status' => 'active',
             'organization_id' => $organization->id,
         ]);
@@ -137,7 +138,7 @@ class MobileCampaignApplicationTest extends TestCase
             'type' => 'donation_campaign',
         ]);
 
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
         $this->postJson("/api/mobile/campaigns/{$campaign->id}/applications", [])
             ->assertUnprocessable()
@@ -162,7 +163,7 @@ class MobileCampaignApplicationTest extends TestCase
             'id' => (string) \Illuminate\Support\Str::uuid(),
             'title' => 'Volunteer Program',
             'summary' => 'Help the community',
-            'category' => 'volunteer',
+            'category' => 'health',
             'status' => 'active',
             'organization_id' => $organization->id,
             'applicants_count' => 0,

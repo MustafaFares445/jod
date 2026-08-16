@@ -5,6 +5,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -19,7 +20,7 @@ beforeEach(function () {
         [PermissionGroup::ORGANIZATION, PermissionAction::ACCEPT],
     ]);
 
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('lists organizations with filters', function () {
     Organization::query()->create([

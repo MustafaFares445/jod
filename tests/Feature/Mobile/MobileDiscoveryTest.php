@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\Post;
 use App\Models\SavedPost;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -116,7 +117,7 @@ test('mobile discovery post includes saved and submitted state for authenticated
     $campaign = Campaign::query()->create([
         'id' => (string) Str::uuid(),
         'title' => 'Volunteer campaign',
-        'category' => 'volunteer',
+        'category' => 'health',
         'status' => 'active',
         'organization_id' => $organization->id,
     ]);
@@ -144,7 +145,7 @@ test('mobile discovery post includes saved and submitted state for authenticated
         'applied_at' => now(),
         'created_by' => $user->id,
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->getJson("/api/mobile/discovery/posts/{$post->id}");
 
@@ -158,7 +159,7 @@ test('mobile discovery post includes saved and submitted state for authenticated
 });
 test('mobile discovery posts include viewer state when authenticated', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->getJson('/api/mobile/discovery/posts');
 

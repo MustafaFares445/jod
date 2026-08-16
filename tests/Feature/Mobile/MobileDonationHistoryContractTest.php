@@ -11,6 +11,7 @@ use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\User;
 use App\Support\Permissions\PermissionNameResolver;
+use App\Services\Auth\TokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -36,7 +37,7 @@ class MobileDonationHistoryContractTest extends TestCase
             'amount_or_type' => 25000,
             'created_by' => $user->id,
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->getJson('/api/mobile/me/donations?flow=contributed&perPage=10')
             ->assertOk()
@@ -72,7 +73,7 @@ class MobileDonationHistoryContractTest extends TestCase
             'created_by' => $donor->id,
         ]);
 
-        Sanctum::actingAs($staff);
+        Sanctum::actingAs($staff, [TokenService::ACCESS_ABILITY]);
 
         $response = $this->getJson('/api/mobile/me/donations?flow=received&perPage=10');
         $response->assertOk()
@@ -86,7 +87,7 @@ class MobileDonationHistoryContractTest extends TestCase
         $organization = Organization::factory()->create();
         $user = User::factory()->create(['organization_id' => $organization->id]);
         Donation::factory()->create(['organization_id' => $organization->id]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->getJson('/api/mobile/me/donations?flow=received')
             ->assertOk()
@@ -109,12 +110,12 @@ class MobileDonationHistoryContractTest extends TestCase
             'created_by' => $donor->id,
         ]);
 
-        Sanctum::actingAs($staff);
+        Sanctum::actingAs($staff, [TokenService::ACCESS_ABILITY]);
         $this->getJson("/api/mobile/me/donations/{$donation->id}")
             ->assertOk()
             ->assertJsonPath('data.flow', 'received');
 
-        Sanctum::actingAs($outsider);
+        Sanctum::actingAs($outsider, [TokenService::ACCESS_ABILITY]);
         $this->getJson("/api/mobile/me/donations/{$donation->id}")
             ->assertNotFound();
     }
@@ -124,7 +125,7 @@ class MobileDonationHistoryContractTest extends TestCase
         $user = User::factory()->create(['city' => 'Aleppo']);
         $organization = Organization::factory()->create();
         $campaign = $this->campaign($organization);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
             'amount' => 100,
@@ -149,7 +150,7 @@ class MobileDonationHistoryContractTest extends TestCase
         return Campaign::query()->create(array_merge([
             'id' => (string) Str::uuid(),
             'title' => fake()->sentence(3),
-            'category' => 'donation',
+            'category' => 'health',
             'status' => 'active',
             'organization_id' => $organization->id,
             'goal_amount' => 1000,

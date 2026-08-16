@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -35,10 +36,10 @@ beforeEach(function () {
         [PermissionGroup::ORG_NOTIFICATION, PermissionAction::UPDATE],
     ]);
 
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('paginated responses include contract envelope without removing legacy data', function () {
-    $campaign = campaign(['status' => 'active']);
+    $campaign = organization_contract_campaign($this->organization, ['status' => 'active']);
 
     $this->getJson('/api/v1/org/campaigns')
         ->assertOk()
@@ -50,7 +51,7 @@ test('paginated responses include contract envelope without removing legacy data
         ->assertJsonPath('data.0.id', $campaign->id);
 });
 test('campaign status contract endpoint enforces lifecycle', function () {
-    $campaign = campaign(['status' => 'draft']);
+    $campaign = organization_contract_campaign($this->organization, ['status' => 'draft']);
 
     $this->patchJson("/api/v1/org/campaigns/{$campaign->id}/status", [
         'status' => 'active',
@@ -110,10 +111,10 @@ test('notification read contract endpoint requires no request body', function ()
 
     expect($notification->refresh()->read_at)->not->toBeNull();
 });
-function campaign(array $overrides = []): Campaign
+function organization_contract_campaign(Organization $organization, array $overrides = []): Campaign
 {
     return Campaign::query()->create([
-        'organization_id' => $this->organization->id,
+        'organization_id' => $organization->id,
         'title' => 'Contract Campaign',
         'summary' => 'Summary',
         'category' => 'health',

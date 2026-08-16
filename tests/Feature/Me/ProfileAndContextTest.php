@@ -9,6 +9,7 @@ use App\Models\OrganizationStaff;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -36,7 +37,7 @@ beforeEach(function () {
         'status' => 'active',
     ]);
 
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('returns profile bootstrap data', function () {
     $response = $this->getJson('/api/v1/me');

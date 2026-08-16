@@ -10,6 +10,7 @@ use App\Models\Notification;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -51,7 +52,7 @@ beforeEach(function () {
         [PermissionGroup::ORG_NOTIFICATION, PermissionAction::UPDATE],
         [PermissionGroup::ORG_NOTIFICATION, PermissionAction::DELETE],
     ]);
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('campaign close rejects invalid state transition', function () {
     $campaign = Campaign::query()->create([

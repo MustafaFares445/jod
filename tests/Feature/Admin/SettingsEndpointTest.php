@@ -5,6 +5,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\PlatformSetting;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -14,7 +15,7 @@ beforeEach(function () {
         [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::VIEW],
         [PermissionGroup::PLATFORM_SETTINGS, PermissionAction::UPDATE],
     ]);
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
     PlatformSetting::truncate();
 });
 test('returns platform settings', function () {

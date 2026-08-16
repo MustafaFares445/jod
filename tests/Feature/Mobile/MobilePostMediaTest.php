@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Models\Post;
 use App\Models\PostImage;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ beforeEach(function () {
 });
 test('user can create post with images and receives ordered urls', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->post('/api/mobile/posts', [
         'type' => 'help_request',
@@ -44,7 +45,7 @@ test('user can create post with images and receives ordered urls', function () {
 test('user can add reorder and delete images on editable post', function () {
     $user = User::factory()->create();
     $post = mobile_post_media_test_createPost($user);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->post("/api/mobile/posts/{$post->id}/images", [
         'images' => [
@@ -82,7 +83,7 @@ test('user can add reorder and delete images on editable post', function () {
 test('image limits types and complete reorder set are validated', function () {
     $user = User::factory()->create();
     $post = mobile_post_media_test_createPost($user);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->post("/api/mobile/posts/{$post->id}/images", [
         'images' => [UploadedFile::fake()->create('not-image.txt', 10, 'text/plain')],
@@ -118,7 +119,7 @@ test('media management requires ownership and editable status', function () {
     $otherUser = User::factory()->create();
     $otherPost = mobile_post_media_test_createPost($otherUser);
     $publishedPost = mobile_post_media_test_createPost($user, ['status' => 'published']);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->post("/api/mobile/posts/{$otherPost->id}/images", [
         'images' => [UploadedFile::fake()->image('other.jpg')],
@@ -132,7 +133,7 @@ test('cross post image ids cannot be deleted or used for reorder', function () {
     $user = User::factory()->create();
     $firstPost = mobile_post_media_test_createPost($user);
     $secondPost = mobile_post_media_test_createPost($user);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->post("/api/mobile/posts/{$firstPost->id}/images", [
         'images' => [UploadedFile::fake()->image('first.jpg')],
@@ -175,7 +176,7 @@ test('discovery returns images and deleting post purges files', function () {
         ->assertJsonPath('data.images.0', Storage::disk('public')->url($path));
 
     $post->update(['status' => 'draft', 'published_at' => null]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->deleteJson("/api/mobile/posts/{$post->id}")->assertOk();
 

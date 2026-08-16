@@ -5,6 +5,7 @@ use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -19,7 +20,7 @@ test('user can record donation and campaign totals are updated', function () {
         'raised_amount' => 100,
         'donors_count' => 3,
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
         'amount' => 25.50,
@@ -66,7 +67,7 @@ test('donation requires active campaign and valid payload', function () {
     $user = User::factory()->create();
     $activeCampaign = mobile_donation_test_createCampaign();
     $closedCampaign = mobile_donation_test_createCampaign(['status' => 'closed']);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->postJson("/api/mobile/campaigns/{$activeCampaign->id}/donations", [
         'amount' => 0,
@@ -106,7 +107,7 @@ test('donation history is paginated filterable and scoped to user', function () 
         'campaign_title' => $firstCampaign->title,
         'created_by' => $otherUser->id,
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->getJson('/api/mobile/me/donations?perPage=1')
         ->assertOk()
@@ -159,7 +160,7 @@ function mobile_donation_test_createCampaign(array $overrides = []): Campaign
         'id' => (string) Str::uuid(),
         'title' => 'Active Donation Campaign',
         'summary' => 'Campaign accepting mobile contributions.',
-        'category' => 'emergency',
+        'category' => 'health',
         'status' => 'active',
         'location' => 'Amman',
         'organization_id' => $organization->id,

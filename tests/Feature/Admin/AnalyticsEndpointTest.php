@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use App\Support\Permissions\PermissionCatalog;
+use App\Services\Auth\TokenService;
 use Database\Seeders\Permissions\PermissionsSeeder;
 use Database\Seeders\UserSeeder;
 use Laravel\Sanctum\Sanctum;
@@ -19,7 +20,7 @@ beforeEach(function () {
     $this->grantPermissions($this->user, [
         [PermissionGroup::USER, PermissionAction::VIEW],
     ]);
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('returns admin overview with stats', function () {
     User::factory()->count(5)->create();
@@ -64,7 +65,7 @@ test('seeded admin user can access admin overview', function () {
         ->where('email', 'admin@jod.com')
         ->firstOrFail();
 
-    Sanctum::actingAs($admin);
+    Sanctum::actingAs($admin, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->getJson('/api/v1/admin/overview');
 
@@ -73,7 +74,7 @@ test('seeded admin user can access admin overview', function () {
     expect($response->json('data.activity'))->toBeArray();
 });
 test('forbids admin overview without users view permission', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->getJson('/api/v1/admin/overview')
         ->assertForbidden();

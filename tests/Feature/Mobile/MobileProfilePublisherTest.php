@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Post;
 use App\Models\SavedPost;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -31,7 +32,7 @@ class MobileProfilePublisherTest extends TestCase
         SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $savedPost->id]);
         Donation::factory()->create(['created_by' => $user->id]);
 
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->getJson('/api/mobile/me')
             ->assertOk()
@@ -53,7 +54,7 @@ class MobileProfilePublisherTest extends TestCase
             'city' => 'Old City',
             'bio' => 'Old bio',
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->patchJson('/api/mobile/me/profile', [
             'name' => 'New Name',

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -21,7 +22,7 @@ test('mobile profile includes loaded organization without sensitive fields', fun
         'email' => 'relief@example.com',
     ]);
     $user = User::factory()->create(['organization_id' => $organization->id]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->getJson('/api/mobile/me');
 
@@ -33,7 +34,7 @@ test('mobile profile includes loaded organization without sensitive fields', fun
 });
 test('mobile profile can be updated', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->patchJson('/api/mobile/me/profile', [
         'name' => 'Updated Mobile User',
@@ -52,7 +53,7 @@ test('mobile profile can be updated', function () {
 });
 test('mobile profile phone can be cleared', function () {
     $user = User::factory()->create(['phone' => '+962790000000']);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->patchJson('/api/mobile/me/profile', [
         'name' => $user->name,
@@ -71,7 +72,7 @@ test('mobile password can be changed with sanctum authentication', function () {
     $user = User::factory()->create([
         'password' => bcrypt('current-password'),
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->patchJson('/api/mobile/me/change-password', [
         'currentPassword' => 'current-password',
@@ -85,7 +86,7 @@ test('mobile password can be changed with sanctum authentication', function () {
     expect(Hash::check('new-password', $user->fresh()->password))->toBeTrue();
 });
 test('mobile profile validation uses mobile error envelope', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $response = $this->patchJson('/api/mobile/me/profile', [
         'name' => '',
@@ -98,7 +99,7 @@ test('mobile profile validation uses mobile error envelope', function () {
     $response->assertJsonValidationErrors(['name', 'email'], 'error.details');
 });
 test('mobile profile validation keeps existing validation error code', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $response = $this->patchJson('/api/mobile/me/profile', [
         'name' => '',

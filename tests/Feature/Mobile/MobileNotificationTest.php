@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -34,7 +35,7 @@ test('notifications are paginated filterable and scoped to personal inbox', func
         'recipient_id' => $otherUser->id,
         'title' => 'Other user',
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->getJson('/api/mobile/me/notifications?perPage=10')
         ->assertOk()
@@ -66,7 +67,7 @@ test('unread count is scoped to personal inbox', function () {
         'status' => 'unread',
     ]);
     Notification::factory()->create(['recipient_id' => $otherUser->id]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->getJson('/api/mobile/me/notifications/unread-count')
         ->assertOk()
@@ -82,7 +83,7 @@ test('notification detail is scoped to authenticated user and inbox', function (
         'mailbox' => 'sent',
         'status' => 'sent',
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->getJson("/api/mobile/me/notifications/{$own->id}")
         ->assertOk()
@@ -99,7 +100,7 @@ test('notification detail is scoped to authenticated user and inbox', function (
 test('notification can be marked read and unread idempotently', function () {
     $user = User::factory()->create();
     $notification = Notification::factory()->create(['recipient_id' => $user->id]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->patchJson("/api/mobile/me/notifications/{$notification->id}/read")
         ->assertOk()
@@ -138,7 +139,7 @@ test('mark all read only updates authenticated users unread inbox notifications'
         'mailbox' => 'sent',
         'status' => 'unread',
     ]);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->patchJson('/api/mobile/me/notifications/read-all')
         ->assertOk()
@@ -153,7 +154,7 @@ test('mark all read only updates authenticated users unread inbox notifications'
     expect($sent->refresh()->status)->toBe('unread');
 });
 test('notification filters are validated', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->getJson('/api/mobile/me/notifications?perPage=0&status=sent&category=unknown&priority=urgent')
         ->assertUnprocessable()

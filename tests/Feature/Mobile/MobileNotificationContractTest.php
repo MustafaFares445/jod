@@ -6,6 +6,7 @@ namespace Tests\Feature\Mobile;
 
 use App\Models\Notification;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class MobileNotificationContractTest extends TestCase
             'reference_label' => 'عرض الطلب',
             'reference_path' => '/applications/application-1',
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->getJson("/api/mobile/me/notifications/{$notification->id}")
             ->assertOk()
@@ -48,7 +49,7 @@ class MobileNotificationContractTest extends TestCase
             'category' => 'donation',
             'title' => 'Donation received',
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $response = $this->getJson('/api/mobile/me/notifications?perPage=10');
         $response->assertOk()
@@ -73,7 +74,7 @@ class MobileNotificationContractTest extends TestCase
             'reference_path' => '/posts/post-1',
             'sent_at' => now()->subMinute(),
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->getJson("/api/mobile/me/notifications/{$saved->id}")
             ->assertOk()
@@ -93,7 +94,7 @@ class MobileNotificationContractTest extends TestCase
             'reference_label' => null,
             'reference_path' => null,
         ]);
-        Sanctum::actingAs($user);
+        Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
         $this->getJson("/api/mobile/me/notifications/{$notification->id}")
             ->assertOk()

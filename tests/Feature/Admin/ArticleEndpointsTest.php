@@ -5,6 +5,7 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Article;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -16,7 +17,7 @@ beforeEach(function () {
         [PermissionGroup::ARTICLE, PermissionAction::UPDATE],
         [PermissionGroup::ARTICLE, PermissionAction::DELETE],
     ]);
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('lists articles', function () {
     Article::factory()->count(3)->create();

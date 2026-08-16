@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -37,7 +38,7 @@ beforeEach(function () {
         [PermissionGroup::NOTIFICATION, PermissionAction::RESEND],
     ]);
 
-    Sanctum::actingAs($this->user);
+    Sanctum::actingAs($this->user, [TokenService::ACCESS_ABILITY]);
 });
 test('reviews posts', function () {
     $post = Post::query()->create([

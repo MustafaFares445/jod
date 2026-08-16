@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Models\Category;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -11,7 +12,7 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 test('my posts returns only owned posts with pagination', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $ownedPost = mobile_publishing_test_createPost($user, ['title' => 'Owned post', 'status' => 'draft']);
     mobile_publishing_test_createPost($otherUser, ['title' => 'Other post', 'status' => 'draft']);
@@ -29,7 +30,7 @@ test('my posts returns only owned posts with pagination', function () {
 });
 test('my posts filters active as internal published', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $publishedPost = mobile_publishing_test_createPost($user, ['title' => 'Published post', 'status' => 'published']);
     mobile_publishing_test_createPost($user, ['title' => 'Draft post', 'status' => 'draft']);
@@ -43,7 +44,7 @@ test('my posts filters active as internal published', function () {
 });
 test('create draft allows incomplete fields and assigns owner', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $response = $this->postJson('/api/mobile/posts', [
         'type' => 'help_request',
@@ -65,7 +66,7 @@ test('create draft allows incomplete fields and assigns owner', function () {
 test('create submitted post requires full validation and becomes pending', function () {
     $user = User::factory()->create();
     $category = Category::factory()->create(['target' => 'post', 'status' => 'active']);
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $this->postJson('/api/mobile/posts', [
         'type' => 'help_request',
@@ -97,7 +98,7 @@ test('create submitted post requires full validation and becomes pending', funct
     ]);
 });
 test('create rejects non empty images until uploads are supported', function () {
-    Sanctum::actingAs(User::factory()->create());
+    Sanctum::actingAs(User::factory()->create(), [TokenService::ACCESS_ABILITY]);
 
     $this->postJson('/api/mobile/posts', [
         'type' => 'help_request',
@@ -110,7 +111,7 @@ test('create rejects non empty images until uploads are supported', function () 
 });
 test('owner can update draft or rejected post without changing status', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
     $draftPost = mobile_publishing_test_createPost($user, ['status' => 'draft']);
     $rejectedPost = mobile_publishing_test_createPost($user, ['status' => 'rejected', 'rejection_reason' => 'Too short']);
 
@@ -141,7 +142,7 @@ test('owner can update draft or rejected post without changing status', function
 test('update denies pending active archived and non owned posts', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     foreach (['pending', 'published', 'archived'] as $status) {
         $post = mobile_publishing_test_createPost($user, ['status' => $status]);
@@ -157,7 +158,7 @@ test('update denies pending active archived and non owned posts', function () {
 });
 test('owner can submit draft and resubmit rejected post', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
     $draftPost = mobile_publishing_test_createPost($user, ['status' => 'draft']);
     $rejectedPost = mobile_publishing_test_createPost($user, ['status' => 'rejected', 'rejection_reason' => 'Needs details']);
 
@@ -180,7 +181,7 @@ test('owner can submit draft and resubmit rejected post', function () {
 test('submit requires complete persisted post and ownership', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
     $incompletePost = mobile_publishing_test_createPost($user, [
         'title' => null,
         'content' => null,
@@ -198,7 +199,7 @@ test('submit requires complete persisted post and ownership', function () {
 });
 test('owner can archive active post', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
     $post = mobile_publishing_test_createPost($user, ['status' => 'published']);
 
     $this->postJson("/api/mobile/posts/{$post->id}/archive")
@@ -210,7 +211,7 @@ test('owner can archive active post', function () {
 });
 test('owner can repost archived post as active', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
     $post = mobile_publishing_test_createPost($user, ['status' => 'archived', 'published_at' => null]);
 
     $this->postJson("/api/mobile/posts/{$post->id}/repost")
@@ -223,7 +224,7 @@ test('owner can repost archived post as active', function () {
 });
 test('owner can delete post and hide it from mobile lists', function () {
     $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
     $post = mobile_publishing_test_createPost($user, ['status' => 'published']);
 
     $this->deleteJson("/api/mobile/posts/{$post->id}")
@@ -238,7 +239,7 @@ test('owner can delete post and hide it from mobile lists', function () {
 test('archive repost and delete deny non owner', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    Sanctum::actingAs($user);
+    Sanctum::actingAs($user, [TokenService::ACCESS_ABILITY]);
 
     $activePost = mobile_publishing_test_createPost($otherUser, ['status' => 'published']);
     $archivedPost = mobile_publishing_test_createPost($otherUser, ['status' => 'archived']);
