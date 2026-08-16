@@ -96,6 +96,7 @@ class Post extends Model
     public function campaignApplications(): HasMany
     {
         return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id')
+            ->where('source', 'mobile_app')
             ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
     }
 
