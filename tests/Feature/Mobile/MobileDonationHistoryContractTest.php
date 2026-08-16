@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mobile;
 
+use App\Enums\PermissionAction;
+use App\Enums\PermissionGroup;
 use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\User;
+use App\Support\Permissions\PermissionNameResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class MobileDonationHistoryContractTest extends TestCase
@@ -45,11 +49,12 @@ class MobileDonationHistoryContractTest extends TestCase
             ->assertJsonPath('data.0.organization', $organization->name);
     }
 
-    public function test_received_history_is_scoped_to_users_organization(): void
+    public function test_received_history_is_scoped_to_users_organization_and_donor_permission(): void
     {
         $organization = Organization::factory()->create();
         $otherOrganization = Organization::factory()->create();
         $staff = User::factory()->create(['organization_id' => $organization->id]);
+        $this->grantDonorView($staff);
         $donor = User::factory()->create();
         $campaign = $this->campaign($organization);
         $otherCampaign = $this->campaign($otherOrganization);
@@ -76,10 +81,11 @@ class MobileDonationHistoryContractTest extends TestCase
             ->assertJsonPath('data.0.flow', 'received');
     }
 
-    public function test_received_history_is_empty_for_user_without_organization(): void
+    public function test_received_history_is_empty_without_donor_permission(): void
     {
-        $user = User::factory()->create(['organization_id' => null]);
-        Donation::factory()->create();
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create(['organization_id' => $organization->id]);
+        Donation::factory()->create(['organization_id' => $organization->id]);
         Sanctum::actingAs($user);
 
         $this->getJson('/api/mobile/me/donations?flow=received')
@@ -88,10 +94,11 @@ class MobileDonationHistoryContractTest extends TestCase
             ->assertJsonPath('meta.total', 0);
     }
 
-    public function test_organization_user_can_show_received_donation_but_outsider_cannot(): void
+    public function test_organization_user_can_show_received_donation_with_permission_but_outsider_cannot(): void
     {
         $organization = Organization::factory()->create();
         $staff = User::factory()->create(['organization_id' => $organization->id]);
+        $this->grantDonorView($staff);
         $outsider = User::factory()->create();
         $donor = User::factory()->create();
         $campaign = $this->campaign($organization);
@@ -125,6 +132,13 @@ class MobileDonationHistoryContractTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.city', 'Aleppo');
+    }
+
+    private function grantDonorView(User $user): void
+    {
+        $name = PermissionNameResolver::resolve(PermissionGroup::ORG_DONOR, PermissionAction::VIEW);
+        Permission::findOrCreate($name, 'web');
+        $user->givePermissionTo($name);
     }
 
     /**
