@@ -19,7 +19,19 @@ class Article extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'title', 'slug', 'excerpt', 'content', 'status', 'published_at', 'author_name', 'author_id'];
+    protected $fillable = [
+        'id',
+        'title',
+        'slug',
+        'excerpt',
+        'content',
+        'category',
+        'cover_image',
+        'status',
+        'published_at',
+        'author_name',
+        'author_id',
+    ];
 
     protected $casts = [
         'status' => 'string',

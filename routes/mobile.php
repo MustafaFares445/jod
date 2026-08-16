@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Mobile\AuthController;
+use App\Http\Controllers\Mobile\BlogController;
 use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
@@ -32,6 +33,12 @@ Route::prefix('auth')
         Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])->name('verify-reset-code');
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
     });
+
+Route::middleware('throttle:60,1')->group(function (): void {
+    Route::get('blogs', [BlogController::class, 'index'])->name('blogs.index');
+    Route::get('blogs/{blog}', [BlogController::class, 'show'])->name('blogs.show');
+    Route::get('blog-categories', [BlogController::class, 'categories'])->name('blogs.categories');
+});
 
 Route::prefix('discovery')
     ->name('discovery.')

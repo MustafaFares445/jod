@@ -17,6 +17,8 @@ class ArticleResource extends JsonResource
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
             'content' => $this->content,
+            'category' => $this->category,
+            'coverImage' => $this->cover_image,
             'status' => $this->status,
             'publishedAt' => $this->published_at?->toIso8601String(),
             'authorName' => $this->author_name,
