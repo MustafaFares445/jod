@@ -1,0 +1,56 @@
+name: Convert tests to Pest syntax
+
+on:
+  push:
+    branches:
+      - agent/convert-tests-to-pest-syntax
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/convert-tests-to-pest-syntax
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install project dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Install Pest Drift temporarily
+        run: composer require pestphp/pest-plugin-drift --dev --with-all-dependencies --no-interaction
+
+      - name: Convert PHPUnit tests to Pest syntax
+        run: ./vendor/bin/pest --drift tests
+
+      - name: Restore dependency manifests
+        run: git checkout -- composer.json composer.lock
+
+      - name: Syntax-check converted tests
+        run: find tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Verify Pest discovers converted suite
+        run: ./vendor/bin/pest --list-tests
+
+      - name: Commit converted tests and remove workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/convert-tests-to-pest.yml
+          git add tests
+          if git diff --cached --quiet; then
+            echo "No conversion changes produced."
+            exit 1
+          fi
+          git commit -m "Convert tests to Pest syntax"
+          git push origin HEAD:agent/convert-tests-to-pest-syntax
