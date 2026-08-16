@@ -27,7 +27,8 @@ class NotificationPolicy
 
     public function view(User $user, Notification $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::VIEW);
+        return $this->isShared($model)
+            && $this->authorizeAction($user, PermissionAction::VIEW);
     }
 
     public function viewAnyOrganization(User $user): bool
@@ -38,7 +39,8 @@ class NotificationPolicy
 
     public function viewOrganization(User $user, Notification $model): bool
     {
-        return $this->sameOrganization($user, $model)
+        return $this->isShared($model)
+            && $this->sameOrganization($user, $model)
             && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
     }
 
@@ -55,45 +57,53 @@ class NotificationPolicy
 
     public function update(User $user, Notification $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::UPDATE);
+        return $this->isShared($model)
+            && $this->authorizeAction($user, PermissionAction::UPDATE);
     }
 
     public function updateReadState(User $user, Notification $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::UPDATE);
+        return $this->isShared($model)
+            && $this->authorizeAction($user, PermissionAction::UPDATE);
     }
 
     public function updateOrganization(User $user, Notification $model): bool
     {
-        return $this->sameOrganization($user, $model)
+        return $this->isShared($model)
+            && $this->sameOrganization($user, $model)
             && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE);
     }
 
     public function updateReadStateOrganization(User $user, Notification $model): bool
     {
-        return $this->sameOrganization($user, $model)
+        return $this->isShared($model)
+            && $this->sameOrganization($user, $model)
             && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE);
     }
 
     public function delete(User $user, Notification $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::DELETE);
+        return $this->isShared($model)
+            && $this->authorizeAction($user, PermissionAction::DELETE);
     }
 
     public function deleteOrganization(User $user, Notification $model): bool
     {
-        return $this->sameOrganization($user, $model)
+        return $this->isShared($model)
+            && $this->sameOrganization($user, $model)
             && $this->authorizeOrganizationAction($user, PermissionAction::DELETE);
     }
 
     public function resend(User $user, Notification $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::RESEND);
+        return $this->isShared($model)
+            && $this->authorizeAction($user, PermissionAction::RESEND);
     }
 
     public function resendOrganization(User $user, Notification $model): bool
     {
-        return $this->sameOrganization($user, $model)
+        return $this->isShared($model)
+            && $this->sameOrganization($user, $model)
             && $this->authorizeOrganizationAction($user, PermissionAction::RESEND);
     }
 
@@ -108,5 +118,10 @@ class NotificationPolicy
     {
         return $user->organization_id !== null
             && (string) $user->organization_id === (string) $model->organization_id;
+    }
+
+    private function isShared(Notification $model): bool
+    {
+        return $model->recipient_id === null;
     }
 }
