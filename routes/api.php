@@ -102,7 +102,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::get('dashboard/overview', App\Http\Controllers\API\Org\OverviewController::class);
 
         Route::apiResource('campaigns', CampaignController::class);
-        Route::patch('campaigns/{campaign}/status', CampaignController::class.'@updateStatus');
         Route::post('campaigns/{campaign}/close', CampaignController::class.'@close');
 
         Route::apiResource('posts', PostController::class);

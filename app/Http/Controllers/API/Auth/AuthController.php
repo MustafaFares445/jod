@@ -37,6 +37,14 @@ class AuthController extends Controller
             return $this->errorResponse('The provided credentials are incorrect.', 401);
         }
 
+        if (! $this->matchesRequestedUserType($user, $validated['userType'])) {
+            return $this->errorResponse('The provided credentials are incorrect.', 401);
+        }
+
+        if ($validated['userType'] === 'companies' && $user->status !== 'active') {
+            return $this->errorResponse('This company account is not active.', 403);
+        }
+
         $user->forceFill([
             'last_active_at' => now(),
         ])->save();
@@ -49,6 +57,15 @@ class AuthController extends Controller
             'user' => UserResource::make($user)->resolve(),
             'permissions' => $this->permissionCatalogService->forUser($user),
         ], 'Logged in successfully');
+    }
+
+    private function matchesRequestedUserType(User $user, string $userType): bool
+    {
+        return match ($userType) {
+            'admin' => $user->user_type === 'admin',
+            'companies' => $user->user_type !== 'admin' && $user->organization_id !== null,
+            default => false,
+        };
     }
 
     public function refresh(RefreshTokenRequest $request): JsonResponse

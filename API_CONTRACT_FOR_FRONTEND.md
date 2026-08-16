@@ -47,9 +47,12 @@ Request:
 ```json
 {
   "email": "admin@jod.com",
-  "password": "password"
+  "password": "password",
+  "userType": "admin"
 }
 ```
+
+`userType` is required and must be either `admin` or `companies`. Company dashboard users use this same endpoint with `"userType": "companies"`; the old `/v1/company/auth/login` endpoint is no longer used.
 
 Response:
 ```json
@@ -1168,7 +1171,7 @@ sortBy=updated_newest|updated_oldest|progress_highest|progress_lowest (compat)
    - title (required)
    - summary (required, textarea)
    - category (required: health, education, food, shelter, employment)
-   - status (required: draft|active|closed)
+   - status (optional, defaults to draft)
    - location (required)
    - goalAmount (required, numeric, >= 0)
    - beneficiariesCount (required, numeric, >= 0)
@@ -1209,10 +1212,12 @@ sortBy=updated_newest|updated_oldest|progress_highest|progress_lowest (compat)
 ```json
 {
   "title": "Updated Title",
-  "goalAmount": 60000
+  "goalAmount": 60000,
+  "status": "active"
 }
 ```
-5. Refresh details
+5. `status` is optional and must be one of `draft`, `active`, or `closed` when sent. To close through this endpoint, include `closedReason`.
+6. Refresh details
 
 #### 12e. Close Campaign
 **Sequence:**

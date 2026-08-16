@@ -88,12 +88,12 @@ class CampaignService
             'draft:active' => $campaign->update([
                 'status' => 'active',
                 'closed_at' => null,
-                'close_reason' => null,
+                'closed_reason' => null,
             ]),
             'active:closed' => $campaign->update([
                 'status' => 'closed',
                 'closed_at' => now(),
-                'close_reason' => $closedReason,
+                'closed_reason' => $closedReason,
             ]),
             default => throw ValidationException::withMessages([
                 'status' => ["Campaign status cannot transition from {$campaign->status} to {$status}."],
@@ -113,7 +113,7 @@ class CampaignService
 
         $campaign->update([
             'status' => 'closed',
-            'close_reason' => $reason,
+            'closed_reason' => $reason,
             'closed_at' => now(),
         ]);
 

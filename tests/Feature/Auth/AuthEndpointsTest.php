@@ -27,6 +27,7 @@ class AuthEndpointsTest extends TestCase
         $user = User::factory()->create([
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'user_type' => 'admin',
             'last_active_at' => null,
         ]);
 
@@ -34,10 +35,11 @@ class AuthEndpointsTest extends TestCase
             [PermissionGroup::DASHBOARD, PermissionAction::VIEW],
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
+        $response = $this->postJson('/api/v1/auth/login', $this->loginPayload([
             'email' => 'admin@example.com',
             'password' => 'password',
-        ]);
+            'userType' => 'admin',
+        ]));
 
         $response->assertOk();
         $response->assertJsonPath('message', 'Logged in successfully');
@@ -99,10 +101,11 @@ class AuthEndpointsTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
+        $response = $this->postJson('/api/v1/auth/login', $this->loginPayload([
             'email' => 'manager@example.com',
             'password' => 'password',
-        ]);
+            'userType' => 'companies',
+        ]));
 
         $response->assertOk();
         $this->assertTrue($response->json('data.permissions.flat')[$permissionName]);
@@ -114,15 +117,85 @@ class AuthEndpointsTest extends TestCase
         User::factory()->create([
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'user_type' => 'admin',
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
+        $response = $this->postJson('/api/v1/auth/login', $this->loginPayload([
             'email' => 'admin@example.com',
             'password' => 'wrong-password',
-        ]);
+            'userType' => 'admin',
+        ]));
 
         $response->assertUnauthorized();
         $response->assertJsonPath('message', 'The provided credentials are incorrect.');
+    }
+
+    public function test_dashboard_login_accepts_company_user_on_shared_endpoint(): void
+    {
+        $this->seed(PermissionsSeeder::class);
+
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create([
+            'email' => 'company@example.com',
+            'password' => Hash::make('password'),
+            'user_type' => 'general',
+            'organization_id' => $organization->id,
+            'status' => 'active',
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', $this->loginPayload([
+            'email' => 'company@example.com',
+            'password' => 'password',
+            'userType' => 'companies',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('message', 'Logged in successfully');
+        $response->assertJsonPath('data.user.id', $user->id);
+        $this->assertNotEmpty($response->json('data.token'));
+        $this->assertNotEmpty($response->json('data.refreshToken'));
+    }
+
+    public function test_dashboard_login_rejects_cross_type_requests(): void
+    {
+        $organization = Organization::factory()->create();
+        User::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'user_type' => 'admin',
+            'organization_id' => null,
+        ]);
+        User::factory()->create([
+            'email' => 'company@example.com',
+            'password' => Hash::make('password'),
+            'user_type' => 'general',
+            'organization_id' => $organization->id,
+        ]);
+
+        $this->postJson('/api/v1/auth/login', $this->loginPayload([
+            'email' => 'admin@example.com',
+            'password' => 'password',
+            'userType' => 'companies',
+        ]))
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'The provided credentials are incorrect.');
+
+        $this->postJson('/api/v1/auth/login', $this->loginPayload([
+            'email' => 'company@example.com',
+            'password' => 'password',
+            'userType' => 'admin',
+        ]))
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'The provided credentials are incorrect.');
+    }
+
+    public function test_old_company_login_endpoint_is_not_registered(): void
+    {
+        $route = collect(app('router')->getRoutes())
+            ->first(fn ($route): bool => in_array('POST', $route->methods(), true)
+                && $route->uri() === 'api/v1/company/auth/login');
+
+        $this->assertNull($route);
     }
 
     #[DataProvider('provideInvalidLoginPayloads')]
@@ -139,12 +212,14 @@ class AuthEndpointsTest extends TestCase
         User::factory()->create([
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'user_type' => 'admin',
         ]);
 
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
+        $loginResponse = $this->postJson('/api/v1/auth/login', $this->loginPayload([
             'email' => 'admin@example.com',
             'password' => 'password',
-        ]);
+            'userType' => 'admin',
+        ]));
 
         $oldAccessToken = $loginResponse->json('data.token');
         $oldRefreshToken = $loginResponse->json('data.refreshToken');
@@ -179,12 +254,14 @@ class AuthEndpointsTest extends TestCase
         User::factory()->create([
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'user_type' => 'admin',
         ]);
 
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
+        $loginResponse = $this->postJson('/api/v1/auth/login', $this->loginPayload([
             'email' => 'admin@example.com',
             'password' => 'password',
-        ]);
+            'userType' => 'admin',
+        ]));
 
         $this->withHeader('Authorization', 'Bearer '.$loginResponse->json('data.refreshToken'))
             ->getJson('/api/v1/me')
@@ -226,12 +303,14 @@ class AuthEndpointsTest extends TestCase
         $user = User::factory()->create([
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
+            'user_type' => 'admin',
         ]);
 
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
+        $loginResponse = $this->postJson('/api/v1/auth/login', $this->loginPayload([
             'email' => 'admin@example.com',
             'password' => 'password',
-        ]);
+            'userType' => 'admin',
+        ]));
 
         $plainTextToken = $loginResponse->json('data.token');
         $tokenId = explode('|', $plainTextToken, 2)[0];
@@ -254,17 +333,34 @@ class AuthEndpointsTest extends TestCase
     {
         return [
             'missing email' => [
-                ['password' => 'password'],
+                ['password' => 'password', 'userType' => 'admin'],
                 'email',
             ],
             'invalid email format' => [
-                ['email' => 'not-an-email', 'password' => 'password'],
+                ['email' => 'not-an-email', 'password' => 'password', 'userType' => 'admin'],
                 'email',
             ],
             'short password' => [
-                ['email' => 'admin@example.com', 'password' => 'short'],
+                ['email' => 'admin@example.com', 'password' => 'short', 'userType' => 'admin'],
                 'password',
             ],
+            'missing user type' => [
+                ['email' => 'admin@example.com', 'password' => 'password'],
+                'userType',
+            ],
+            'invalid user type' => [
+                ['email' => 'admin@example.com', 'password' => 'password', 'userType' => 'company'],
+                'userType',
+            ],
         ];
+    }
+
+    private function loginPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'email' => 'admin@example.com',
+            'password' => 'password',
+            'userType' => 'admin',
+        ], $overrides);
     }
 }

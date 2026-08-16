@@ -9,6 +9,7 @@ use App\Enums\PermissionGroup;
 use App\Enums\PermissionModule;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
+use App\Services\Permissions\OrganizationPermissionSyncService;
 use App\Support\Permissions\PermissionCatalog;
 use App\Support\Permissions\PermissionNameResolver;
 use Illuminate\Database\Seeder;
@@ -99,9 +100,11 @@ class RoleSeeder extends Seeder
 
     public function run(): void
     {
+        $permissionSyncService = app(OrganizationPermissionSyncService::class);
+
         Organization::query()
             ->orderBy('id')
-            ->each(function (Organization $organization): void {
+            ->each(function (Organization $organization) use ($permissionSyncService): void {
                 foreach ($this->defaultRoles() as $roleData) {
                     $roleId = $this->roleId($organization->id, $roleData['name']);
                     $role = OrganizationRole::query()->find($roleId)
@@ -122,6 +125,8 @@ class RoleSeeder extends Seeder
                         'is_active' => true,
                         'is_system' => $roleData['is_system'],
                     ])->save();
+
+                    $permissionSyncService->syncForRole($role->fresh());
                 }
             });
     }
@@ -172,7 +177,7 @@ class RoleSeeder extends Seeder
     }
 
     /**
-     * @param list<array{0: PermissionGroup, 1: PermissionAction}> $definitions
+     * @param  list<array{0: PermissionGroup, 1: PermissionAction}>  $definitions
      * @return list<string>
      */
     private function resolvePermissions(array $definitions): array

@@ -67,11 +67,11 @@ class OrganizationContractCompatibilityTest extends TestCase
             ->assertJsonPath('data.0.id', $campaign->id);
     }
 
-    public function test_campaign_status_contract_endpoint_enforces_lifecycle(): void
+    public function test_campaign_update_accepts_status_and_enforces_lifecycle(): void
     {
         $campaign = $this->campaign(['status' => 'draft']);
 
-        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}/status", [
+        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
             'status' => 'active',
         ])
             ->assertOk()
@@ -79,13 +79,45 @@ class OrganizationContractCompatibilityTest extends TestCase
             ->assertJsonPath('item.status', 'active')
             ->assertJsonPath('data.status', 'active');
 
-        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}/status", [
+        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
             'status' => 'closed',
             'closedReason' => 'Campaign objectives were completed.',
         ])
             ->assertOk()
             ->assertJsonPath('item.status', 'closed')
             ->assertJsonPath('item.closedReason', 'Campaign objectives were completed.');
+    }
+
+    public function test_campaign_update_still_works_without_status(): void
+    {
+        $campaign = $this->campaign(['status' => 'draft']);
+
+        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+            'title' => 'Updated Campaign',
+        ])
+            ->assertOk()
+            ->assertJsonPath('item.title', 'Updated Campaign')
+            ->assertJsonPath('item.status', 'draft');
+    }
+
+    public function test_campaign_update_rejects_invalid_status(): void
+    {
+        $campaign = $this->campaign(['status' => 'draft']);
+
+        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+            'status' => 'pending',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_old_campaign_status_endpoint_is_not_registered(): void
+    {
+        $route = collect(app('router')->getRoutes())
+            ->first(fn ($route): bool => in_array('PATCH', $route->methods(), true)
+                && $route->uri() === 'api/v1/org/campaigns/{campaign}/status');
+
+        $this->assertNull($route);
     }
 
     public function test_post_status_contract_endpoint_uses_existing_transition_rules(): void

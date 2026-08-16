@@ -109,15 +109,15 @@ This controls:
 
 ### 3.4 Canonical API contracts
 
-Canonical status endpoints were introduced:
+Canonical status contracts were introduced:
 
 ```http
-PATCH /api/v1/org/campaigns/{campaign}/status
+PATCH /api/v1/org/campaigns/{campaign}
 PATCH /api/v1/org/posts/{post}/status
 PATCH /api/v1/org/reports/{report}/status
 ```
 
-Legacy action endpoints may remain in the Backend for temporary compatibility, but the new Frontend integration uses the canonical contracts.
+Campaign status is now merged into the normal campaign update payload; post and report workflow status still use their dedicated status endpoints. Legacy action endpoints may remain in the Backend for temporary compatibility, but the new Frontend integration uses the canonical contracts.
 
 ---
 
@@ -230,10 +230,10 @@ The response includes:
 /api/v1/org/campaigns
 ```
 
-- Canonical status endpoint:
+- Campaign status updates now use the normal campaign update endpoint:
 
 ```http
-PATCH /api/v1/org/campaigns/{campaign}/status
+PATCH /api/v1/org/campaigns/{campaign}
 ```
 
 - Supported statuses:
@@ -246,7 +246,7 @@ PATCH /api/v1/org/campaigns/{campaign}/status
 
 ### Frontend changes
 
-- Replaced the `/close` integration with the canonical `/status` contract.
+- Sends status changes through the normal campaign update contract.
 - Sends:
 
 ```json
@@ -499,7 +499,7 @@ This section is intentionally deferred.
 | Auth | GET | `/api/v1/me/dashboard-context` | User, organization, and permissions |
 | Overview | GET | `/api/v1/org/dashboard/overview` | Organization statistics and recent activity |
 | Campaigns | REST | `/api/v1/org/campaigns` | Campaign CRUD |
-| Campaign Status | PATCH | `/api/v1/org/campaigns/{id}/status` | Campaign lifecycle update |
+| Campaign Status | PATCH | `/api/v1/org/campaigns/{id}` | Campaign lifecycle update |
 | Posts | REST | `/api/v1/org/posts` | Post CRUD |
 | Post Status | PATCH | `/api/v1/org/posts/{id}/status` | Post lifecycle update |
 | Donors | REST | `/api/v1/org/donors` | Donor CRUD |

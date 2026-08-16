@@ -7,7 +7,6 @@ namespace App\Http\Controllers\API\Org;
 use App\Data\CampaignData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\CampaignRequest;
-use App\Http\Requests\Org\CampaignStatusRequest;
 use App\Http\Requests\Org\CloseCampaignRequest;
 use App\Http\Resources\CampaignResource;
 use App\Models\Campaign;
@@ -50,30 +49,34 @@ class CampaignController extends Controller
 
     public function update(CampaignRequest $request, Campaign $campaign): CampaignResource
     {
-        $this->authorize('updateOrganization', $campaign);
+        $validated = $request->validated();
+        $hasCampaignUpdateFields = $this->hasCampaignUpdateFields($validated);
 
-        $campaign = $this->service->update(
-            $campaign,
-            CampaignData::from($request->validated()),
-        );
+        if ($hasCampaignUpdateFields || ! array_key_exists('status', $validated)) {
+            $this->authorize('updateOrganization', $campaign);
+        }
 
-        return CampaignResource::make($campaign);
-    }
+        if ($hasCampaignUpdateFields) {
+            $campaign = $this->service->update(
+                $campaign,
+                CampaignData::from($this->campaignData($campaign, $validated)),
+            )->refresh();
+        }
 
-    public function updateStatus(CampaignStatusRequest $request, Campaign $campaign): CampaignResource
-    {
-        $status = (string) $request->validated('status');
+        if (array_key_exists('status', $validated)) {
+            $status = (string) $validated['status'];
 
-        $this->authorize(
-            $status === 'closed' ? 'closeOrganization' : 'updateOrganization',
-            $campaign,
-        );
+            $this->authorize(
+                $status === 'closed' ? 'closeOrganization' : 'updateOrganization',
+                $campaign,
+            );
 
-        $campaign = $this->service->updateStatus(
-            $campaign,
-            $status,
-            $request->validated('closedReason'),
-        );
+            $campaign = $this->service->updateStatus(
+                $campaign,
+                $status,
+                $validated['closedReason'] ?? null,
+            );
+        }
 
         return CampaignResource::make($campaign->refresh());
     }
@@ -109,5 +112,41 @@ class CampaignController extends Controller
         }
 
         return $organizationId;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function hasCampaignUpdateFields(array $validated): bool
+    {
+        return count(array_intersect(array_keys($validated), [
+            'title',
+            'summary',
+            'category',
+            'location',
+            'goalAmount',
+            'beneficiariesCount',
+            'startDate',
+            'endDate',
+        ])) > 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function campaignData(Campaign $campaign, array $validated): array
+    {
+        return [
+            'title' => $validated['title'] ?? $campaign->title,
+            'summary' => $validated['summary'] ?? $campaign->summary,
+            'category' => $validated['category'] ?? $campaign->category,
+            'location' => $validated['location'] ?? $campaign->location,
+            'goalAmount' => $validated['goalAmount'] ?? $campaign->goal_amount,
+            'beneficiariesCount' => $validated['beneficiariesCount'] ?? $campaign->beneficiaries_count,
+            'startDate' => $validated['startDate'] ?? $campaign->start_date?->toDateString(),
+            'endDate' => $validated['endDate'] ?? $campaign->end_date?->toDateString(),
+            'status' => $campaign->status,
+        ];
     }
 }

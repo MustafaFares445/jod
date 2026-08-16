@@ -339,7 +339,7 @@ Legacy `filter.*`, `sort`, and `sortBy` parameters MAY remain available during m
 | Campaigns | `POST` | `/campaigns` | `campaigns-manage` |
 | Campaigns | `PUT` | `/campaigns/{id}` | `campaigns-manage` |
 | Campaigns | `DELETE` | `/campaigns/{id}` | `campaigns-manage` |
-| Campaigns | `PATCH` | `/campaigns/{id}/status` | `campaigns-manage` |
+| Campaigns | `PATCH` | `/campaigns/{id}` | `campaigns-manage` |
 | Donors | `GET` | `/donors?view=donors\|applicants` | `donors-view` or `donors-manage` |
 | Donors | `GET` | `/donors/{id}` | `donors-view` or `donors-manage` |
 | Donors | `POST` | `/donors?view=donors\|applicants` | `donors-manage` |
@@ -476,15 +476,16 @@ interface OrganizationCampaignItem {
 
 ```ts
 interface CampaignFormValues {
-  title: string
-  summary: string
-  category: 'health' | 'education' | 'food' | 'shelter' | 'employment'
-  status: 'draft' | 'active' | 'closed'
-  location: string
-  goalAmount: number
-  beneficiariesCount: number
-  startDate: string
-  endDate: string
+  title?: string
+  summary?: string
+  category?: 'health' | 'education' | 'food' | 'shelter' | 'employment'
+  status?: 'draft' | 'active' | 'closed'
+  closedReason?: string | null
+  location?: string
+  goalAmount?: number
+  beneficiariesCount?: number
+  startDate?: string
+  endDate?: string
 }
 ```
 
@@ -514,10 +515,10 @@ category
 status
 ```
 
-### 11.4 Status update
+### 11.4 Update and status transitions
 
 ```http
-PATCH /api/v1/org/campaigns/{id}/status
+PATCH /api/v1/org/campaigns/{id}
 ```
 
 ```json
@@ -527,7 +528,7 @@ PATCH /api/v1/org/campaigns/{id}/status
 }
 ```
 
-`closedReason` is required when moving to `closed` and SHOULD be omitted for other target statuses.
+`status` is optional. When present, it uses the same lifecycle validation as the previous status update contract. `closedReason` may be sent when moving to `closed` and SHOULD be omitted for other target statuses.
 
 Allowed transitions:
 
@@ -1098,7 +1099,7 @@ The following aliases may remain available while clients migrate:
 | Stable path | Legacy alias |
 |---|---|
 | `/dashboard/overview` | `/overview` |
-| `PATCH /campaigns/{id}/status` | `POST /campaigns/{id}/close` for closing only |
+| `PATCH /campaigns/{id}` with `status` | `POST /campaigns/{id}/close` for closing only |
 | `PATCH /posts/{id}/status` | `POST /posts/{id}/publish` |
 | `PATCH /posts/{id}/status` | `POST /posts/{id}/archive` |
 | `PATCH /posts/{id}/status` | `POST /posts/{id}/restore` |
@@ -1120,7 +1121,7 @@ This section is informational and does not change the target contract.
 
 - response `statusCode`, `message`, and `item` compatibility envelope;
 - `/dashboard/overview`;
-- campaign CRUD and `/campaigns/{id}/status`;
+- campaign CRUD with status transitions on `/campaigns/{id}`;
 - post CRUD and `/posts/{id}/status`;
 - donor CRUD through the legacy donor resource;
 - applicant CRUD through the legacy applicant resource;

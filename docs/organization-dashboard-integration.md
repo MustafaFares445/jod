@@ -14,7 +14,7 @@ The organization owner and staff dashboards use the same organization-scoped bac
 ### Organization APIs
 
 - Overview: `GET /api/v1/org/dashboard/overview`
-- Campaigns: CRUD plus `PATCH /api/v1/org/campaigns/{campaign}/status`
+- Campaigns: CRUD with status transitions on `PATCH /api/v1/org/campaigns/{campaign}`
 - Posts: CRUD plus `PATCH /api/v1/org/posts/{post}/status`
 - Donors: `/api/v1/org/donors`
 - Applicants: `/api/v1/org/applicants`

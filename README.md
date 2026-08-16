@@ -46,6 +46,8 @@ Login endpoint:
 POST /api/v1/auth/login
 ```
 
+Dashboard login requests must include `userType` as either `admin` or `companies`.
+
 All other dashboard endpoints require a bearer token.
 
 ## Export API Docs

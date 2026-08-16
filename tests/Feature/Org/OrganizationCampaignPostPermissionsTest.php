@@ -44,11 +44,11 @@ class OrganizationCampaignPostPermissionsTest extends TestCase
 
         $this->actingAs($staff)->getJson('/api/v1/org/campaigns')->assertOk();
         $this->actingAs($staff)
-            ->patchJson("/api/v1/org/campaigns/{$campaign->id}/status", ['status' => 'active'])
+            ->patchJson("/api/v1/org/campaigns/{$campaign->id}", ['status' => 'active'])
             ->assertForbidden();
     }
 
-    public function test_resource_updates_cannot_bypass_lifecycle(): void
+    public function test_campaign_update_accepts_status_while_post_updates_cannot_bypass_lifecycle(): void
     {
         [$owner, $organization] = $this->organizationUser(true);
         $campaign = Campaign::factory()->create(['organization_id' => $organization->id, 'status' => 'draft']);
@@ -56,7 +56,8 @@ class OrganizationCampaignPostPermissionsTest extends TestCase
 
         $this->actingAs($owner)
             ->putJson("/api/v1/org/campaigns/{$campaign->id}", ['status' => 'active'])
-            ->assertUnprocessable();
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
 
         $this->actingAs($owner)
             ->putJson("/api/v1/org/posts/{$post->id}", ['status' => 'published'])
