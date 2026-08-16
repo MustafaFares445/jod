@@ -9,6 +9,7 @@ use App\Http\Requests\Org\NotificationReadStateRequest;
 use App\Http\Requests\Org\NotificationRequest;
 use App\Http\Resources\OrgNotificationResource;
 use App\Models\Notification;
+use App\Services\NotificationDistributionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,8 @@ use Illuminate\Support\Str;
 
 class NotificationController extends Controller
 {
+    public function __construct(private readonly NotificationDistributionService $distribution) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Notification::class);
@@ -27,6 +30,7 @@ class NotificationController extends Controller
 
         $query = Notification::query()
             ->with('createdBy')
+            ->whereNull('recipient_id')
             ->when(($mailbox = $this->queryParam($request, 'filter.mailbox')) && $mailbox !== 'all', fn (Builder $builder) => $builder->where('mailbox', $mailbox))
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->queryParam($request, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
@@ -73,6 +77,8 @@ class NotificationController extends Controller
             'creator_id' => auth()->id(),
             'sent_at' => now(),
         ]);
+
+        $notification = $this->distribution->dispatch($notification);
 
         return OrgNotificationResource::make($notification->loadMissing('createdBy'))->response()->setStatusCode(201);
     }
@@ -130,13 +136,9 @@ class NotificationController extends Controller
     {
         $this->authorize('resend', $notification);
 
-        $notification->update([
-            'mailbox' => 'sent',
-            'status' => 'sent',
-            'sent_at' => now(),
-        ]);
+        $notification = $this->distribution->resend($notification);
 
-        return OrgNotificationResource::make($notification->refresh()->loadMissing('createdBy'));
+        return OrgNotificationResource::make($notification->loadMissing('createdBy'));
     }
 
     private function queryParam(Request $request, string $key): mixed
