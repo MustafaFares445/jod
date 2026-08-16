@@ -25,6 +25,8 @@ class CampaignResource extends JsonResource
             'beneficiariesCount' => (int) $this->beneficiaries_count,
             'donorsCount' => (int) $this->donors_count,
             'applicantsCount' => (int) $this->applicants_count,
+            'requiredVolunteers' => (int) $this->required_volunteers,
+            'eventTime' => filled($this->event_time) ? substr((string) $this->event_time, 0, 5) : null,
             'startDate' => $this->start_date?->toDateString(),
             'endDate' => $this->end_date?->toDateString(),
             'submittedAt' => $this->submitted_at?->toIso8601String() ?? $this->created_at?->toIso8601String(),

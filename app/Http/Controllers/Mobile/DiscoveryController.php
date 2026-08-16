@@ -8,8 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\CampaignDiscoveryRequest;
 use App\Http\Requests\Mobile\CategoryDiscoveryRequest;
 use App\Http\Requests\Mobile\PostDiscoveryRequest;
-use App\Http\Resources\CampaignResource;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\Mobile\MobileCampaignResource;
 use App\Http\Resources\Mobile\MobileHomePostResource;
 use App\Http\Resources\Mobile\MobilePublisherResource;
 use App\Models\User;
@@ -30,12 +30,6 @@ class DiscoveryController extends Controller
         private readonly PublisherService $publisherService,
     ) {}
 
-    /**
-     * List public posts for mobile discovery.
-     *
-     * Public endpoint. A valid Sanctum bearer token is optional and enriches
-     * viewer-specific fields such as saved and application state.
-     */
     public function posts(PostDiscoveryRequest $request): JsonResponse
     {
         $viewer = $this->viewer($request);
@@ -48,9 +42,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * Show a public post for mobile discovery.
-     */
     public function showPost(Request $request, string $post): JsonResponse
     {
         $viewer = $this->viewer($request);
@@ -67,11 +58,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * Show a public mobile publisher. Publisher identifiers are the same values
-     * emitted by MobileHomePostResource: organization id for organization-backed
-     * content, otherwise the individual author id.
-     */
     public function showPublisher(Request $request, string $publisher): JsonResponse
     {
         $model = $this->publisherService->findPublic($publisher);
@@ -89,9 +75,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * List public posts belonging to one mobile publisher.
-     */
     public function publisherPosts(PostDiscoveryRequest $request, string $publisher): JsonResponse
     {
         $model = $this->publisherService->findPublic($publisher);
@@ -110,24 +93,18 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * List active campaigns for mobile discovery.
-     */
     public function campaigns(CampaignDiscoveryRequest $request): JsonResponse
     {
         $paginator = $this->campaignService->discover($request->validated());
         $viewer = $this->viewer($request);
 
         return MobileApiResponse::paginated(
-            $paginator->through(fn ($campaign) => CampaignResource::make($campaign)->resolve($request)),
+            $paginator->through(fn ($campaign) => MobileCampaignResource::make($campaign)->resolve($request)),
             'Campaigns retrieved successfully.',
             $this->viewerMeta($viewer),
         );
     }
 
-    /**
-     * Show an active campaign for mobile discovery.
-     */
     public function showCampaign(Request $request, string $campaign): JsonResponse
     {
         $model = $this->campaignService->findPublicCampaign($campaign);
@@ -139,15 +116,12 @@ class DiscoveryController extends Controller
         $viewer = $this->viewer($request);
 
         return MobileApiResponse::success(
-            CampaignResource::make($model)->resolve($request),
+            MobileCampaignResource::make($model)->resolve($request),
             'Campaign retrieved successfully.',
             $this->viewerMeta($viewer),
         );
     }
 
-    /**
-     * List active categories for mobile discovery.
-     */
     public function categories(CategoryDiscoveryRequest $request): JsonResponse
     {
         $paginator = $this->categoryService->discover($request->validated());
@@ -167,9 +141,7 @@ class DiscoveryController extends Controller
         return $user instanceof User ? $user : null;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function viewerMeta(?User $user): array
     {
         if ($user === null) {
