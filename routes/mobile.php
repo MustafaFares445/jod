@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Mobile\AuthController;
+use App\Http\Controllers\Mobile\AvatarController;
 use App\Http\Controllers\Mobile\BlogController;
 use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
@@ -92,6 +93,8 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
             Route::get('applications', [CampaignApplicationController::class, 'index'])->name('applications.index');
             Route::get('applications/{application}', [CampaignApplicationController::class, 'show'])->name('applications.show');
             Route::delete('applications/{application}', [CampaignApplicationController::class, 'destroy'])->name('applications.destroy');
+            Route::post('avatar', [AvatarController::class, 'store'])->name('avatar.store');
+            Route::delete('avatar', [AvatarController::class, 'destroy'])->name('avatar.destroy');
             Route::put('devices', [MobileDeviceController::class, 'store'])->name('devices.store');
             Route::delete('devices/{device}', [MobileDeviceController::class, 'destroy'])->name('devices.destroy');
 
