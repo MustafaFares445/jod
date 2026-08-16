@@ -1,239 +1,199 @@
 <?php
 
 declare(strict_types=1);
-
-namespace Tests\Feature\Org;
-
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-class StaffManagementTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->organization = Organization::factory()->create();
+    $this->owner = User::factory()->create(['organization_id' => $this->organization->id]);
 
-    private User $owner;
+    $ownerRole = OrganizationRole::factory()->create([
+        'organization_id' => $this->organization->id,
+        'name' => 'Owner',
+        'is_active' => true,
+        'is_system' => true,
+    ]);
 
-    private Organization $organization;
+    OrganizationStaff::factory()->create([
+        'organization_id' => $this->organization->id,
+        'user_id' => $this->owner->id,
+        'organization_role_id' => $ownerRole->id,
+        'status' => 'active',
+    ]);
 
-    private OrganizationRole $managerRole;
+    $this->managerRole = OrganizationRole::factory()->create([
+        'organization_id' => $this->organization->id,
+        'name' => 'Manager',
+        'is_system' => false,
+    ]);
+});
+test('list organization staff', function () {
+    OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
+    OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+    $response = $this->actingAs($this->owner)
+        ->getJson('/api/v1/org/staff');
 
-        $this->organization = Organization::factory()->create();
-        $this->owner = User::factory()->create(['organization_id' => $this->organization->id]);
+    $response->assertStatus(200)
+        ->assertJsonStructure(['data' => [], 'meta'])
+        ->assertJsonCount(3, 'data');
+});
+test('invite staff member', function () {
+    $data = [
+        'name' => 'Jane Doe',
+        'email' => 'jane@example.com',
+        'phone' => '1234567890',
+        'organization_role_id' => $this->managerRole->id,
+    ];
 
-        $ownerRole = OrganizationRole::factory()->create([
-            'organization_id' => $this->organization->id,
-            'name' => 'Owner',
-            'is_active' => true,
-            'is_system' => true,
-        ]);
+    $response = $this->actingAs($this->owner)
+        ->postJson('/api/v1/org/staff', $data);
 
-        OrganizationStaff::factory()->create([
-            'organization_id' => $this->organization->id,
-            'user_id' => $this->owner->id,
-            'organization_role_id' => $ownerRole->id,
-            'status' => 'active',
-        ]);
+    $response->assertStatus(201)
+        ->assertJsonStructure(['data' => ['id', 'name', 'email', 'role', 'invitedAt']])
+        ->assertJson(['data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com']]);
 
-        $this->managerRole = OrganizationRole::factory()->create([
-            'organization_id' => $this->organization->id,
-            'name' => 'Manager',
-            'is_system' => false,
-        ]);
-    }
+    $this->assertDatabaseHas('organization_staff', ['email' => 'jane@example.com']);
+});
+test('update staff member', function () {
+    $staff = OrganizationStaff::factory()->create([
+        'organization_id' => $this->organization->id,
+        'name' => 'Old Name',
+    ]);
 
-    public function test_list_organization_staff(): void
-    {
-        OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
-        OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
-
-        $response = $this->actingAs($this->owner)
-            ->getJson('/api/v1/org/staff');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure(['data' => [], 'meta'])
-            ->assertJsonCount(3, 'data');
-    }
-
-    public function test_invite_staff_member(): void
-    {
-        $data = [
-            'name' => 'Jane Doe',
-            'email' => 'jane@example.com',
-            'phone' => '1234567890',
+    $response = $this->actingAs($this->owner)
+        ->patchJson("/api/v1/org/staff/{$staff->id}", [
+            'name' => 'New Name',
+            'email' => $staff->email,
             'organization_role_id' => $this->managerRole->id,
-        ];
-
-        $response = $this->actingAs($this->owner)
-            ->postJson('/api/v1/org/staff', $data);
-
-        $response->assertStatus(201)
-            ->assertJsonStructure(['data' => ['id', 'name', 'email', 'role', 'invitedAt']])
-            ->assertJson(['data' => ['name' => 'Jane Doe', 'email' => 'jane@example.com']]);
-
-        $this->assertDatabaseHas('organization_staff', ['email' => 'jane@example.com']);
-    }
-
-    public function test_update_staff_member(): void
-    {
-        $staff = OrganizationStaff::factory()->create([
-            'organization_id' => $this->organization->id,
-            'name' => 'Old Name',
         ]);
 
-        $response = $this->actingAs($this->owner)
-            ->patchJson("/api/v1/org/staff/{$staff->id}", [
-                'name' => 'New Name',
-                'email' => $staff->email,
-                'organization_role_id' => $this->managerRole->id,
-            ]);
+    $response->assertStatus(200)
+        ->assertJsonPath('data.name', 'New Name');
+});
+test('remove staff member', function () {
+    $staff = OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
 
-        $response->assertStatus(200)
-            ->assertJsonPath('data.name', 'New Name');
-    }
+    $response = $this->actingAs($this->owner)
+        ->deleteJson("/api/v1/org/staff/{$staff->id}");
 
-    public function test_remove_staff_member(): void
-    {
-        $staff = OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
+    $response->assertNoContent();
+    $this->assertDatabaseMissing('organization_staff', ['id' => $staff->id]);
+});
+test('staff role must belong to the same organization', function () {
+    $otherOrganization = Organization::factory()->create();
+    $otherRole = OrganizationRole::factory()->create([
+        'organization_id' => $otherOrganization->id,
+        'is_system' => false,
+    ]);
 
-        $response = $this->actingAs($this->owner)
-            ->deleteJson("/api/v1/org/staff/{$staff->id}");
+    $this->actingAs($this->owner)
+        ->postJson('/api/v1/org/staff', [
+            'name' => 'Cross Org Staff',
+            'email' => 'cross-org@example.com',
+            'organization_role_id' => $otherRole->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('organization_role_id');
+});
+test('membership from another organization does not grant owner access', function () {
+    $otherOrganization = Organization::factory()->create();
+    $user = User::factory()->create(['organization_id' => $this->organization->id]);
+    $otherOwnerRole = OrganizationRole::factory()->create([
+        'organization_id' => $otherOrganization->id,
+        'is_active' => true,
+        'is_system' => true,
+    ]);
 
-        $response->assertNoContent();
-        $this->assertDatabaseMissing('organization_staff', ['id' => $staff->id]);
-    }
+    OrganizationStaff::factory()->create([
+        'organization_id' => $otherOrganization->id,
+        'user_id' => $user->id,
+        'organization_role_id' => $otherOwnerRole->id,
+        'status' => 'active',
+    ]);
 
-    public function test_staff_role_must_belong_to_the_same_organization(): void
-    {
-        $otherOrganization = Organization::factory()->create();
-        $otherRole = OrganizationRole::factory()->create([
-            'organization_id' => $otherOrganization->id,
-            'is_system' => false,
-        ]);
+    expect($user->fresh()->isOrganizationOwner())->toBeFalse();
 
-        $this->actingAs($this->owner)
-            ->postJson('/api/v1/org/staff', [
-                'name' => 'Cross Org Staff',
-                'email' => 'cross-org@example.com',
-                'organization_role_id' => $otherRole->id,
-            ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('organization_role_id');
-    }
+    $this->actingAs($user)
+        ->getJson('/api/v1/org/staff')
+        ->assertForbidden();
+});
+test('final owner cannot be demoted', function () {
+    $ownerMembership = OrganizationStaff::query()
+        ->where('user_id', $this->owner->id)
+        ->firstOrFail();
 
-    public function test_membership_from_another_organization_does_not_grant_owner_access(): void
-    {
-        $otherOrganization = Organization::factory()->create();
-        $user = User::factory()->create(['organization_id' => $this->organization->id]);
-        $otherOwnerRole = OrganizationRole::factory()->create([
-            'organization_id' => $otherOrganization->id,
-            'is_active' => true,
-            'is_system' => true,
-        ]);
+    $this->actingAs($this->owner)
+        ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
+            'organizationRoleId' => $this->managerRole->id,
+        ])
+        ->assertConflict();
 
-        OrganizationStaff::factory()->create([
-            'organization_id' => $otherOrganization->id,
-            'user_id' => $user->id,
-            'organization_role_id' => $otherOwnerRole->id,
-            'status' => 'active',
-        ]);
+    $this->assertDatabaseHas('organization_staff', [
+        'id' => $ownerMembership->id,
+        'organization_role_id' => $ownerMembership->organization_role_id,
+        'status' => 'active',
+    ]);
+});
+test('final owner cannot be deactivated', function () {
+    $ownerMembership = OrganizationStaff::query()
+        ->where('user_id', $this->owner->id)
+        ->firstOrFail();
 
-        $this->assertFalse($user->fresh()->isOrganizationOwner());
+    $this->actingAs($this->owner)
+        ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
+            'status' => 'inactive',
+        ])
+        ->assertConflict();
+});
+test('owner cannot remove own membership', function () {
+    $ownerMembership = OrganizationStaff::query()
+        ->where('user_id', $this->owner->id)
+        ->firstOrFail();
 
-        $this->actingAs($user)
-            ->getJson('/api/v1/org/staff')
-            ->assertForbidden();
-    }
+    $this->actingAs($this->owner)
+        ->deleteJson("/api/v1/org/staff/{$ownerMembership->id}")
+        ->assertForbidden();
+});
+test('staff cannot manage staff even with staff permissions', function () {
+    $staffUser = User::factory()->create(['organization_id' => $this->organization->id]);
+    $staffRole = OrganizationRole::factory()->create([
+        'organization_id' => $this->organization->id,
+        'name' => 'Malformed Manager',
+        'is_active' => true,
+        'is_system' => false,
+    ]);
 
-    public function test_final_owner_cannot_be_demoted(): void
-    {
-        $ownerMembership = OrganizationStaff::query()
-            ->where('user_id', $this->owner->id)
-            ->firstOrFail();
+    OrganizationStaff::factory()->create([
+        'organization_id' => $this->organization->id,
+        'user_id' => $staffUser->id,
+        'organization_role_id' => $staffRole->id,
+        'status' => 'active',
+    ]);
 
-        $this->actingAs($this->owner)
-            ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
-                'organizationRoleId' => $this->managerRole->id,
-            ])
-            ->assertConflict();
+    $this->grantPermissions($staffUser, [
+        [PermissionGroup::ORG_STAFF, PermissionAction::VIEW],
+        [PermissionGroup::ORG_STAFF, PermissionAction::MANAGE],
+        [PermissionGroup::ORG_STAFF, PermissionAction::DELETE],
+    ]);
 
-        $this->assertDatabaseHas('organization_staff', [
-            'id' => $ownerMembership->id,
-            'organization_role_id' => $ownerMembership->organization_role_id,
-            'status' => 'active',
-        ]);
-    }
+    $this->actingAs($staffUser)
+        ->getJson('/api/v1/org/staff')
+        ->assertForbidden();
+});
+test('cannot manage staff from different organization', function () {
+    $otherOrg = Organization::factory()->create();
+    $otherUser = User::factory()->create(['organization_id' => $otherOrg->id]);
+    $staff = OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
 
-    public function test_final_owner_cannot_be_deactivated(): void
-    {
-        $ownerMembership = OrganizationStaff::query()
-            ->where('user_id', $this->owner->id)
-            ->firstOrFail();
+    $response = $this->actingAs($otherUser)
+        ->deleteJson("/api/v1/org/staff/{$staff->id}");
 
-        $this->actingAs($this->owner)
-            ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
-                'status' => 'inactive',
-            ])
-            ->assertConflict();
-    }
-
-    public function test_owner_cannot_remove_own_membership(): void
-    {
-        $ownerMembership = OrganizationStaff::query()
-            ->where('user_id', $this->owner->id)
-            ->firstOrFail();
-
-        $this->actingAs($this->owner)
-            ->deleteJson("/api/v1/org/staff/{$ownerMembership->id}")
-            ->assertForbidden();
-    }
-
-    public function test_staff_cannot_manage_staff_even_with_staff_permissions(): void
-    {
-        $staffUser = User::factory()->create(['organization_id' => $this->organization->id]);
-        $staffRole = OrganizationRole::factory()->create([
-            'organization_id' => $this->organization->id,
-            'name' => 'Malformed Manager',
-            'is_active' => true,
-            'is_system' => false,
-        ]);
-
-        OrganizationStaff::factory()->create([
-            'organization_id' => $this->organization->id,
-            'user_id' => $staffUser->id,
-            'organization_role_id' => $staffRole->id,
-            'status' => 'active',
-        ]);
-
-        $this->grantPermissions($staffUser, [
-            [PermissionGroup::ORG_STAFF, PermissionAction::VIEW],
-            [PermissionGroup::ORG_STAFF, PermissionAction::MANAGE],
-            [PermissionGroup::ORG_STAFF, PermissionAction::DELETE],
-        ]);
-
-        $this->actingAs($staffUser)
-            ->getJson('/api/v1/org/staff')
-            ->assertForbidden();
-    }
-
-    public function test_cannot_manage_staff_from_different_organization(): void
-    {
-        $otherOrg = Organization::factory()->create();
-        $otherUser = User::factory()->create(['organization_id' => $otherOrg->id]);
-        $staff = OrganizationStaff::factory()->create(['organization_id' => $this->organization->id]);
-
-        $response = $this->actingAs($otherUser)
-            ->deleteJson("/api/v1/org/staff/{$staff->id}");
-
-        $response->assertStatus(403);
-    }
-}
+    $response->assertStatus(403);
+});

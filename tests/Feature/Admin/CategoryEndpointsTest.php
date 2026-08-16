@@ -1,111 +1,85 @@
 <?php
 
 declare(strict_types=1);
-
-namespace Tests\Feature\Admin;
-
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Category;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-class CategoryEndpointsTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->user = User::factory()->create();
+    $this->grantPermissions($this->user, [
+        [PermissionGroup::CATEGORY, PermissionAction::VIEW],
+        [PermissionGroup::CATEGORY, PermissionAction::CREATE],
+        [PermissionGroup::CATEGORY, PermissionAction::UPDATE],
+        [PermissionGroup::CATEGORY, PermissionAction::DELETE],
+    ]);
+    Sanctum::actingAs($this->user);
+});
+test('lists categories', function () {
+    Category::factory()->count(3)->create();
 
-    private User $user;
+    $response = $this->getJson('/api/v1/admin/categories');
 
-    protected function setUp(): void
-    {
-        parent::setUp();
+    $response->assertOk();
+    $response->assertJsonPath('message', 'Data retrieved successfully.');
+    expect($response->json('data'))->toHaveCount(3);
+});
+test('creates a category', function () {
+    $payload = [
+        'name' => 'Health',
+        'target' => 'campaign',
+        'description' => 'Campaign categories for health work',
+        'status' => 'active',
+    ];
 
-        $this->user = User::factory()->create();
-        $this->grantPermissions($this->user, [
-            [PermissionGroup::CATEGORY, PermissionAction::VIEW],
-            [PermissionGroup::CATEGORY, PermissionAction::CREATE],
-            [PermissionGroup::CATEGORY, PermissionAction::UPDATE],
-            [PermissionGroup::CATEGORY, PermissionAction::DELETE],
-        ]);
-        Sanctum::actingAs($this->user);
-    }
+    $response = $this->postJson('/api/v1/admin/categories', $payload);
 
-    public function test_lists_categories(): void
-    {
-        Category::factory()->count(3)->create();
+    $response->assertCreated();
+    expect($response->json('data.name'))->toEqual('Health');
+    $this->assertDatabaseHas('categories', ['name' => 'Health']);
+});
+test('shows a single category', function () {
+    $category = Category::factory()->create();
 
-        $response = $this->getJson('/api/v1/admin/categories');
+    $response = $this->getJson("/api/v1/admin/categories/{$category->id}");
 
-        $response->assertOk();
-        $response->assertJsonPath('message', 'Data retrieved successfully.');
-        $this->assertCount(3, $response->json('data'));
-    }
+    $response->assertOk();
+    expect($response->json('data.id'))->toEqual($category->id);
+});
+test('updates a category', function () {
+    $category = Category::factory()->create();
 
-    public function test_creates_a_category(): void
-    {
-        $payload = [
-            'name' => 'Health',
-            'target' => 'campaign',
-            'description' => 'Campaign categories for health work',
-            'status' => 'active',
-        ];
+    $payload = [
+        'name' => 'Updated category',
+        'target' => 'post',
+        'description' => 'Updated description',
+        'status' => 'inactive',
+    ];
 
-        $response = $this->postJson('/api/v1/admin/categories', $payload);
+    $response = $this->patchJson("/api/v1/admin/categories/{$category->id}", $payload);
 
-        $response->assertCreated();
-        $this->assertEquals('Health', $response->json('data.name'));
-        $this->assertDatabaseHas('categories', ['name' => 'Health']);
-    }
+    $response->assertOk();
+    expect($response->json('data.name'))->toEqual('Updated category');
+    expect($response->json('data.status'))->toEqual('inactive');
+});
+test('updates category status', function () {
+    $category = Category::factory()->create(['status' => 'active']);
 
-    public function test_shows_a_single_category(): void
-    {
-        $category = Category::factory()->create();
+    $response = $this->patchJson("/api/v1/admin/categories/{$category->id}/status", [
+        'status' => 'inactive',
+    ]);
 
-        $response = $this->getJson("/api/v1/admin/categories/{$category->id}");
+    $response->assertOk();
+    expect($response->json('data.status'))->toEqual('inactive');
+});
+test('deletes a category', function () {
+    $category = Category::factory()->create();
 
-        $response->assertOk();
-        $this->assertEquals($category->id, $response->json('data.id'));
-    }
+    $response = $this->deleteJson("/api/v1/admin/categories/{$category->id}");
 
-    public function test_updates_a_category(): void
-    {
-        $category = Category::factory()->create();
-
-        $payload = [
-            'name' => 'Updated category',
-            'target' => 'post',
-            'description' => 'Updated description',
-            'status' => 'inactive',
-        ];
-
-        $response = $this->patchJson("/api/v1/admin/categories/{$category->id}", $payload);
-
-        $response->assertOk();
-        $this->assertEquals('Updated category', $response->json('data.name'));
-        $this->assertEquals('inactive', $response->json('data.status'));
-    }
-
-    public function test_updates_category_status(): void
-    {
-        $category = Category::factory()->create(['status' => 'active']);
-
-        $response = $this->patchJson("/api/v1/admin/categories/{$category->id}/status", [
-            'status' => 'inactive',
-        ]);
-
-        $response->assertOk();
-        $this->assertEquals('inactive', $response->json('data.status'));
-    }
-
-    public function test_deletes_a_category(): void
-    {
-        $category = Category::factory()->create();
-
-        $response = $this->deleteJson("/api/v1/admin/categories/{$category->id}");
-
-        $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
-        $this->assertSoftDeleted('categories', ['id' => $category->id]);
-    }
-}
+    $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
+    $this->assertSoftDeleted('categories', ['id' => $category->id]);
+});

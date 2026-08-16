@@ -1,135 +1,106 @@
 <?php
 
 declare(strict_types=1);
-
-namespace Tests\Feature\Admin;
-
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Badge;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-class BadgeEndpointsTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->user = User::factory()->create();
+    $this->grantPermissions($this->user, [
+        [PermissionGroup::BADGE, PermissionAction::VIEW],
+        [PermissionGroup::BADGE, PermissionAction::CREATE],
+        [PermissionGroup::BADGE, PermissionAction::UPDATE],
+        [PermissionGroup::BADGE, PermissionAction::DELETE],
+    ]);
+    Sanctum::actingAs($this->user);
+});
+test('lists badges', function () {
+    Badge::factory()->count(3)->create();
 
-    private User $user;
+    $response = $this->getJson('/api/v1/admin/badges');
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->user = User::factory()->create();
-        $this->grantPermissions($this->user, [
-            [PermissionGroup::BADGE, PermissionAction::VIEW],
-            [PermissionGroup::BADGE, PermissionAction::CREATE],
-            [PermissionGroup::BADGE, PermissionAction::UPDATE],
-            [PermissionGroup::BADGE, PermissionAction::DELETE],
-        ]);
-        Sanctum::actingAs($this->user);
-    }
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(3);
+});
+test('creates a badge', function () {
+    $payload = [
+        'name' => 'Test Badge',
+        'description' => 'This is a test badge',
+        'criteria' => 'Complete 10 posts',
+        'iconName' => 'star',
+        'isActive' => true,
+    ];
 
-    public function test_lists_badges(): void
-    {
-        Badge::factory()->count(3)->create();
+    $response = $this->postJson('/api/v1/admin/badges', $payload);
 
-        $response = $this->getJson('/api/v1/admin/badges');
+    $response->assertCreated();
+    expect($response->json('data.name'))->toEqual('Test Badge');
+    expect($response->json('data.isActive'))->toBeTrue();
+    $this->assertDatabaseHas('badges', ['name' => 'Test Badge']);
+});
+test('shows a single badge', function () {
+    $badge = Badge::factory()->create();
 
-        $response->assertOk();
-        $this->assertCount(3, $response->json('data'));
-    }
+    $response = $this->getJson("/api/v1/admin/badges/{$badge->id}");
 
-    public function test_creates_a_badge(): void
-    {
-        $payload = [
-            'name' => 'Test Badge',
-            'description' => 'This is a test badge',
-            'criteria' => 'Complete 10 posts',
-            'iconName' => 'star',
-            'isActive' => true,
-        ];
+    $response->assertOk();
+    expect($response->json('data.id'))->toEqual($badge->id);
+    expect($response->json('data.name'))->toEqual($badge->name);
+});
+test('updates a badge', function () {
+    $badge = Badge::factory()->create();
 
-        $response = $this->postJson('/api/v1/admin/badges', $payload);
+    $payload = [
+        'name' => 'Updated Badge',
+        'description' => 'Updated description',
+        'criteria' => 'Updated criteria',
+        'iconName' => 'heart',
+        'isActive' => false,
+    ];
 
-        $response->assertCreated();
-        $this->assertEquals('Test Badge', $response->json('data.name'));
-        $this->assertTrue($response->json('data.isActive'));
-        $this->assertDatabaseHas('badges', ['name' => 'Test Badge']);
-    }
+    $response = $this->patchJson("/api/v1/admin/badges/{$badge->id}", $payload);
 
-    public function test_shows_a_single_badge(): void
-    {
-        $badge = Badge::factory()->create();
+    $response->assertOk();
+    expect($response->json('data.name'))->toEqual('Updated Badge');
+    expect($response->json('data.isActive'))->toBeFalse();
+});
+test('updates badge status', function () {
+    $badge = Badge::factory()->create(['is_active' => true]);
 
-        $response = $this->getJson("/api/v1/admin/badges/{$badge->id}");
+    $response = $this->patchJson("/api/v1/admin/badges/{$badge->id}/status", ['isActive' => false]);
 
-        $response->assertOk();
-        $this->assertEquals($badge->id, $response->json('data.id'));
-        $this->assertEquals($badge->name, $response->json('data.name'));
-    }
+    $response->assertOk();
+    expect($response->json('data.isActive'))->toBeFalse();
+});
+test('deletes a badge', function () {
+    $badge = Badge::factory()->create();
 
-    public function test_updates_a_badge(): void
-    {
-        $badge = Badge::factory()->create();
+    $response = $this->deleteJson("/api/v1/admin/badges/{$badge->id}");
 
-        $payload = [
-            'name' => 'Updated Badge',
-            'description' => 'Updated description',
-            'criteria' => 'Updated criteria',
-            'iconName' => 'heart',
-            'isActive' => false,
-        ];
+    $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
+    $this->assertSoftDeleted('badges', ['id' => $badge->id]);
+});
+test('filters badges by search', function () {
+    Badge::factory()->create(['name' => 'Popular Badge']);
+    Badge::factory()->create(['name' => 'Rare Badge']);
 
-        $response = $this->patchJson("/api/v1/admin/badges/{$badge->id}", $payload);
+    $response = $this->getJson('/api/v1/admin/badges?filter.search=Popular');
 
-        $response->assertOk();
-        $this->assertEquals('Updated Badge', $response->json('data.name'));
-        $this->assertFalse($response->json('data.isActive'));
-    }
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.name'))->toEqual('Popular Badge');
+});
+test('filters badges by active status', function () {
+    Badge::factory()->create(['is_active' => true]);
+    Badge::factory()->create(['is_active' => false]);
 
-    public function test_updates_badge_status(): void
-    {
-        $badge = Badge::factory()->create(['is_active' => true]);
+    $response = $this->getJson('/api/v1/admin/badges?filter.isActive=true');
 
-        $response = $this->patchJson("/api/v1/admin/badges/{$badge->id}/status", ['isActive' => false]);
-
-        $response->assertOk();
-        $this->assertFalse($response->json('data.isActive'));
-    }
-
-    public function test_deletes_a_badge(): void
-    {
-        $badge = Badge::factory()->create();
-
-        $response = $this->deleteJson("/api/v1/admin/badges/{$badge->id}");
-
-        $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
-        $this->assertSoftDeleted('badges', ['id' => $badge->id]);
-    }
-
-    public function test_filters_badges_by_search(): void
-    {
-        Badge::factory()->create(['name' => 'Popular Badge']);
-        Badge::factory()->create(['name' => 'Rare Badge']);
-
-        $response = $this->getJson('/api/v1/admin/badges?filter.search=Popular');
-
-        $response->assertOk();
-        $this->assertCount(1, $response->json('data'));
-        $this->assertEquals('Popular Badge', $response->json('data.0.name'));
-    }
-
-    public function test_filters_badges_by_active_status(): void
-    {
-        Badge::factory()->create(['is_active' => true]);
-        Badge::factory()->create(['is_active' => false]);
-
-        $response = $this->getJson('/api/v1/admin/badges?filter.isActive=true');
-
-        $response->assertOk();
-        $this->assertCount(1, $response->json('data'));
-        $this->assertTrue($response->json('data.0.isActive'));
-    }
-}
+    $response->assertOk();
+    expect($response->json('data'))->toHaveCount(1);
+    expect($response->json('data.0.isActive'))->toBeTrue();
+});
