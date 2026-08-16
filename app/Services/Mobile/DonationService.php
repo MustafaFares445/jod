@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class DonationService
@@ -25,7 +26,7 @@ class DonationService
         $query = Donation::query()->with('campaign.organization');
 
         if ($flow === 'received') {
-            if ($user->organization_id === null) {
+            if (! Gate::forUser($user)->allows('viewAny', Donation::class)) {
                 $query->whereRaw('1 = 0');
             } else {
                 $query->where('organization_id', $user->organization_id);
@@ -46,17 +47,20 @@ class DonationService
 
     public function findForUser(User $user, string $donationId): ?Donation
     {
-        return Donation::query()
+        $donation = Donation::query()
             ->with('campaign.organization')
             ->whereKey($donationId)
-            ->where(function (Builder $query) use ($user): void {
-                $query->where('created_by', $user->id);
-
-                if ($user->organization_id !== null) {
-                    $query->orWhere('organization_id', $user->organization_id);
-                }
-            })
             ->first();
+
+        if ($donation === null) {
+            return null;
+        }
+
+        if ((string) $donation->created_by === (string) $user->id) {
+            return $donation;
+        }
+
+        return Gate::forUser($user)->allows('view', $donation) ? $donation : null;
     }
 
     /**
