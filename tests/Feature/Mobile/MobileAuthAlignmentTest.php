@@ -70,7 +70,7 @@ class MobileAuthAlignmentTest extends TestCase
         $volunteerCampaign = Campaign::query()->create([
             'id' => (string) Str::uuid(),
             'title' => 'Volunteer Campaign',
-            'category' => 'volunteer',
+            'category' => 'employment',
             'status' => 'active',
             'organization_id' => $organization->id,
         ]);
@@ -86,7 +86,7 @@ class MobileAuthAlignmentTest extends TestCase
         $donationCampaign = Campaign::query()->create([
             'id' => (string) Str::uuid(),
             'title' => 'Donation Campaign',
-            'category' => 'donation',
+            'category' => 'emergency',
             'status' => 'active',
             'organization_id' => $organization->id,
             'goal_amount' => 1000,
