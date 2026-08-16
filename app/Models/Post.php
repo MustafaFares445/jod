@@ -96,7 +96,7 @@ class Post extends Model
     public function campaignApplications(): HasMany
     {
         return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id')
-            ->whereNotIn('applicant_status', CampaignApplicationServiceStatus::inactive());
+            ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
     }
 
     public function likedByUsers(): BelongsToMany
