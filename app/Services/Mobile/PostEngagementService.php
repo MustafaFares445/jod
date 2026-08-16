@@ -6,6 +6,7 @@ namespace App\Services\Mobile;
 
 use App\Models\Post;
 use App\Models\PostLike;
+use App\Models\PostShare;
 use App\Models\Report;
 use App\Models\SavedPost;
 use App\Models\User;
@@ -79,6 +80,32 @@ class PostEngagementService
                 ->delete();
 
             return $this->saveState($post, false);
+        });
+    }
+
+    /**
+     * Record one completed share-sheet action.
+     *
+     * @return array{postId: string, sharesCount: int}
+     */
+    public function share(User $user, string $postId, ?string $channel = null): array
+    {
+        return DB::transaction(function () use ($user, $postId, $channel): array {
+            $post = $this->findPublicPostForUpdate($postId);
+
+            PostShare::query()->create([
+                'post_id' => $post->id,
+                'user_id' => $user->id,
+                'channel' => filled($channel) ? trim((string) $channel) : null,
+            ]);
+
+            $sharesCount = PostShare::query()->where('post_id', $post->id)->count();
+            $post->update(['shares_count' => $sharesCount]);
+
+            return [
+                'postId' => (string) $post->id,
+                'sharesCount' => $sharesCount,
+            ];
         });
     }
 
