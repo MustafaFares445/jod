@@ -43,6 +43,8 @@ class MobilePasswordResetService
             ],
         );
 
+        // Preserve the legacy row for rollout compatibility without storing the
+        // newly issued mobile code in plaintext.
         if (filled($user->email)) {
             DB::table('password_reset_tokens')->updateOrInsert(
                 ['email' => $user->email],
