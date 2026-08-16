@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Mobile\AuthController;
+use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\MeController;
@@ -66,6 +67,9 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
             Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
             Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
             Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
+            Route::get('applications', [CampaignApplicationController::class, 'index'])->name('applications.index');
+            Route::get('applications/{application}', [CampaignApplicationController::class, 'show'])->name('applications.show');
+            Route::delete('applications/{application}', [CampaignApplicationController::class, 'destroy'])->name('applications.destroy');
             Route::put('devices', [MobileDeviceController::class, 'store'])->name('devices.store');
             Route::delete('devices/{device}', [MobileDeviceController::class, 'destroy'])->name('devices.destroy');
 
@@ -85,6 +89,8 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
             Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
         });
 
+    Route::post('campaigns/{campaign}/applications', [CampaignApplicationController::class, 'store'])
+        ->name('campaigns.applications.store');
     Route::post('campaigns/{campaign}/donations', [DonationController::class, 'store'])
         ->name('campaigns.donations.store');
 

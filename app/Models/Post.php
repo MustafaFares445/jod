@@ -89,9 +89,14 @@ class Post extends Model
         return $this->hasMany(SavedPost::class);
     }
 
+    /**
+     * Applications that should put a mobile volunteer CTA in the submitted
+     * state. Rejected/withdrawn applications are intentionally re-applicable.
+     */
     public function campaignApplications(): HasMany
     {
-        return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id');
+        return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id')
+            ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
     }
 
     public function likedByUsers(): BelongsToMany
