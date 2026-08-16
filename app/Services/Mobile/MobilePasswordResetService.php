@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -73,7 +74,7 @@ class MobilePasswordResetService
             return $this->verifyLegacyCode($user, $code);
         }
 
-        if (now()->greaterThan($record->expires_at)) {
+        if (now()->greaterThan(Carbon::parse((string) $record->expires_at))) {
             $this->consume($user);
 
             return false;
@@ -141,7 +142,7 @@ class MobilePasswordResetService
             return false;
         }
 
-        if (now()->diffInMinutes($record->created_at) > 15) {
+        if (now()->diffInMinutes(Carbon::parse((string) $record->created_at)) > 15) {
             DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
             return false;
