@@ -1,0 +1,52 @@
+name: Capture Pest output
+
+on:
+  push:
+    branches:
+      - agent/migrate-to-pest
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: jod_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/migrate-to-pest
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist
+      - name: Capture test output
+        shell: bash
+        run: |
+          set +e
+          composer test > pest-test-output.txt 2>&1
+          status=$?
+          echo "EXIT_STATUS=$status" >> pest-test-output.txt
+          exit 0
+      - name: Publish captured output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pest-test-output.txt
+          git commit -m "Capture Pest test output"
+          git push origin HEAD:agent/migrate-to-pest
