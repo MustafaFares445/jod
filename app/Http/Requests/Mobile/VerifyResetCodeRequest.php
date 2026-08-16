@@ -13,11 +13,18 @@ class VerifyResetCodeRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'login' => $this->input('login', $this->input('phoneNumber')),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
             'login' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'size:6'],
+            'code' => ['required', 'string', 'size:4', 'regex:/^\d{4}$/'],
         ];
     }
 }
