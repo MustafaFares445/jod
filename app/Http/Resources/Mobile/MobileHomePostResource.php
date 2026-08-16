@@ -20,10 +20,10 @@ class MobileHomePostResource extends JsonResource
     public function toArray(Request $request): array
     {
         $postType = $this->mobilePostType();
-        $ctaType = $this->ctaType($postType);
+        $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
+        $ctaType = $this->ctaType($postType, $campaign !== null);
         $ctaState = $this->ctaState($ctaType);
         $publisher = $this->publisher();
-        $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
         $targetId = in_array($ctaType, ['apply', 'donate'], true)
             ? ($campaign?->id ? (string) $campaign->id : null)
             : (string) $this->id;
@@ -148,11 +148,11 @@ class MobileHomePostResource extends JsonResource
         };
     }
 
-    private function ctaType(string $postType): string
+    private function ctaType(string $postType, bool $hasCampaign): string
     {
         return match ($postType) {
-            'volunteer_opportunity' => 'apply',
-            'donation_campaign' => 'donate',
+            'volunteer_opportunity' => $hasCampaign ? 'apply' : 'contact',
+            'donation_campaign' => $hasCampaign ? 'donate' : 'contact',
             'help_request' => 'contact',
             'campaign_update' => 'details',
             default => 'none',
