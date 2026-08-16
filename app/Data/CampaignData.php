@@ -18,7 +18,7 @@ class CampaignData extends Data
         public string $startDate,
         public string $endDate,
         public ?string $status = 'draft',
-        public ?int $requiredVolunteers = 0,
+        public ?int $requiredVolunteers = null,
         public ?string $eventTime = null,
     ) {}
 }
