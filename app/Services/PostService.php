@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Data\PostData;
 use App\Models\Campaign;
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -17,13 +18,13 @@ class PostService
     /**
      * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, status?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
      */
-    public function discover(array $params): LengthAwarePaginator
+    public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeDiscoverySort($params);
 
         $query = Post::query()
-            ->with(['organization', 'campaign', 'images'])
+            ->with($this->mobileRelations($viewer))
             ->where('status', 'published')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
@@ -50,10 +51,10 @@ class PostService
         return $query->paginate($perPage);
     }
 
-    public function findPublicPost(string $id): ?Post
+    public function findPublicPost(string $id, ?User $viewer = null): ?Post
     {
         return Post::query()
-            ->with(['organization', 'campaign', 'images'])
+            ->with($this->mobileRelations($viewer))
             ->whereKey($id)
             ->where('status', 'published')
             ->first();
@@ -176,6 +177,24 @@ class PostService
     public function delete(Post $post): void
     {
         $post->delete();
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function mobileRelations(?User $viewer): array
+    {
+        $relations = ['organization', 'campaign', 'author', 'images'];
+
+        if ($viewer === null) {
+            return $relations;
+        }
+
+        $relations['saves'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
+        $relations['likes'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
+        $relations['campaignApplications'] = static fn (Builder $builder) => $builder->where('created_by', $viewer->id);
+
+        return $relations;
     }
 
     private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
