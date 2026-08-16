@@ -17,6 +17,7 @@ class PublisherService
         $organization = Organization::query()
             ->whereKey($id)
             ->where('status', 'active')
+            ->whereHas('posts', fn (Builder $post) => $post->where('status', 'published'))
             ->first();
 
         if ($organization !== null) {
@@ -26,6 +27,10 @@ class PublisherService
         return User::query()
             ->whereKey($id)
             ->where('status', 'active')
+            ->whereHas('posts', function (Builder $post): void {
+                $post->where('status', 'published')
+                    ->whereNull('organization_id');
+            })
             ->first();
     }
 
