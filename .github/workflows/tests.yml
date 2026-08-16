@@ -27,6 +27,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Prepare environment
+        run: cp .env.example .env
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -38,29 +41,4 @@ jobs:
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Run tests
-        shell: bash
-        run: |
-          set +e
-          composer test 2>&1 | tee test-output.txt
-          status=${PIPESTATUS[0]}
-          exit "$status"
-
-      - name: Upload test output
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-output
-          path: test-output.txt
-          if-no-files-found: error
-
-      - name: Upload source snapshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: source-snapshot
-          path: |
-            app
-            bootstrap
-            database/factories
-            tests
-          if-no-files-found: error
+        run: composer test
