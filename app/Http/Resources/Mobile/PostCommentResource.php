@@ -17,23 +17,37 @@ class PostCommentResource extends JsonResource
     {
         $author = $this->relationLoaded('user') ? $this->user : null;
         $name = (string) ($author?->name ?? 'JOD User');
-        $email = $author?->email;
-        $username = filled($email)
-            ? Str::before((string) $email, '@')
-            : (Str::slug($name, '.') ?: 'jod');
+        $username = filled($author?->username)
+            ? (string) $author->username
+            : $this->derivedUsername($author?->email, $name);
+
+        $authorData = [
+            'id' => (string) ($author?->id ?? $this->user_id),
+            'name' => $name,
+            'username' => $username,
+            'verified' => $author?->email_verified_at !== null,
+        ];
+
+        if ($author !== null && ($avatarUrl = $author->avatarUrl()) !== null) {
+            $authorData['avatarUrl'] = $avatarUrl;
+        }
 
         return [
             'id' => (string) $this->id,
             'postId' => (string) $this->post_id,
             'body' => $this->body,
-            'author' => [
-                'id' => (string) ($author?->id ?? $this->user_id),
-                'name' => $name,
-                'username' => $username,
-                'verified' => $author?->email_verified_at !== null,
-            ],
+            'author' => $authorData,
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function derivedUsername(?string $email, string $name): string
+    {
+        if (filled($email)) {
+            return Str::before((string) $email, '@');
+        }
+
+        return Str::slug($name, '.') ?: 'jod';
     }
 }
