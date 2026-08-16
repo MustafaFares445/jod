@@ -71,7 +71,9 @@ class PublisherService
             'title', 'title_asc' => $query->orderBy('title'),
             '-title', 'title_desc' => $query->orderByDesc('title'),
             'updatedAt', 'updated_oldest' => $query->orderBy('updated_at'),
-            'most_engaged' => $query->orderByDesc('reactions_count')->orderByDesc('updated_at'),
+            'most_engaged' => $query
+                ->orderByRaw('(COALESCE(reactions_count, 0) + COALESCE(comments_count, 0) + COALESCE(shares_count, 0)) DESC')
+                ->orderByDesc('updated_at'),
             default => $query->orderByDesc('published_at')->orderByDesc('updated_at'),
         };
 
