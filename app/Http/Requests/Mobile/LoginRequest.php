@@ -13,6 +13,13 @@ class LoginRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'phone' => $this->input('phone', $this->input('phoneNumber')),
+        ]);
+    }
+
     /**
      * @return array<string, list<string>>
      */

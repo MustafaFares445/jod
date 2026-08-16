@@ -13,6 +13,13 @@ class ForgotPasswordRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'login' => $this->input('login', $this->input('phoneNumber')),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
