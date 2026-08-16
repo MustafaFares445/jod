@@ -56,8 +56,13 @@ class NotificationResource extends JsonResource
     {
         $path = Str::lower((string) $this->reference_path);
         $label = Str::lower((string) $this->reference_label);
+        $haystack = $path.' '.$label;
 
-        return Str::contains($path.' '.$label, ['saved', 'محفوظ'])
+        if (Str::contains($haystack, ['comment', 'comments', 'تعليق'])) {
+            return 'comment';
+        }
+
+        return Str::contains($haystack, ['saved', 'محفوظ'])
             ? 'saved'
             : 'system';
     }

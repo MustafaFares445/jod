@@ -10,7 +10,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class EngagementStateResource extends JsonResource
 {
     /**
-     * @return array{postId: string, isLiked?: bool, likesCount?: int, isSaved?: bool, savesCount?: int}
+     * @return array{postId: string, isLiked?: bool, likesCount?: int, isSaved?: bool, savesCount?: int, sharesCount?: int}
      */
     public function toArray(Request $request): array
     {
@@ -26,6 +26,10 @@ class EngagementStateResource extends JsonResource
         if (array_key_exists('isSaved', $this->resource)) {
             $data['isSaved'] = (bool) $this->resource['isSaved'];
             $data['savesCount'] = (int) $this->resource['savesCount'];
+        }
+
+        if (array_key_exists('sharesCount', $this->resource)) {
+            $data['sharesCount'] = (int) $this->resource['sharesCount'];
         }
 
         return $data;
