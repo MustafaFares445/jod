@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Mobile;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -13,6 +14,15 @@ class ProfileRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('username') && is_string($this->input('username'))) {
+            $this->merge([
+                'username' => Str::lower(trim((string) $this->input('username'))),
+            ]);
+        }
     }
 
     /**
@@ -29,7 +39,7 @@ class ProfileRequest extends FormRequest
                 'string',
                 'min:3',
                 'max:80',
-                'regex:/^[a-zA-Z0-9._-]+$/',
+                'regex:/^[a-z0-9._-]+$/',
                 Rule::unique('users', 'username')->ignore($userId),
             ],
             'email' => [
