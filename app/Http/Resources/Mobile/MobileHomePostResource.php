@@ -98,8 +98,8 @@ class MobileHomePostResource extends JsonResource
             ?? 'JOD';
         $email = $organization?->email ?? $author?->email;
         $phone = $organization?->phone ?? $author?->phone;
-        $city = $organization?->location ?? $this->location;
-        $bio = $organization?->description;
+        $city = $organization?->location ?? $author?->city ?? $this->location;
+        $bio = $organization?->description ?? $author?->bio;
 
         $publisher = [
             'id' => (string) $publisherId,
