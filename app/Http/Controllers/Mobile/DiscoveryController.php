@@ -11,9 +11,11 @@ use App\Http\Requests\Mobile\PostDiscoveryRequest;
 use App\Http\Resources\CampaignResource;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\Mobile\MobileHomePostResource;
+use App\Http\Resources\Mobile\MobilePublisherResource;
 use App\Models\User;
 use App\Services\CampaignService;
 use App\Services\CategoryService;
+use App\Services\Mobile\PublisherService;
 use App\Services\PostService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -25,6 +27,7 @@ class DiscoveryController extends Controller
         private readonly PostService $postService,
         private readonly CampaignService $campaignService,
         private readonly CategoryService $categoryService,
+        private readonly PublisherService $publisherService,
     ) {}
 
     /**
@@ -32,16 +35,6 @@ class DiscoveryController extends Controller
      *
      * Public endpoint. A valid Sanctum bearer token is optional and enriches
      * viewer-specific fields such as saved and application state.
-     *
-     * @queryParam page int optional The page number.
-     * @queryParam perPage int optional The number of items per page.
-     * @queryParam search string optional Free-text search across public post fields.
-     * @queryParam status string optional Public status filter. Allowed value: published.
-     * @queryParam type string optional Post type filter.
-     * @queryParam location string optional Location filter.
-     * @queryParam organizationId string optional Organization filter.
-     * @queryParam sort string optional Sort order.
-     * @queryParam sortBy string optional Legacy sort alias.
      */
     public function posts(PostDiscoveryRequest $request): JsonResponse
     {
@@ -57,10 +50,6 @@ class DiscoveryController extends Controller
 
     /**
      * Show a public post for mobile discovery.
-     *
-     * Public endpoint. A valid Sanctum bearer token is optional.
-     *
-     * @urlParam post string required The post identifier.
      */
     public function showPost(Request $request, string $post): JsonResponse
     {
@@ -79,19 +68,50 @@ class DiscoveryController extends Controller
     }
 
     /**
+     * Show a public mobile publisher. Publisher identifiers are the same values
+     * emitted by MobileHomePostResource: organization id for organization-backed
+     * content, otherwise the individual author id.
+     */
+    public function showPublisher(Request $request, string $publisher): JsonResponse
+    {
+        $model = $this->publisherService->findPublic($publisher);
+
+        if ($model === null) {
+            return MobileApiResponse::error('not_found', 'The requested publisher could not be found.', null, 404);
+        }
+
+        $viewer = $this->viewer($request);
+
+        return MobileApiResponse::success(
+            MobilePublisherResource::make($model)->resolve($request),
+            'Publisher retrieved successfully.',
+            $this->viewerMeta($viewer),
+        );
+    }
+
+    /**
+     * List public posts belonging to one mobile publisher.
+     */
+    public function publisherPosts(PostDiscoveryRequest $request, string $publisher): JsonResponse
+    {
+        $model = $this->publisherService->findPublic($publisher);
+
+        if ($model === null) {
+            return MobileApiResponse::error('not_found', 'The requested publisher could not be found.', null, 404);
+        }
+
+        $viewer = $this->viewer($request);
+        $paginator = $this->publisherService->paginatePosts($model, $request->validated(), $viewer);
+
+        return MobileApiResponse::paginated(
+            $paginator->through(fn ($post) => MobileHomePostResource::make($post)->resolve($request)),
+            'Publisher posts retrieved successfully.',
+            $this->viewerMeta($viewer),
+        );
+    }
+
+    /**
      * List active campaigns for mobile discovery.
-     *
-     * Public endpoint.
-     *
-     * @queryParam page int optional The page number.
-     * @queryParam perPage int optional The number of items per page.
-     * @queryParam search string optional Free-text search across public campaign fields.
-     * @queryParam status string optional Public status filter. Allowed value: active.
-     * @queryParam category string optional Campaign category filter.
-     * @queryParam location string optional Location filter.
-     * @queryParam organizationId string optional Organization filter.
-     * @queryParam sort string optional Sort order.
-     * @queryParam sortBy string optional Legacy sort alias.
      */
     public function campaigns(CampaignDiscoveryRequest $request): JsonResponse
     {
@@ -107,10 +127,6 @@ class DiscoveryController extends Controller
 
     /**
      * Show an active campaign for mobile discovery.
-     *
-     * Public endpoint.
-     *
-     * @urlParam campaign string required The campaign identifier.
      */
     public function showCampaign(Request $request, string $campaign): JsonResponse
     {
@@ -131,15 +147,6 @@ class DiscoveryController extends Controller
 
     /**
      * List active categories for mobile discovery.
-     *
-     * Public endpoint.
-     *
-     * @queryParam page int optional The page number.
-     * @queryParam perPage int optional The number of items per page.
-     * @queryParam search string optional Free-text search across category fields.
-     * @queryParam target string optional Category target filter.
-     * @queryParam status string optional Public status filter. Allowed value: active.
-     * @queryParam sort string optional Sort order.
      */
     public function categories(CategoryDiscoveryRequest $request): JsonResponse
     {

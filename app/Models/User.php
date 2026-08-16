@@ -18,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['id', 'name', 'email', 'password', 'phone', 'status', 'user_type', 'organization_id', 'last_active_at'])]
+#[Fillable(['id', 'name', 'email', 'password', 'phone', 'city', 'bio', 'status', 'user_type', 'organization_id', 'last_active_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -79,6 +79,11 @@ class User extends Authenticatable
     public function isOrganizationOwner(): bool
     {
         return $this->organizationDashboardRole() === 'org_owner';
+    }
+
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class, 'author_id');
     }
 
     public function reports(): HasMany

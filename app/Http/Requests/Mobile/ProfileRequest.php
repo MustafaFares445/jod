@@ -29,7 +29,14 @@ class ProfileRequest extends FormRequest
                 'max:255',
                 Rule::unique('users', 'email')->ignore($userId),
             ],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                Rule::unique('users', 'phone')->ignore($userId),
+            ],
+            'city' => ['nullable', 'string', 'min:2', 'max:100'],
+            'bio' => ['nullable', 'string', 'max:180'],
         ];
     }
 }

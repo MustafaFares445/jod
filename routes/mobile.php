@@ -38,6 +38,8 @@ Route::prefix('discovery')
     ->group(function (): void {
         Route::get('posts', [DiscoveryController::class, 'posts'])->name('posts');
         Route::get('posts/{post}', [DiscoveryController::class, 'showPost'])->name('posts.show');
+        Route::get('publishers/{publisher}', [DiscoveryController::class, 'showPublisher'])->name('publishers.show');
+        Route::get('publishers/{publisher}/posts', [DiscoveryController::class, 'publisherPosts'])->name('publishers.posts');
         Route::get('campaigns', [DiscoveryController::class, 'campaigns'])->name('campaigns');
         Route::get('campaigns/{campaign}', [DiscoveryController::class, 'showCampaign'])->name('campaigns.show');
         Route::get('categories', [DiscoveryController::class, 'categories'])->name('categories');
