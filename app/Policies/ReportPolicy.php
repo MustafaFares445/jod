@@ -50,20 +50,23 @@ class ReportPolicy
 
     public function claim(User $user, Report $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::CLAIM);
+        return $this->authorizeAction($user, PermissionAction::CLAIM)
+            || ($this->sameOrganization($user, $model)
+                && $this->authorizeOrganizationAction($user, PermissionAction::CLAIM));
     }
 
     public function requestInfo(User $user, Report $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::REQUEST_INFO);
+        return $this->authorizeAction($user, PermissionAction::REQUEST_INFO)
+            || ($this->sameOrganization($user, $model)
+                && $this->authorizeOrganizationAction($user, PermissionAction::REQUEST_INFO));
     }
 
     public function close(User $user, Report $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::CLOSE);
+        return $this->authorizeAction($user, PermissionAction::CLOSE)
+            || ($this->sameOrganization($user, $model)
+                && $this->authorizeOrganizationAction($user, PermissionAction::CLOSE));
     }
 
     private function authorizeOrganizationAction(User $user, PermissionAction $action): bool

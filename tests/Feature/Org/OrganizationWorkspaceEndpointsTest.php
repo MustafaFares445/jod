@@ -124,6 +124,12 @@ test('donor crud and filtering', function () {
         ->assertOk()
         ->assertJsonCount(1, 'data');
 
+    Campaign::factory()->create([
+        'organization_id' => $this->organization->id,
+        'title' => 'Health Initiative',
+        'status' => 'active',
+    ]);
+
     $createPayload = [
         'name' => 'Donor C',
         'email' => 'c@example.com',
@@ -171,6 +177,12 @@ test('applicant filtering and crud', function () {
     $this->getJson('/api/v1/org/applicants?filter.applicantStatus=approved')
         ->assertOk()
         ->assertJsonCount(1, 'data');
+
+    Campaign::factory()->create([
+        'organization_id' => $this->organization->id,
+        'title' => 'Volunteer Program',
+        'status' => 'active',
+    ]);
 
     $payload = [
         'name' => 'Applicant C',

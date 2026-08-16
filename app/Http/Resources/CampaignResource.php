@@ -31,7 +31,7 @@ class CampaignResource extends JsonResource
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
             'closedAt' => $this->closed_at?->toIso8601String(),
-            'closedReason' => $this->close_reason,
+            'closedReason' => $this->closed_reason,
             'reviewedBy' => $this->whenLoaded('reviewedBy', fn () => $this->reviewedBy?->name),
             'rejectionReason' => $this->rejection_reason,
         ];

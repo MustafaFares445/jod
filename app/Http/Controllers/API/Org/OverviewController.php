@@ -14,7 +14,7 @@ class OverviewController extends Controller
 {
     public function __invoke(Request $request, OrganizationOverviewService $service): JsonResponse
     {
-        $this->authorize('viewAny', 'org-dashboard');
+        $this->authorize('org-dashboard');
         $organization = $request->user()->organization;
 
         if ($organization === null) {
