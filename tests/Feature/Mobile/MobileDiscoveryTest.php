@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature\Mobile;
 
 use App\Models\Campaign;
+use App\Models\CampaignApplication;
 use App\Models\Category;
 use App\Models\Organization;
 use App\Models\Post;
+use App\Models\SavedPost;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -52,6 +54,120 @@ class MobileDiscoveryTest extends TestCase
         $response->assertJsonMissing(['title' => 'Draft post']);
         $response->assertJsonPath('meta.currentPage', 1);
         $response->assertJsonPath('meta.perPage', 10);
+    }
+
+    public function test_mobile_discovery_posts_return_canonical_home_post_contract(): void
+    {
+        $organization = Organization::factory()->create([
+            'name' => 'JOD Relief',
+            'email' => 'relief@jod.test',
+            'phone' => '0999999999',
+            'location' => 'Damascus',
+            'description' => 'Community relief organization.',
+            'verification_status' => 'verified',
+        ]);
+        $campaign = Campaign::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Food campaign',
+            'category' => 'food',
+            'status' => 'active',
+            'organization_id' => $organization->id,
+        ]);
+        $post = Post::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Support the food campaign',
+            'summary' => 'Short campaign summary',
+            'content' => 'Full campaign details for mobile.',
+            'type' => 'donation_campaign',
+            'status' => 'published',
+            'location' => 'Damascus',
+            'organization_id' => $organization->id,
+            'campaign_id' => $campaign->id,
+            'reactions_count' => 12,
+            'published_at' => now(),
+        ]);
+
+        $response = $this->getJson('/api/mobile/discovery/posts?perPage=10');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.id', $post->id)
+            ->assertJsonPath('data.0.publisher.id', $organization->id)
+            ->assertJsonPath('data.0.publisher.name', 'JOD Relief')
+            ->assertJsonPath('data.0.publisher.username', 'relief')
+            ->assertJsonPath('data.0.publisher.city', 'Damascus')
+            ->assertJsonPath('data.0.publisher.verified', true)
+            ->assertJsonPath('data.0.publisher.phoneNumber', '0999999999')
+            ->assertJsonPath('data.0.postType', 'donation_campaign')
+            ->assertJsonPath('data.0.content', 'Full campaign details for mobile.')
+            ->assertJsonPath('data.0.cta.type', 'donate')
+            ->assertJsonPath('data.0.cta.state', 'open')
+            ->assertJsonPath('data.0.cta.targetId', $campaign->id)
+            ->assertJsonPath('data.0.stats.likes', 12)
+            ->assertJsonPath('data.0.stats.comments', 0)
+            ->assertJsonPath('data.0.stats.shares', 0)
+            ->assertJsonPath('data.0.saved', false)
+            ->assertJsonStructure([
+                'data' => [[
+                    'id',
+                    'publisher' => ['id', 'name', 'username', 'verified'],
+                    'postType',
+                    'title',
+                    'content',
+                    'createdAt',
+                    'images',
+                    'cta' => ['type', 'label', 'targetId', 'state'],
+                    'stats' => ['likes', 'comments', 'shares'],
+                    'saved',
+                ]],
+            ]);
+    }
+
+    public function test_mobile_discovery_post_includes_saved_and_submitted_state_for_authenticated_viewer(): void
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+        $campaign = Campaign::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Volunteer campaign',
+            'category' => 'volunteer',
+            'status' => 'active',
+            'organization_id' => $organization->id,
+        ]);
+        $post = Post::query()->create([
+            'id' => (string) Str::uuid(),
+            'title' => 'Volunteer with us',
+            'content' => 'Volunteer campaign details.',
+            'type' => 'volunteer_opportunity',
+            'status' => 'published',
+            'organization_id' => $organization->id,
+            'campaign_id' => $campaign->id,
+            'published_at' => now(),
+        ]);
+        SavedPost::factory()->create([
+            'user_id' => $user->id,
+            'post_id' => $post->id,
+        ]);
+        CampaignApplication::query()->create([
+            'organization_id' => $organization->id,
+            'campaign_id' => $campaign->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'campaign_title' => $campaign->title,
+            'applicant_status' => 'pending',
+            'applied_at' => now(),
+            'created_by' => $user->id,
+        ]);
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson("/api/mobile/discovery/posts/{$post->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.saved', true)
+            ->assertJsonPath('data.cta.type', 'apply')
+            ->assertJsonPath('data.cta.state', 'submitted')
+            ->assertJsonPath('data.cta.targetId', $campaign->id)
+            ->assertJsonPath('meta.viewer.isAuthenticated', true)
+            ->assertJsonPath('meta.viewer.userId', $user->id);
     }
 
     public function test_mobile_discovery_posts_include_viewer_state_when_authenticated(): void

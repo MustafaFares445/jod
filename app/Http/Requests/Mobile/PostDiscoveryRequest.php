@@ -23,11 +23,12 @@ class PostDiscoveryRequest extends FormRequest
             'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
             'search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'in:published'],
+            'actionState' => ['nullable', 'string', 'in:open,submitted,closed'],
             'type' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
             'organizationId' => ['nullable', 'string', 'max:255'],
-            'sort' => ['nullable', 'string', 'in:title,-title,updatedAt,-updatedAt'],
-            'sortBy' => ['nullable', 'string', 'in:title_asc,title_desc,updated_oldest'],
+            'sort' => ['nullable', 'string', 'in:title,-title,updatedAt,-updatedAt,newest,most_engaged'],
+            'sortBy' => ['nullable', 'string', 'in:title_asc,title_desc,updated_oldest,newest,most_engaged'],
         ];
     }
 }

@@ -10,7 +10,8 @@ use App\Http\Requests\Mobile\CategoryDiscoveryRequest;
 use App\Http\Requests\Mobile\PostDiscoveryRequest;
 use App\Http\Resources\CampaignResource;
 use App\Http\Resources\CategoryResource;
-use App\Http\Resources\PostResource;
+use App\Http\Resources\Mobile\MobileHomePostResource;
+use App\Models\User;
 use App\Services\CampaignService;
 use App\Services\CategoryService;
 use App\Services\PostService;
@@ -29,7 +30,8 @@ class DiscoveryController extends Controller
     /**
      * List public posts for mobile discovery.
      *
-     * Public endpoint.
+     * Public endpoint. A valid Sanctum bearer token is optional and enriches
+     * viewer-specific fields such as saved and application state.
      *
      * @queryParam page int optional The page number.
      * @queryParam perPage int optional The number of items per page.
@@ -40,42 +42,39 @@ class DiscoveryController extends Controller
      * @queryParam organizationId string optional Organization filter.
      * @queryParam sort string optional Sort order.
      * @queryParam sortBy string optional Legacy sort alias.
-     *
-     * @response array{success: bool, message: string, data: array<int, array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, images: list<string>, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function posts(PostDiscoveryRequest $request): JsonResponse
     {
-        $paginator = $this->postService->discover($request->validated());
-        $meta = $this->viewerMeta($request);
+        $viewer = $this->viewer($request);
+        $paginator = $this->postService->discover($request->validated(), $viewer);
 
         return MobileApiResponse::paginated(
-            $paginator->through(fn ($post) => PostResource::make($post)->resolve($request)),
+            $paginator->through(fn ($post) => MobileHomePostResource::make($post)->resolve($request)),
             'Posts retrieved successfully.',
-            $meta,
+            $this->viewerMeta($viewer),
         );
     }
 
     /**
      * Show a public post for mobile discovery.
      *
-     * Public endpoint.
+     * Public endpoint. A valid Sanctum bearer token is optional.
      *
      * @urlParam post string required The post identifier.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, title: string, summary: string|null, type: string, status: string, organizationName: string|null, authorName: string|null, location: string|null, campaignTitle: string|null, images: list<string>, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null, reviewedBy: string|null, rejectionReason: string|null, viewsCount: int, reactionsCount: int, applicationsCount: int}, error: null, meta: array{viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function showPost(Request $request, string $post): JsonResponse
     {
-        $model = $this->postService->findPublicPost($post);
+        $viewer = $this->viewer($request);
+        $model = $this->postService->findPublicPost($post, $viewer);
 
         if (! $model) {
             return MobileApiResponse::error('not_found', 'The requested post could not be found.', null, 404);
         }
 
         return MobileApiResponse::success(
-            PostResource::make($model)->resolve($request),
+            MobileHomePostResource::make($model)->resolve($request),
             'Post retrieved successfully.',
-            $this->viewerMeta($request),
+            $this->viewerMeta($viewer),
         );
     }
 
@@ -93,18 +92,16 @@ class DiscoveryController extends Controller
      * @queryParam organizationId string optional Organization filter.
      * @queryParam sort string optional Sort order.
      * @queryParam sortBy string optional Legacy sort alias.
-     *
-     * @response array{success: bool, message: string, data: array<int, array{id: string, title: string, summary: string|null, category: string, status: string, organizationName: string|null, managerName: string|null, location: string|null, goalAmount: float, raisedAmount: float, beneficiariesCount: int, donorsCount: int, applicantsCount: int, startDate: string|null, endDate: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, closedAt: string|null, closedReason: string|null, reviewedBy: string|null, rejectionReason: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function campaigns(CampaignDiscoveryRequest $request): JsonResponse
     {
         $paginator = $this->campaignService->discover($request->validated());
-        $meta = $this->viewerMeta($request);
+        $viewer = $this->viewer($request);
 
         return MobileApiResponse::paginated(
             $paginator->through(fn ($campaign) => CampaignResource::make($campaign)->resolve($request)),
             'Campaigns retrieved successfully.',
-            $meta,
+            $this->viewerMeta($viewer),
         );
     }
 
@@ -114,8 +111,6 @@ class DiscoveryController extends Controller
      * Public endpoint.
      *
      * @urlParam campaign string required The campaign identifier.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, title: string, summary: string|null, category: string, status: string, organizationName: string|null, managerName: string|null, location: string|null, goalAmount: float, raisedAmount: float, beneficiariesCount: int, donorsCount: int, applicantsCount: int, startDate: string|null, endDate: string|null, submittedAt: string|null, createdAt: string|null, updatedAt: string|null, closedAt: string|null, closedReason: string|null, reviewedBy: string|null, rejectionReason: string|null}, error: null, meta: array{viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function showCampaign(Request $request, string $campaign): JsonResponse
     {
@@ -125,10 +120,12 @@ class DiscoveryController extends Controller
             return MobileApiResponse::error('not_found', 'The requested campaign could not be found.', null, 404);
         }
 
+        $viewer = $this->viewer($request);
+
         return MobileApiResponse::success(
             CampaignResource::make($model)->resolve($request),
             'Campaign retrieved successfully.',
-            $this->viewerMeta($request),
+            $this->viewerMeta($viewer),
         );
     }
 
@@ -143,28 +140,32 @@ class DiscoveryController extends Controller
      * @queryParam target string optional Category target filter.
      * @queryParam status string optional Public status filter. Allowed value: active.
      * @queryParam sort string optional Sort order.
-     *
-     * @response array{success: bool, message: string, data: array<int, array{id: string, name: string, target: string, description: string|null, usageCount: int, status: string, createdAt: string|null, updatedAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int, viewer?: array{isAuthenticated: bool, userId: string, organizationId: string|null}}}
      */
     public function categories(CategoryDiscoveryRequest $request): JsonResponse
     {
         $paginator = $this->categoryService->discover($request->validated());
+        $viewer = $this->viewer($request);
 
         return MobileApiResponse::paginated(
             $paginator->through(fn ($category) => CategoryResource::make($category)->resolve($request)),
             'Categories retrieved successfully.',
-            $this->viewerMeta($request),
+            $this->viewerMeta($viewer),
         );
+    }
+
+    private function viewer(Request $request): ?User
+    {
+        $user = $request->user('sanctum');
+
+        return $user instanceof User ? $user : null;
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function viewerMeta(Request $request): array
+    private function viewerMeta(?User $user): array
     {
-        $user = $request->user();
-
-        if (! $user) {
+        if ($user === null) {
             return [];
         }
 

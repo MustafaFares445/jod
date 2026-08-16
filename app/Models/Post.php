@@ -89,6 +89,11 @@ class Post extends Model
         return $this->hasMany(SavedPost::class);
     }
 
+    public function campaignApplications(): HasMany
+    {
+        return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id');
+    }
+
     public function likedByUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'post_likes')->withTimestamps();
