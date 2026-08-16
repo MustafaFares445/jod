@@ -38,6 +38,23 @@ class MobileAuthAlignmentTest extends TestCase
         ]);
     }
 
+    public function test_mobile_login_accepts_phone_number_screen_alias(): void
+    {
+        $user = User::factory()->create([
+            'email' => null,
+            'phone' => '0999999994',
+            'password' => Hash::make('Password123!'),
+        ]);
+
+        $this->postJson('/api/mobile/auth/login', [
+            'phoneNumber' => $user->phone,
+            'password' => 'Password123!',
+        ])->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.user.id', $user->id)
+            ->assertJsonPath('data.user.phone', $user->phone);
+    }
+
     public function test_phone_first_account_can_complete_four_digit_password_reset_flow(): void
     {
         $user = User::factory()->create([
