@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 class PostService
 {
     /**
-     * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, status?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
+     * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
      */
     public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
@@ -30,12 +30,25 @@ class PostService
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
             ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
             ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
+            ->when(filled($params['actionState'] ?? null), function (Builder $builder) use ($params, $viewer): void {
+                $this->applyActionStateFilter($builder, (string) $params['actionState'], $viewer);
+            })
             ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
                 $search = (string) $params['search'];
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('location', 'like', "%{$search}%");
+                        ->orWhere('content', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('organization', function (Builder $organization) use ($search): void {
+                            $organization->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('location', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('author', function (Builder $author) use ($search): void {
+                            $author->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
                 });
             });
 
@@ -44,6 +57,8 @@ class PostService
             '-title' => $query->orderByDesc('title'),
             'updatedAt' => $query->orderBy('updated_at'),
             '-updatedAt' => $query->orderByDesc('updated_at'),
+            'newest' => $query->orderByDesc('published_at')->orderByDesc('updated_at'),
+            'most_engaged' => $query->orderByDesc('reactions_count')->orderByDesc('updated_at'),
             default => $query->orderByDesc('updated_at'),
         };
         $query->orderBy('id');
@@ -197,6 +212,53 @@ class PostService
         return $relations;
     }
 
+    private function applyActionStateFilter(Builder $query, string $state, ?User $viewer): void
+    {
+        if ($state === 'submitted') {
+            if ($viewer === null) {
+                $query->whereRaw('1 = 0');
+
+                return;
+            }
+
+            $query->where('type', 'volunteer_opportunity')
+                ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'))
+                ->whereHas(
+                    'campaignApplications',
+                    fn (Builder $application) => $application->where('created_by', $viewer->id),
+                );
+
+            return;
+        }
+
+        if ($state === 'closed') {
+            $query->whereIn('type', ['volunteer_opportunity', 'donation_campaign'])
+                ->where(function (Builder $campaignState): void {
+                    $campaignState->whereDoesntHave('campaign')
+                        ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
+                });
+
+            return;
+        }
+
+        $query->where(function (Builder $interactive) use ($viewer): void {
+            $interactive->where(function (Builder $donation): void {
+                $donation->where('type', 'donation_campaign')
+                    ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
+            })->orWhere(function (Builder $volunteer) use ($viewer): void {
+                $volunteer->where('type', 'volunteer_opportunity')
+                    ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
+
+                if ($viewer !== null) {
+                    $volunteer->whereDoesntHave(
+                        'campaignApplications',
+                        fn (Builder $application) => $application->where('created_by', $viewer->id),
+                    );
+                }
+            });
+        });
+    }
+
     private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
     {
         if (! $campaignTitle) {
@@ -257,7 +319,9 @@ class PostService
             'title_asc' => 'title',
             'title_desc' => '-title',
             'updated_oldest' => 'updatedAt',
-            default => '-updatedAt',
+            'newest' => 'newest',
+            'most_engaged' => 'most_engaged',
+            default => 'newest',
         };
     }
 
