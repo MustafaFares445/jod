@@ -13,6 +13,7 @@ use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostImageController;
 use App\Http\Controllers\Mobile\PostReportController;
+use App\Http\Controllers\Mobile\ProfilePostController;
 use App\Http\Controllers\Mobile\SavedPostController;
 use App\Http\Controllers\Mobile\UserPostController;
 use Illuminate\Support\Facades\Route;
@@ -71,6 +72,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         ->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
             Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
+            Route::get('profile-posts', [ProfilePostController::class, 'index'])->name('profile-posts.index');
             Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
             Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
             Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
