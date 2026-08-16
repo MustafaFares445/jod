@@ -24,7 +24,7 @@ class PostDiscoveryRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'in:published'],
             'actionState' => ['nullable', 'string', 'in:open,submitted,closed'],
-            'type' => ['nullable', 'string', 'in:volunteer_opportunity,donation_campaign,help_request,campaign_update,awareness'],
+            'type' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
             'organizationId' => ['nullable', 'string', 'max:255'],
             'sort' => ['nullable', 'string', 'in:title,-title,updatedAt,-updatedAt,newest,most_engaged'],
