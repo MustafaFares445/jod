@@ -53,8 +53,8 @@ class MobileHomePostResource extends JsonResource
             'cta' => $cta,
             'stats' => [
                 'likes' => (int) $this->reactions_count,
-                'comments' => 0,
-                'shares' => 0,
+                'comments' => (int) $this->comments_count,
+                'shares' => (int) $this->shares_count,
             ],
             'saved' => $this->relationLoaded('saves') && $this->saves->isNotEmpty(),
 
