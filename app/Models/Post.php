@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -21,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'location',
     'organization_id',
     'campaign_id',
+    'category_id',
     'author_id',
     'rejection_reason',
     'views_count',
@@ -56,6 +59,11 @@ class Post extends Model
         return $this->belongsTo(Campaign::class);
     }
 
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
@@ -64,5 +72,40 @@ class Post extends Model
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(PostImage::class)->orderBy('position')->orderBy('id');
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(PostLike::class);
+    }
+
+    public function saves(): HasMany
+    {
+        return $this->hasMany(SavedPost::class);
+    }
+
+    /**
+     * Applications that should put a mobile volunteer CTA in the submitted
+     * state. Rejected/withdrawn applications are intentionally re-applicable.
+     */
+    public function campaignApplications(): HasMany
+    {
+        return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id')
+            ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
+    }
+
+    public function likedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'post_likes')->withTimestamps();
+    }
+
+    public function savedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'saved_posts')->withTimestamps();
     }
 }

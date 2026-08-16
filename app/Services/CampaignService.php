@@ -12,6 +12,47 @@ use Illuminate\Validation\ValidationException;
 
 class CampaignService
 {
+    public function discover(array $params): LengthAwarePaginator
+    {
+        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $sort = $this->normalizeDiscoverySort($params);
+
+        $query = Campaign::query()
+            ->with(['organization', 'creator'])
+            ->where('status', 'active')
+            ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
+            ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->where('category', $params['category']))
+            ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
+            ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
+            ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
+                $search = (string) $params['search'];
+                $builder->where(function (Builder $inner) use ($search): void {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('summary', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            });
+
+        match ($sort) {
+            'updatedAt' => $query->orderBy('updated_at'),
+            '-updatedAt' => $query->orderByDesc('updated_at'),
+            'progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END ASC'),
+            '-progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END DESC'),
+            default => $query->orderByDesc('updated_at'),
+        };
+
+        return $query->paginate($perPage);
+    }
+
+    public function findPublicCampaign(string $id): ?Campaign
+    {
+        return Campaign::query()
+            ->with(['organization', 'creator'])
+            ->whereKey($id)
+            ->where('status', 'active')
+            ->first();
+    }
+
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
@@ -145,6 +186,23 @@ class CampaignService
             'updated_oldest' => 'updatedAt',
             'progress_highest' => '-progress',
             'progress_lowest' => 'progress',
+            default => '-updatedAt',
+        };
+    }
+
+    private function normalizeDiscoverySort(array $params): string
+    {
+        $sort = (string) ($params['sort'] ?? '');
+        if ($sort !== '') {
+            return $sort;
+        }
+
+        $sortBy = (string) ($params['sortBy'] ?? '');
+
+        return match ($sortBy) {
+            'progress_highest' => '-progress',
+            'progress_lowest' => 'progress',
+            'updated_oldest' => 'updatedAt',
             default => '-updatedAt',
         };
     }

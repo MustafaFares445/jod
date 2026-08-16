@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\ChangePasswordRequest;
 use App\Http\Requests\Mobile\ProfileRequest;
 use App\Http\Resources\Mobile\UserResource;
+use App\Models\User;
 use App\Services\Permissions\PermissionCatalogService;
 use App\Services\UserService;
 use App\Support\Mobile\MobileApiResponse;
@@ -24,15 +25,11 @@ class MeController extends Controller
      * Get the authenticated mobile user profile.
      *
      * Requires a Sanctum bearer token.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: object{id: string, name: string, email: string|null, phone: string|null, status: string|null, verificationStatus: string|null}|null, createdAt: string|null, lastActiveAt: string|null}, error: null, meta: object{}}
      */
     public function profile(Request $request): JsonResponse
     {
-        $user = $request->user()->loadMissing('organization');
-
         return MobileApiResponse::success(
-            UserResource::make($user)->resolve($request),
+            UserResource::make($this->profileUser($request->user()))->resolve($request),
             'Profile retrieved successfully.',
         );
     }
@@ -42,18 +39,28 @@ class MeController extends Controller
      *
      * Requires a Sanctum bearer token.
      *
-     * @response array{success: bool, message: string, data: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: object{id: string, name: string, email: string|null, phone: string|null, status: string|null, verificationStatus: string|null}|null, createdAt: string|null, lastActiveAt: string|null}, error: null, meta: object{}}
+     * @bodyParam name string required The user's display name.
+     * @bodyParam email string required The user's email address.
+     * @bodyParam phone string optional The user's phone number.
+     * @bodyParam city string optional The user's city.
+     * @bodyParam bio string optional The user's biography, up to 180 characters.
      */
     public function updateProfile(ProfileRequest $request): JsonResponse
     {
+        $validated = $request->validated();
+        $preserveNullAttributes = array_values(array_intersect(
+            ['phone', 'city', 'bio'],
+            array_keys($validated),
+        ));
+
         $user = $this->userService->update(
-            UserData::from($request->validated()),
+            UserData::from($validated),
             $request->user(),
-            $request->has('phone') ? ['phone'] : [],
-        )->loadMissing('organization');
+            $preserveNullAttributes,
+        );
 
         return MobileApiResponse::success(
-            UserResource::make($user)->resolve($request),
+            UserResource::make($this->profileUser($user))->resolve($request),
             'Profile updated successfully.',
         );
     }
@@ -62,6 +69,10 @@ class MeController extends Controller
      * Change the authenticated mobile user password.
      *
      * Requires a Sanctum bearer token.
+     *
+     * @bodyParam currentPassword string required The current password.
+     * @bodyParam password string required The new password.
+     * @bodyParam password_confirmation string required Confirmation of the new password.
      *
      * @response array{success: bool, message: string, data: array{passwordChanged: bool}, error: null, meta: array}
      */
@@ -93,5 +104,12 @@ class MeController extends Controller
             $permissionCatalogService->forUser($request->user()),
             'Permissions retrieved successfully.',
         );
+    }
+
+    private function profileUser(User $user): User
+    {
+        return $user
+            ->loadMissing('organization')
+            ->loadCount(['posts', 'savedPosts', 'donations']);
     }
 }

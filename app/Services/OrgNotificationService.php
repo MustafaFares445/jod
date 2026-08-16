@@ -10,6 +10,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class OrgNotificationService
 {
+    public function __construct(private readonly NotificationDistributionService $distribution) {}
+
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
@@ -19,6 +21,7 @@ class OrgNotificationService
         $query = Notification::query()
             ->with('createdBy')
             ->where('organization_id', $organizationId)
+            ->whereNull('recipient_id')
             ->when($mailbox && $mailbox !== 'all', fn (Builder $builder) => $builder->where('mailbox', $mailbox))
             ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
@@ -46,7 +49,7 @@ class OrgNotificationService
 
     public function create(array $attributes, string $organizationId, string $userId): Notification
     {
-        return Notification::create([
+        $notification = Notification::create([
             'organization_id' => $organizationId,
             'title' => $attributes['title'],
             'body' => $attributes['body'],
@@ -58,9 +61,11 @@ class OrgNotificationService
             'priority' => $attributes['priority'] ?? 'normal',
             'reference_label' => $attributes['referenceLabel'] ?? null,
             'reference_path' => $attributes['referencePath'] ?? null,
-            'created_by' => $userId,
+            'creator_id' => $userId,
             'sent_at' => now(),
         ]);
+
+        return $this->distribution->dispatch($notification);
     }
 
     public function updateReadState(Notification $notification, string $status): Notification
@@ -75,13 +80,7 @@ class OrgNotificationService
 
     public function resend(Notification $notification): Notification
     {
-        $notification->update([
-            'mailbox' => 'sent',
-            'status' => 'sent',
-            'sent_at' => now(),
-        ]);
-
-        return $notification;
+        return $this->distribution->resend($notification);
     }
 
     private function normalizeSort(array $params): string

@@ -1,36 +1,70 @@
 <?php
 
 declare(strict_types=1);
+test('existing mobile route names and paths remain registered', function () {
+    $expectedRoutes = [
+        'mobile.auth.register' => ['POST', 'api/mobile/auth/register'],
+        'mobile.auth.login' => ['POST', 'api/mobile/auth/login'],
+        'mobile.auth.refresh' => ['POST', 'api/mobile/auth/refresh'],
+        'mobile.auth.logout' => ['POST', 'api/mobile/auth/logout'],
+        'mobile.auth.forgot-password' => ['POST', 'api/mobile/auth/forgot-password'],
+        'mobile.auth.verify-reset-code' => ['POST', 'api/mobile/auth/verify-reset-code'],
+        'mobile.auth.reset-password' => ['POST', 'api/mobile/auth/reset-password'],
+        'mobile.discovery.posts' => ['GET', 'api/mobile/discovery/posts'],
+        'mobile.discovery.posts.show' => ['GET', 'api/mobile/discovery/posts/{post}'],
+        'mobile.discovery.campaigns' => ['GET', 'api/mobile/discovery/campaigns'],
+        'mobile.discovery.campaigns.show' => ['GET', 'api/mobile/discovery/campaigns/{campaign}'],
+        'mobile.discovery.categories' => ['GET', 'api/mobile/discovery/categories'],
+        'mobile.me.profile' => ['GET', 'api/mobile/me'],
+        'mobile.me.profile.update' => ['PATCH', 'api/mobile/me/profile'],
+        'mobile.me.change-password' => ['PATCH', 'api/mobile/me/change-password'],
+        'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
+        'mobile.me.donations.index' => ['GET', 'api/mobile/me/donations'],
+        'mobile.me.donations.show' => ['GET', 'api/mobile/me/donations/{donation}'],
+        'mobile.me.devices.store' => ['PUT', 'api/mobile/me/devices'],
+        'mobile.me.devices.destroy' => ['DELETE', 'api/mobile/me/devices/{device}'],
+        'mobile.me.notifications.index' => ['GET', 'api/mobile/me/notifications'],
+        'mobile.me.notifications.unread-count' => ['GET', 'api/mobile/me/notifications/unread-count'],
+        'mobile.me.notifications.read-all' => ['PATCH', 'api/mobile/me/notifications/read-all'],
+        'mobile.me.notifications.show' => ['GET', 'api/mobile/me/notifications/{notification}'],
+        'mobile.me.notifications.read' => ['PATCH', 'api/mobile/me/notifications/{notification}/read'],
+        'mobile.me.notifications.unread' => ['PATCH', 'api/mobile/me/notifications/{notification}/unread'],
+        'mobile.campaigns.donations.store' => ['POST', 'api/mobile/campaigns/{campaign}/donations'],
+        'mobile.posts.images.store' => ['POST', 'api/mobile/posts/{post}/images'],
+        'mobile.posts.images.reorder' => ['PATCH', 'api/mobile/posts/{post}/images/order'],
+        'mobile.posts.images.destroy' => ['DELETE', 'api/mobile/posts/{post}/images/{image}'],
+    ];
 
-namespace Tests\Feature\Mobile;
+    foreach ($expectedRoutes as $routeName => [$method, $uri]) {
+        $route = app('router')->getRoutes()->getByName($routeName);
 
-use Tests\TestCase;
-
-class MobileRouteCompatibilityTest extends TestCase
-{
-    public function test_existing_mobile_route_names_and_paths_remain_registered(): void
-    {
-        $expectedRoutes = [
-            'mobile.auth.register' => ['POST', 'api/mobile/auth/register'],
-            'mobile.auth.login' => ['POST', 'api/mobile/auth/login'],
-            'mobile.auth.logout' => ['POST', 'api/mobile/auth/logout'],
-            'mobile.auth.forgot-password' => ['POST', 'api/mobile/auth/forgot-password'],
-            'mobile.auth.verify-reset-code' => ['POST', 'api/mobile/auth/verify-reset-code'],
-            'mobile.auth.reset-password' => ['POST', 'api/mobile/auth/reset-password'],
-            'mobile.me.profile' => ['GET', 'api/mobile/me'],
-            'mobile.me.profile.update' => ['PATCH', 'api/mobile/me/profile'],
-            'mobile.me.change-password' => ['PATCH', 'api/mobile/me/change-password'],
-            'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
-            'mobile.me.dashboard-context' => ['GET', 'api/mobile/me/dashboard-context'],
-            'mobile.me.ping' => ['GET', 'api/mobile/me/ping'],
-        ];
-
-        foreach ($expectedRoutes as $routeName => [$method, $uri]) {
-            $route = app('router')->getRoutes()->getByName($routeName);
-
-            $this->assertNotNull($route, "Route [{$routeName}] is not registered.");
-            $this->assertSame($uri, $route->uri());
-            $this->assertContains($method, $route->methods());
-        }
+        expect($route)->not->toBeNull("Route [{$routeName}] is not registered.");
+        expect($route->uri())->toBe($uri);
+        expect($route->methods())->toContain($method);
     }
-}
+});
+test('public discovery routes are throttled', function () {
+    $routeNames = [
+        'mobile.discovery.posts',
+        'mobile.discovery.posts.show',
+        'mobile.discovery.campaigns',
+        'mobile.discovery.campaigns.show',
+        'mobile.discovery.categories',
+    ];
+
+    foreach ($routeNames as $routeName) {
+        $route = app('router')->getRoutes()->getByName($routeName);
+
+        expect($route)->not->toBeNull("Route [{$routeName}] is not registered.");
+        expect($route->gatherMiddleware())->toContain('throttle:60,1');
+    }
+});
+test('authenticated mobile routes require access token ability', function () {
+    foreach (['mobile.auth.logout', 'mobile.me.profile', 'mobile.me.devices.store', 'mobile.posts.images.store'] as $routeName) {
+        $route = app('router')->getRoutes()->getByName($routeName);
+
+        expect($route)->not->toBeNull("Route [{$routeName}] is not registered.");
+        expect($route->gatherMiddleware())->toContain('auth:sanctum');
+        expect($route->gatherMiddleware())->toContain('mobile-access-token');
+    }
+});

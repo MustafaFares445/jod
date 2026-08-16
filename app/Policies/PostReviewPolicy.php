@@ -88,6 +88,45 @@ class PostReviewPolicy
             && $this->authorizeOrganizationAction($user, PermissionAction::RESTORE);
     }
 
+    public function viewOwn(User $user, Post $model): bool
+    {
+        return $this->ownsPost($user, $model);
+    }
+
+    public function createOwn(User $user): bool
+    {
+        return $user->id !== null;
+    }
+
+    public function updateOwn(User $user, Post $model): bool
+    {
+        return $this->ownsPost($user, $model)
+            && in_array($model->status, ['draft', 'rejected'], true);
+    }
+
+    public function submitOwn(User $user, Post $model): bool
+    {
+        return $this->ownsPost($user, $model)
+            && in_array($model->status, ['draft', 'rejected'], true);
+    }
+
+    public function archiveOwn(User $user, Post $model): bool
+    {
+        return $this->ownsPost($user, $model)
+            && $model->status === 'published';
+    }
+
+    public function repostOwn(User $user, Post $model): bool
+    {
+        return $this->ownsPost($user, $model)
+            && $model->status === 'archived';
+    }
+
+    public function deleteOwn(User $user, Post $model): bool
+    {
+        return $this->ownsPost($user, $model);
+    }
+
     private function authorizeOrganizationAction(User $user, PermissionAction $action): bool
     {
         return $user->isOrganizationOwner()
@@ -98,5 +137,11 @@ class PostReviewPolicy
     {
         return $user->organization_id !== null
             && (string) $user->organization_id === (string) $model->organization_id;
+    }
+
+    private function ownsPost(User $user, Post $model): bool
+    {
+        return $model->author_id !== null
+            && (string) $user->id === (string) $model->author_id;
     }
 }

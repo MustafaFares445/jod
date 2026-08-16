@@ -6,7 +6,12 @@ use App\Models\User;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\SecurityDocumentation\MiddlewareAuthSecurityStrategy;
 use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Dedoc\Scramble\Support\Generator\Types\BooleanType;
+use Dedoc\Scramble\Support\Generator\Types\NullType;
+use Dedoc\Scramble\Support\Generator\Types\ObjectType;
+use Dedoc\Scramble\Support\Generator\Types\StringType;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -72,6 +77,27 @@ MARKDOWN,
             ],
         ])
             ->routes(static fn (Route $route): bool => Str::startsWith($route->uri(), 'api/mobile/'))
+            ->withDocumentTransformers(static function (OpenApi $openApi): void {
+                foreach ($openApi->components->responses as $name => $response) {
+                    if (class_basename($name) !== 'AuthenticationException') {
+                        continue;
+                    }
+
+                    $error = (new ObjectType)
+                        ->addProperty('code', (new StringType)->const('unauthenticated'))
+                        ->addProperty('message', new StringType)
+                        ->setRequired(['code', 'message']);
+
+                    $body = (new ObjectType)
+                        ->addProperty('success', (new BooleanType)->const(false))
+                        ->addProperty('message', (new StringType)->setDescription('Error overview.'))
+                        ->addProperty('data', new NullType)
+                        ->addProperty('error', $error)
+                        ->setRequired(['success', 'message', 'data', 'error']);
+
+                    $response->setContent('application/json', Schema::fromType($body));
+                }
+            })
             ->expose(ui: 'docs/mobile-api', document: 'docs/mobile-api.json');
 
         Scramble::configure()

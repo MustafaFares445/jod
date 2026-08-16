@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'organization_id',
     'creator_id',
     'recipient_id',
+    'source_notification_id',
+    'distribution_batch_id',
     'sent_at',
     'read_at',
 ])]
@@ -53,6 +56,16 @@ class Notification extends Model
     public function recipient(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recipient_id');
+    }
+
+    public function sourceNotification(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'source_notification_id');
+    }
+
+    public function recipientCopies(): HasMany
+    {
+        return $this->hasMany(self::class, 'source_notification_id');
     }
 
     public function organization(): BelongsTo

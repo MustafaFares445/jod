@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RefreshTokenRequest;
 use App\Http\Requests\Mobile\ForgotPasswordRequest;
 use App\Http\Requests\Mobile\LoginRequest;
 use App\Http\Requests\Mobile\RegisterRequest;
@@ -12,6 +13,7 @@ use App\Http\Requests\Mobile\ResetPasswordRequest;
 use App\Http\Requests\Mobile\VerifyResetCodeRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Models\User;
+use App\Services\Auth\TokenService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -19,13 +21,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly TokenService $tokenService) {}
+
     /**
      * Register a mobile account.
      *
-     * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
+     * @bodyParam name string required The user's display name.
+     * @bodyParam email string required The user's email address.
+     * @bodyParam phone string optional The user's phone number.
+     * @bodyParam password string required The password.
+     * @bodyParam password_confirmation string required Confirmation of the password.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -41,11 +52,8 @@ class AuthController extends Controller
             'user_type' => 'general',
         ])->loadMissing('organization');
 
-        $token = $user->createToken('mobile-token')->plainTextToken;
-
         return MobileApiResponse::success([
-            'token' => $token,
-            'tokenType' => 'Bearer',
+            ...$this->tokenService->issueTokenPair($user),
             'user' => UserResource::make($user)->resolve($request),
         ], 'Registered successfully.');
     }
@@ -53,9 +61,13 @@ class AuthController extends Controller
     /**
      * Log in to the mobile API.
      *
-     * Public endpoint that returns a Sanctum bearer token and the current mobile user profile.
+     * Public endpoint that returns a short-lived access token, a rotating refresh token, and the current mobile user profile.
      *
-     * @response array{success: bool, message: string, data: array{token: string, tokenType: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
+     * @bodyParam email string optional The account email address. Required when phone is omitted.
+     * @bodyParam phone string optional The account phone number. Required when email is omitted.
+     * @bodyParam password string required The account password.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -87,17 +99,43 @@ class AuthController extends Controller
             'last_active_at' => now(),
         ])->save();
 
-        $token = $user->createToken('mobile-token')->plainTextToken;
-
         return MobileApiResponse::success([
-            'token' => $token,
-            'tokenType' => 'Bearer',
+            ...$this->tokenService->issueTokenPair($user),
             'user' => UserResource::make($user)->resolve($request),
         ], 'Logged in successfully.');
     }
 
     /**
+     * Rotate a mobile refresh token and issue a new token pair.
+     *
+     * Refresh tokens are single-use. Rotating one revokes the previous access and refresh token pair.
+     *
+     * @bodyParam refreshToken string required The current refresh token.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string}, error: null, meta: array}
+     */
+    public function refresh(RefreshTokenRequest $request): JsonResponse
+    {
+        $tokens = $this->tokenService->rotateRefreshToken(
+            $request->validated('refreshToken'),
+        );
+
+        if ($tokens === null) {
+            return MobileApiResponse::error(
+                'invalid_refresh_token',
+                'The refresh token is invalid or expired.',
+                null,
+                401,
+            );
+        }
+
+        return MobileApiResponse::success($tokens, 'Token refreshed successfully.');
+    }
+
+    /**
      * Request a password reset code.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
      *
      * @response array{success: bool, message: string, data: array{resetCodeSent: bool}, error: null, meta: array}
      */
@@ -124,6 +162,9 @@ class AuthController extends Controller
     /**
      * Verify a password reset code.
      *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit reset code.
+     *
      * @response array{success: bool, message: string, data: array{resetCodeVerified: bool}, error: null, meta: array}
      */
     public function verifyResetCode(VerifyResetCodeRequest $request): JsonResponse
@@ -143,6 +184,13 @@ class AuthController extends Controller
     /**
      * Reset a mobile account password.
      *
+     * A successful reset revokes all existing API sessions for the account.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit reset code.
+     * @bodyParam password string required The new password.
+     * @bodyParam password_confirmation string required Confirmation of the new password.
+     *
      * @response array{success: bool, message: string, data: array{resetPasswordUpdated: bool}, error: null, meta: array}
      */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
@@ -154,11 +202,14 @@ class AuthController extends Controller
             return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
         }
 
-        $user->forceFill([
-            'password' => $validated['password'],
-        ])->save();
+        DB::transaction(function () use ($user, $validated): void {
+            $user->forceFill([
+                'password' => $validated['password'],
+            ])->save();
 
-        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            $user->tokens()->delete();
+            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+        });
 
         return MobileApiResponse::success([
             'resetPasswordUpdated' => true,
@@ -168,13 +219,18 @@ class AuthController extends Controller
     /**
      * Log out from the mobile API.
      *
-     * Requires a Sanctum bearer token and revokes the current access token.
+     * Requires a mobile access token and revokes both tokens belonging to the current session.
      *
      * @response array{success: bool, message: string, data: null, error: null, meta: array}
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()?->currentAccessToken()?->delete();
+        $user = $request->user();
+        $currentToken = $user?->currentAccessToken();
+
+        if ($user instanceof User && $currentToken instanceof PersonalAccessToken) {
+            $this->tokenService->revokeTokenSession($user, $currentToken);
+        }
 
         return MobileApiResponse::success(null, 'Logged out successfully.');
     }
