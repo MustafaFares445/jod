@@ -20,7 +20,6 @@ return new class extends Migration
                 ['distribution_batch_id', 'recipient_id'],
                 'notifications_distribution_recipient_unique',
             );
-            $table->index('source_notification_id');
         });
     }
 
@@ -28,7 +27,6 @@ return new class extends Migration
     {
         Schema::table('notifications', function (Blueprint $table): void {
             $table->dropUnique('notifications_distribution_recipient_unique');
-            $table->dropIndex(['source_notification_id']);
             $table->dropForeign(['source_notification_id']);
             $table->dropColumn(['distribution_batch_id', 'source_notification_id']);
         });
