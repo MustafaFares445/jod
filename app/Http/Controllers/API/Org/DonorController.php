@@ -10,8 +10,8 @@ use App\Http\Requests\Org\DonorRequest;
 use App\Http\Resources\DonorResource;
 use App\Models\Donation;
 use App\Services\DonorService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
 class DonorController extends Controller
@@ -60,13 +60,13 @@ class DonorController extends Controller
         return DonorResource::make($donor);
     }
 
-    public function destroy(Donation $donor): Response
+    public function destroy(Donation $donor): JsonResponse
     {
         $this->authorize('delete', $donor);
 
         $donor->delete();
 
-        return response()->noContent();
+        return response()->json(['message' => 'Data deleted successfully.']);
     }
 
     private function organizationId(): string
