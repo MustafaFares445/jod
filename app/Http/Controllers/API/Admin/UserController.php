@@ -96,7 +96,7 @@ class UserController extends Controller
 
     public function updatePassword(Request $request, User $user): UserResource
     {
-        $this->authorize('resetPassword');
+        $this->authorize('resetPassword', User::class);
 
         $request->validate([
             'newPassword' => ['required', 'string', 'min:8', 'confirmed'],
