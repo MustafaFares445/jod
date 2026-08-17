@@ -97,6 +97,138 @@ test('post publish archive restore transitions', function () {
         ->assertOk()
         ->assertJsonPath('data.status', 'draft');
 });
+test('campaign contract matches dashboard request props response envelope and sorting', function () {
+    $lower = Campaign::query()->create([
+        'organization_id' => $this->organization->id,
+        'title' => 'Lower Raised',
+        'summary' => 'Lower raised amount.',
+        'category' => 'health',
+        'status' => 'draft',
+        'location' => 'Riyadh',
+        'goal_amount' => 5000,
+        'raised_amount' => 100,
+        'beneficiaries_count' => 5,
+        'start_date' => '2026-09-01',
+        'end_date' => '2026-10-01',
+    ]);
+
+    $higher = Campaign::query()->create([
+        'organization_id' => $this->organization->id,
+        'title' => 'Higher Raised',
+        'summary' => 'Higher raised amount.',
+        'category' => 'education',
+        'status' => 'draft',
+        'location' => 'Jeddah',
+        'goal_amount' => 5000,
+        'raised_amount' => 900,
+        'beneficiaries_count' => 8,
+        'start_date' => '2026-09-01',
+        'end_date' => '2026-10-01',
+    ]);
+
+    $this->getJson('/api/v1/org/campaigns?perPage=2&sort=-raisedAmount')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $higher->id)
+        ->assertJsonPath('data.1.id', $lower->id)
+        ->assertJsonPath('meta.per_page', 2)
+        ->assertJsonPath('message', 'Data retrieved successfully.')
+        ->assertJsonStructure([
+            'data' => [[
+                'id', 'title', 'summary', 'category', 'status', 'location',
+                'goalAmount', 'raisedAmount', 'beneficiariesCount', 'donorsCount',
+                'applicantsCount', 'startDate', 'endDate', 'createdAt', 'updatedAt',
+            ]],
+            'links' => ['first', 'last', 'prev', 'next'],
+            'meta',
+            'message',
+        ]);
+
+    $createPayload = [
+        'title' => 'Dashboard Campaign',
+        'summary' => 'Created with the exact dashboard CampaignCreateRequest shape.',
+        'category' => 'food',
+        'status' => 'draft',
+        'location' => 'Amman',
+        'goalAmount' => 12000,
+        'beneficiariesCount' => 24,
+        'startDate' => '2026-09-10T00:00:00',
+        'endDate' => '2026-10-10T00:00:00',
+    ];
+
+    $createdResponse = $this->postJson('/api/v1/org/campaigns', $createPayload)
+        ->assertCreated()
+        ->assertJsonPath('data.title', 'Dashboard Campaign')
+        ->assertJsonPath('data.status', 'draft')
+        ->assertJsonPath('data.goalAmount', 12000.0)
+        ->assertJsonPath('message', 'Data created successfully.');
+
+    $campaignId = $createdResponse->json('data.id');
+
+    // The edit page always sends status, even when it is unchanged.
+    $this->patchJson("/api/v1/org/campaigns/{$campaignId}", [
+        'title' => 'Dashboard Campaign Updated',
+        'summary' => 'Exact full edit-page payload.',
+        'category' => 'food',
+        'status' => 'draft',
+        'location' => 'Amman',
+        'goalAmount' => 15000,
+        'beneficiariesCount' => 30,
+        'startDate' => '2026-09-11T00:00:00',
+        'endDate' => '2026-10-11T00:00:00',
+    ])->assertOk()
+        ->assertJsonPath('data.title', 'Dashboard Campaign Updated')
+        ->assertJsonPath('data.status', 'draft')
+        ->assertJsonPath('message', 'Data updated successfully.');
+
+    // CampaignUpdateRequest is partial and status transitions still obey lifecycle rules.
+    $this->patchJson("/api/v1/org/campaigns/{$campaignId}", ['status' => 'active'])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'active')
+        ->assertJsonPath('data.title', 'Dashboard Campaign Updated');
+});
+test('post contract accepts the exact dashboard edit body and partial status updates', function () {
+    $createPayload = [
+        'title' => 'Dashboard Post',
+        'summary' => 'Created with the exact dashboard PostCreateRequest shape.',
+        'type' => 'general',
+        'status' => 'draft',
+        'authorName' => 'Dashboard Editor',
+        'location' => 'Amman',
+    ];
+
+    $createdResponse = $this->postJson('/api/v1/org/posts', $createPayload)
+        ->assertCreated()
+        ->assertJsonPath('data.title', 'Dashboard Post')
+        ->assertJsonPath('data.status', 'draft')
+        ->assertJsonPath('message', 'Data created successfully.')
+        ->assertJsonStructure([
+            'data' => [
+                'id', 'title', 'summary', 'type', 'status', 'authorName', 'location',
+                'createdAt', 'updatedAt', 'viewsCount', 'reactionsCount', 'applicationsCount',
+            ],
+            'message',
+        ]);
+
+    $postId = $createdResponse->json('data.id');
+
+    $this->patchJson("/api/v1/org/posts/{$postId}", [
+        'title' => 'Dashboard Post Updated',
+        'summary' => 'Exact full edit-page payload.',
+        'type' => 'general',
+        'status' => 'draft',
+        'authorName' => 'Dashboard Editor',
+        'location' => 'Zarqa',
+    ])->assertOk()
+        ->assertJsonPath('data.title', 'Dashboard Post Updated')
+        ->assertJsonPath('data.status', 'draft')
+        ->assertJsonPath('message', 'Data updated successfully.');
+
+    // PostUpdateRequest is partial; publishing from PATCH must preserve the other props.
+    $this->patchJson("/api/v1/org/posts/{$postId}", ['status' => 'published'])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.title', 'Dashboard Post Updated');
+});
 test('donor contract matches dashboard request props, filtering, pagination and partial updates', function () {
     Donation::query()->create([
         'organization_id' => $this->organization->id,
