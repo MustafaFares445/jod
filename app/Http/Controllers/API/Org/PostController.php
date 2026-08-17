@@ -13,6 +13,7 @@ use App\Models\Post;
 use App\Services\PostService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class PostController extends Controller
@@ -51,13 +52,45 @@ class PostController extends Controller
     {
         $this->authorize('updateOrganization', $post);
 
-        $post = $this->service->update(
-            $post,
-            PostData::from($request->validated()),
-            $this->organizationId(),
-        );
+        $validated = $request->validated();
 
-        return PostResource::make($post);
+        return DB::transaction(function () use ($post, $validated): PostResource {
+            $requestedStatus = array_key_exists('status', $validated)
+                ? (string) $validated['status']
+                : null;
+            $type = (string) ($validated['type'] ?? $post->type);
+            $campaignRelatedTypes = ['campaign_teaser', 'campaign_update', 'campaign_summary'];
+            $campaignTitle = array_key_exists('campaignTitle', $validated)
+                ? $validated['campaignTitle']
+                : (in_array($type, $campaignRelatedTypes, true) ? $post->campaign?->title : null);
+
+            $post = $this->service->update(
+                $post,
+                PostData::from([
+                    'title' => $validated['title'] ?? $post->title,
+                    'summary' => $validated['summary'] ?? $post->summary,
+                    'type' => $type,
+                    'status' => $post->status,
+                    'authorName' => $validated['authorName'] ?? $post->author_name,
+                    'location' => $validated['location'] ?? $post->location,
+                    'campaignTitle' => $campaignTitle,
+                ]),
+                $this->organizationId(),
+            );
+
+            if ($requestedStatus !== null && $requestedStatus !== $post->status) {
+                $ability = match ($requestedStatus) {
+                    'published' => 'publishOrganization',
+                    'archived' => 'archiveOrganization',
+                    'draft' => 'restoreOrganization',
+                };
+
+                $this->authorize($ability, $post);
+                $post = $this->service->updateStatus($post, $requestedStatus);
+            }
+
+            return PostResource::make($post->refresh());
+        });
     }
 
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
