@@ -19,9 +19,10 @@ class UserFilterRequest extends FormRequest
         return [
             'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'page' => ['sometimes', 'integer', 'min:1'],
-            'sort' => ['sometimes', 'string'],
+            'sort' => ['sometimes', 'string', Rule::in('createdAt', '-createdAt', 'name', '-name')],
             'sortBy' => ['sometimes', 'string'],
             'filter.status' => ['sometimes', 'string', Rule::in('active', 'inactive')],
+            'filter.userType' => ['sometimes', 'string', Rule::in('general', 'volunteer', 'job_seeker', 'donor')],
             'filter.role' => ['sometimes', 'string', Rule::in('general', 'volunteer', 'job_seeker', 'donor')],
             'filter.search' => ['sometimes', 'string', 'max:255'],
             'search' => ['sometimes', 'string', 'max:255'],
