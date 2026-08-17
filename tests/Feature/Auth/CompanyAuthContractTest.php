@@ -68,12 +68,12 @@ test('company registration accepts the exact dashboard request props and returns
     ]);
 });
 
-test('company registration reports validation errors using dashboard field names', function (string $field, mixed $value = null) {
+test('company registration reports validation errors using dashboard field names', function (string $field, mixed $value = null, ?string $errorField = null) {
     $payload = dashboard_company_registration_payload([$field => $value]);
 
     $this->postJson('/api/v1/company/auth/register', $payload)
         ->assertStatus(422)
-        ->assertJsonValidationErrors([$field]);
+        ->assertJsonValidationErrors([$errorField ?? $field]);
 })->with([
     'companyName is required' => ['companyName'],
     'companyEmail must be an email' => ['companyEmail', 'not-an-email'],
@@ -84,7 +84,7 @@ test('company registration reports validation errors using dashboard field names
     'ownerName is required' => ['ownerName'],
     'ownerEmail must be an email' => ['ownerEmail', 'not-an-email'],
     'ownerPhone is required' => ['ownerPhone'],
-    'password confirmation must match' => ['password_confirmation', 'different-password'],
+    'password confirmation must match' => ['password_confirmation', 'different-password', 'password'],
     'website must be a URL' => ['website', 'not-a-url'],
     'establishmentDate cannot be in the future' => ['establishmentDate', '2099-01-01'],
 ]);
