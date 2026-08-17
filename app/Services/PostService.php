@@ -205,8 +205,8 @@ class PostService
             return $relations;
         }
 
-        $relations['saves'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
-        $relations['campaignApplications'] = static fn (Builder $builder) => $builder->where('created_by', $viewer->id);
+        $relations['saves'] = static fn ($relation) => $relation->where('user_id', $viewer->id);
+        $relations['campaignApplications'] = static fn ($relation) => $relation->where('created_by', $viewer->id);
 
         return $relations;
     }
