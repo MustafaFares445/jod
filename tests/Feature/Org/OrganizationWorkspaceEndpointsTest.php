@@ -159,7 +159,7 @@ test('campaign contract matches dashboard request props response envelope and so
         ->assertCreated()
         ->assertJsonPath('data.title', 'Dashboard Campaign')
         ->assertJsonPath('data.status', 'draft')
-        ->assertJsonPath('data.goalAmount', 12000.0)
+        ->assertJsonPath('data.goalAmount', 12000)
         ->assertJsonPath('message', 'Data created successfully.');
 
     $campaignId = $createdResponse->json('data.id');
@@ -200,6 +200,7 @@ test('post contract accepts the exact dashboard edit body and partial status upd
         ->assertCreated()
         ->assertJsonPath('data.title', 'Dashboard Post')
         ->assertJsonPath('data.status', 'draft')
+        ->assertJsonPath('data.authorName', 'Dashboard Editor')
         ->assertJsonPath('message', 'Data created successfully.')
         ->assertJsonStructure([
             'data' => [
@@ -221,13 +222,15 @@ test('post contract accepts the exact dashboard edit body and partial status upd
     ])->assertOk()
         ->assertJsonPath('data.title', 'Dashboard Post Updated')
         ->assertJsonPath('data.status', 'draft')
+        ->assertJsonPath('data.authorName', 'Dashboard Editor')
         ->assertJsonPath('message', 'Data updated successfully.');
 
     // PostUpdateRequest is partial; publishing from PATCH must preserve the other props.
     $this->patchJson("/api/v1/org/posts/{$postId}", ['status' => 'published'])
         ->assertOk()
         ->assertJsonPath('data.status', 'published')
-        ->assertJsonPath('data.title', 'Dashboard Post Updated');
+        ->assertJsonPath('data.title', 'Dashboard Post Updated')
+        ->assertJsonPath('data.authorName', 'Dashboard Editor');
 });
 test('donor contract matches dashboard request props, filtering, pagination and partial updates', function () {
     Donation::query()->create([
