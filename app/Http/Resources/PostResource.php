@@ -19,7 +19,7 @@ class PostResource extends JsonResource
             'type' => $this->type,
             'status' => $this->status,
             'organizationName' => $this->organization?->name,
-            'authorName' => $this->author_name,
+            'authorName' => (string) ($this->author_name ?? $this->author?->name ?? ''),
             'location' => $this->location,
             'campaignTitle' => $this->whenLoaded('campaign', fn () => $this->campaign?->title, $this->campaign?->title),
             'images' => $this->relationLoaded('images')
