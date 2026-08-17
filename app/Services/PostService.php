@@ -284,7 +284,7 @@ class PostService
         if ($viewer) {
             $relations['likes'] = fn ($query) => $query->where('user_id', $viewer->id);
             $relations['saves'] = fn ($query) => $query->where('user_id', $viewer->id);
-            $relations['campaignApplications'] = fn ($query) => $query->where('user_id', $viewer->id);
+            $relations['campaignApplications'] = fn ($query) => $query->where('created_by', $viewer->id);
         }
 
         return $relations;
