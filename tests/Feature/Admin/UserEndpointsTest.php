@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 use App\Enums\PermissionAction;
@@ -128,5 +127,5 @@ test('admin user mutations match dashboard request props and response contracts'
         ->assertOk()
         ->assertJsonPath('message', 'Data deleted successfully.');
 
-    $this->assertSoftDeleted('users', ['id' => $userId]);
+    $this->assertDatabaseMissing('users', ['id' => $userId]);
 });
