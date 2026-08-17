@@ -49,8 +49,8 @@ class ApplicantService
             'email' => $attributes['email'],
             'phone' => $attributes['phone'] ?? null,
             'campaign_title' => $attributes['campaignTitle'],
-            'applicant_status' => $attributes['applicantStatus'],
-            'applied_at' => $attributes['appliedAt'],
+            'applicant_status' => $attributes['applicantStatus'] ?? $attributes['amountOrType'] ?? 'pending',
+            'applied_at' => $attributes['appliedAt'] ?? now(),
             'city' => $attributes['city'] ?? null,
             'source' => $attributes['source'] ?? null,
             'campaign_ref' => $attributes['campaignRef'] ?? null,
@@ -63,21 +63,36 @@ class ApplicantService
 
     public function update(CampaignApplication $application, array $attributes, string $organizationId): CampaignApplication
     {
-        $application->update([
-            'campaign_id' => $this->resolveCampaignId($attributes['campaignTitle'], $organizationId),
-            'name' => $attributes['name'],
-            'email' => $attributes['email'],
-            'phone' => $attributes['phone'] ?? null,
-            'campaign_title' => $attributes['campaignTitle'],
-            'applicant_status' => $attributes['applicantStatus'],
-            'applied_at' => $attributes['appliedAt'],
-            'city' => $attributes['city'] ?? null,
-            'source' => $attributes['source'] ?? null,
-            'campaign_ref' => $attributes['campaignRef'] ?? null,
-            'assigned_to' => $attributes['assignedTo'] ?? null,
-            'internal_notes' => $attributes['internalNotes'] ?? null,
-            'request_type' => $attributes['requestType'] ?? null,
-        ]);
+        $updates = [];
+
+        foreach ([
+            'name' => 'name',
+            'email' => 'email',
+            'phone' => 'phone',
+            'applicantStatus' => 'applicant_status',
+            'appliedAt' => 'applied_at',
+            'city' => 'city',
+            'source' => 'source',
+            'campaignRef' => 'campaign_ref',
+            'assignedTo' => 'assigned_to',
+            'internalNotes' => 'internal_notes',
+            'requestType' => 'request_type',
+        ] as $requestKey => $column) {
+            if (array_key_exists($requestKey, $attributes)) {
+                $updates[$column] = $attributes[$requestKey];
+            }
+        }
+
+        if (array_key_exists('amountOrType', $attributes) && ! array_key_exists('applicantStatus', $attributes)) {
+            $updates['applicant_status'] = $attributes['amountOrType'];
+        }
+
+        if (array_key_exists('campaignTitle', $attributes)) {
+            $updates['campaign_title'] = $attributes['campaignTitle'];
+            $updates['campaign_id'] = $this->resolveCampaignId($attributes['campaignTitle'], $organizationId);
+        }
+
+        $application->update($updates);
 
         return $application;
     }
