@@ -24,7 +24,7 @@ class PostRequest extends FormRequest
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
             'type' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary'])],
-            'status' => [$isUpdate ? 'prohibited' : 'sometimes', Rule::in(['draft'])],
+            'status' => ['sometimes', Rule::in($isUpdate ? ['draft', 'published', 'archived'] : ['draft'])],
             'authorName' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'campaignTitle' => [
