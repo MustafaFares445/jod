@@ -86,7 +86,7 @@ class PostService
         $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Post::query()
-            ->with(['campaign', 'images'])
+            ->with(['campaign', 'images', 'author'])
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
@@ -194,88 +194,17 @@ class PostService
         $post->delete();
     }
 
-    /**
-     * @return array<int|string, mixed>
-     */
-    private function mobileRelations(?User $viewer): array
+    private function transitionStatus(Post $post, string $from, array $attributes, string $message): Post
     {
-        $relations = ['organization', 'campaign', 'author', 'images'];
-
-        if ($viewer === null) {
-            return $relations;
-        }
-
-        $relations['saves'] = static fn ($builder) => $builder->where('user_id', $viewer->id);
-        $relations['campaignApplications'] = static fn ($builder) => $builder->where('created_by', $viewer->id);
-
-        return $relations;
-    }
-
-    private function applyActionStateFilter(Builder $query, string $state, ?User $viewer): void
-    {
-        if ($state === 'submitted') {
-            if ($viewer === null) {
-                $query->whereRaw('1 = 0');
-
-                return;
-            }
-
-            $query->where('type', 'volunteer_opportunity')
-                ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'))
-                ->whereHas(
-                    'campaignApplications',
-                    fn (Builder $application) => $application->where('created_by', $viewer->id),
-                );
-
-            return;
-        }
-
-        if ($state === 'closed') {
-            $query->whereIn('type', ['volunteer_opportunity', 'donation_campaign'])
-                ->where(function (Builder $campaignState): void {
-                    $campaignState->whereDoesntHave('campaign')
-                        ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
-                });
-
-            return;
-        }
-
-        $query->where(function (Builder $interactive) use ($viewer): void {
-            $interactive->where(function (Builder $donation): void {
-                $donation->where('type', 'donation_campaign')
-                    ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
-            })->orWhere(function (Builder $volunteer) use ($viewer): void {
-                $volunteer->where('type', 'volunteer_opportunity')
-                    ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
-
-                if ($viewer !== null) {
-                    $volunteer->whereDoesntHave(
-                        'campaignApplications',
-                        fn (Builder $application) => $application->where('created_by', $viewer->id),
-                    );
-                }
-            });
-        });
-    }
-
-    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
-    {
-        if (! $campaignTitle) {
-            return null;
-        }
-
-        $campaignId = Campaign::query()
-            ->where('organization_id', $organizationId)
-            ->where('title', $campaignTitle)
-            ->value('id');
-
-        if ($campaignId === null) {
+        if ($post->status !== $from) {
             throw ValidationException::withMessages([
-                'campaignTitle' => ['Selected campaign does not belong to the organization.'],
+                'status' => [$message],
             ]);
         }
 
-        return (string) $campaignId;
+        $post->update($attributes);
+
+        return $post->refresh();
     }
 
     private function normalizeSort(array $params): string
@@ -292,9 +221,7 @@ class PostService
             return $sort;
         }
 
-        $sortBy = (string) ($params['sortBy'] ?? '');
-
-        return match ($sortBy) {
+        return match ((string) ($params['sortBy'] ?? '')) {
             'updated_oldest' => 'updatedAt',
             'title_asc' => 'title',
             'title_desc' => '-title',
@@ -302,9 +229,6 @@ class PostService
         };
     }
 
-    /**
-     * @param  array{sort?: string|null, sortBy?: string|null}  $params
-     */
     private function normalizeDiscoverySort(array $params): string
     {
         $sort = (string) ($params['sort'] ?? '');
@@ -312,13 +236,8 @@ class PostService
             return $sort;
         }
 
-        $sortBy = (string) ($params['sortBy'] ?? '');
-
-        return match ($sortBy) {
-            'title_asc' => 'title',
-            'title_desc' => '-title',
-            'updated_oldest' => 'updatedAt',
-            'newest' => 'newest',
+        return match ((string) ($params['sortBy'] ?? '')) {
+            'oldest' => 'updatedAt',
             'most_engaged' => 'most_engaged',
             default => 'newest',
         };
@@ -338,26 +257,36 @@ class PostService
         return data_get($params, $key);
     }
 
-    /**
-     * @param  array{status: string, published_at?: mixed}  $attributes
-     */
-    private function transitionStatus(Post $post, string $expectedStatus, array $attributes, string $message): Post
+    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
     {
-        return DB::transaction(function () use ($post, $expectedStatus, $attributes, $message): Post {
-            $lockedPost = Post::query()
-                ->whereKey($post->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
+        if (! $campaignTitle) {
+            return null;
+        }
 
-            if ($lockedPost->status !== $expectedStatus) {
-                throw ValidationException::withMessages([
-                    'status' => [$message],
-                ]);
-            }
+        $campaign = Campaign::query()
+            ->where('organization_id', $organizationId)
+            ->where('title', $campaignTitle)
+            ->first();
 
-            $lockedPost->update($attributes);
+        if (! $campaign) {
+            throw ValidationException::withMessages([
+                'campaignTitle' => ['The selected campaign does not exist for your organization.'],
+            ]);
+        }
 
-            return $lockedPost;
-        });
+        return $campaign->id;
+    }
+
+    private function mobileRelations(?User $viewer): array
+    {
+        $relations = ['organization', 'category', 'campaign', 'author', 'images'];
+
+        if ($viewer) {
+            $relations['likes'] = fn ($query) => $query->where('user_id', $viewer->id);
+            $relations['saves'] = fn ($query) => $query->where('user_id', $viewer->id);
+            $relations['campaignApplications'] = fn ($query) => $query->where('user_id', $viewer->id);
+        }
+
+        return $relations;
     }
 }
