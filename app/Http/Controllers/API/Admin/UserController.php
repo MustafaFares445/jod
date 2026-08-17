@@ -11,6 +11,7 @@ use App\Http\Requests\Users\UserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -23,15 +24,29 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = User::query()
-            ->when($request->get('filter.status'), fn ($q) => $q->where('status', $request->get('filter.status')))
-            ->when($request->get('filter.role'), fn ($q) => $q->where('user_type', $request->get('filter.role')))
-            ->when($request->get('filter.search') ?? $request->get('search'), fn ($q) => $q->where('name', 'LIKE', '%' . ($request->get('filter.search') ?? $request->get('search')) . '%')
-                ->orWhere('email', 'LIKE', '%' . ($request->get('filter.search') ?? $request->get('search')) . '%'))
-            ->orderByDesc('created_at')
-            ->paginate($request->get('perPage', 20));
+        $status = $request->input('filter.status');
+        $userType = $request->input('filter.userType') ?? $request->input('filter.role');
+        $search = $request->input('filter.search') ?? $request->input('search');
+        $sort = (string) $request->input('sort', '-createdAt');
 
-        return UserResource::collection($users);
+        $users = User::query()
+            ->when($status, fn (Builder $query, string $value) => $query->where('status', $value))
+            ->when($userType, fn (Builder $query, string $value) => $query->where('user_type', $value))
+            ->when($search, function (Builder $query, string $value): void {
+                $query->where(function (Builder $searchQuery) use ($value): void {
+                    $searchQuery->where('name', 'LIKE', "%{$value}%")
+                        ->orWhere('email', 'LIKE', "%{$value}%");
+                });
+            });
+
+        match ($sort) {
+            'createdAt' => $users->orderBy('created_at'),
+            'name' => $users->orderBy('name'),
+            '-name' => $users->orderByDesc('name'),
+            default => $users->orderByDesc('created_at'),
+        };
+
+        return UserResource::collection($users->paginate((int) $request->input('perPage', 20)));
     }
 
     public function store(UserRequest $request): UserResource
