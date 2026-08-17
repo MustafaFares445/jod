@@ -19,12 +19,17 @@ class PostRequest extends FormRequest
         $campaignRelatedTypes = ['campaign_teaser', 'campaign_update', 'campaign_summary'];
         $isUpdate = $this->route('post') !== null;
         $organizationId = $this->user()?->organization_id;
+        $statusRules = ! $isUpdate
+            ? ['sometimes', Rule::in(['draft'])]
+            : ($this->isMethod('patch')
+                ? ['sometimes', Rule::in(['draft', 'published', 'archived'])]
+                : ['prohibited']);
 
         return [
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
             'type' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary'])],
-            'status' => ['sometimes', Rule::in($isUpdate ? ['draft', 'published', 'archived'] : ['draft'])],
+            'status' => $statusRules,
             'authorName' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'campaignTitle' => [
