@@ -36,6 +36,8 @@ class CampaignService
         match ($sort) {
             'updatedAt' => $query->orderBy('updated_at'),
             '-updatedAt' => $query->orderByDesc('updated_at'),
+            'raisedAmount' => $query->orderBy('raised_amount'),
+            '-raisedAmount' => $query->orderByDesc('raised_amount'),
             'progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END ASC'),
             '-progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END DESC'),
             default => $query->orderByDesc('updated_at'),
@@ -76,6 +78,8 @@ class CampaignService
         match ($sort) {
             'updatedAt' => $query->orderBy('updated_at'),
             '-updatedAt' => $query->orderByDesc('updated_at'),
+            'raisedAmount' => $query->orderBy('raised_amount'),
+            '-raisedAmount' => $query->orderByDesc('raised_amount'),
             'progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END ASC'),
             '-progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END DESC'),
             default => $query->orderByDesc('updated_at'),
