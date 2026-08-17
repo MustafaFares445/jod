@@ -17,12 +17,17 @@ class CampaignRequest extends FormRequest
     public function rules(): array
     {
         $isUpdate = $this->route('campaign') !== null;
+        $statusRules = ! $isUpdate
+            ? ['sometimes', Rule::in(['draft'])]
+            : ($this->isMethod('patch')
+                ? ['sometimes', Rule::in(['draft', 'active', 'closed'])]
+                : ['prohibited']);
 
         return [
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
             'category' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['health', 'education', 'food', 'shelter', 'employment'])],
-            'status' => ['sometimes', Rule::in($isUpdate ? ['draft', 'active', 'closed'] : ['draft'])],
+            'status' => $statusRules,
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'goalAmount' => [$isUpdate ? 'sometimes' : 'required', 'numeric', 'min:0'],
             'beneficiariesCount' => [$isUpdate ? 'sometimes' : 'required', 'integer', 'min:0'],
