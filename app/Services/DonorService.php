@@ -50,7 +50,7 @@ class DonorService
             'phone' => $attributes['phone'] ?? null,
             'campaign_title' => $attributes['campaignTitle'],
             'amount_or_type' => $attributes['amountOrType'],
-            'donated_at' => $attributes['donatedAt'],
+            'donated_at' => $attributes['donatedAt'] ?? now(),
             'city' => $attributes['city'] ?? null,
             'source' => $attributes['source'] ?? null,
             'payment_method' => $attributes['paymentMethod'] ?? null,
@@ -63,21 +63,32 @@ class DonorService
 
     public function update(Donation $donation, array $attributes, string $organizationId): Donation
     {
-        $donation->update([
-            'campaign_id' => $this->resolveCampaignId($attributes['campaignTitle'], $organizationId),
-            'name' => $attributes['name'],
-            'email' => $attributes['email'],
-            'phone' => $attributes['phone'] ?? null,
-            'campaign_title' => $attributes['campaignTitle'],
-            'amount_or_type' => $attributes['amountOrType'],
-            'donated_at' => $attributes['donatedAt'],
-            'city' => $attributes['city'] ?? null,
-            'source' => $attributes['source'] ?? null,
-            'payment_method' => $attributes['paymentMethod'] ?? null,
-            'campaign_ref' => $attributes['campaignRef'] ?? null,
-            'assigned_to' => $attributes['assignedTo'] ?? null,
-            'internal_notes' => $attributes['internalNotes'] ?? null,
-        ]);
+        $updates = [];
+
+        foreach ([
+            'name' => 'name',
+            'email' => 'email',
+            'phone' => 'phone',
+            'amountOrType' => 'amount_or_type',
+            'donatedAt' => 'donated_at',
+            'city' => 'city',
+            'source' => 'source',
+            'paymentMethod' => 'payment_method',
+            'campaignRef' => 'campaign_ref',
+            'assignedTo' => 'assigned_to',
+            'internalNotes' => 'internal_notes',
+        ] as $requestKey => $column) {
+            if (array_key_exists($requestKey, $attributes)) {
+                $updates[$column] = $attributes[$requestKey];
+            }
+        }
+
+        if (array_key_exists('campaignTitle', $attributes)) {
+            $updates['campaign_title'] = $attributes['campaignTitle'];
+            $updates['campaign_id'] = $this->resolveCampaignId($attributes['campaignTitle'], $organizationId);
+        }
+
+        $donation->update($updates);
 
         return $donation;
     }
