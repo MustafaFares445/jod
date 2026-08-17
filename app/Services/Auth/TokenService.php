@@ -70,7 +70,9 @@ final class TokenService
 
     public function isAccessToken(PersonalAccessToken $token): bool
     {
-        if (! str_starts_with($token->name, self::ACCESS_TOKEN_PREFIX)) {
+        $tokenName = $this->tokenName($token);
+
+        if ($tokenName === null || ! str_starts_with($tokenName, self::ACCESS_TOKEN_PREFIX)) {
             return false;
         }
 
@@ -134,11 +136,13 @@ final class TokenService
 
     private function isValidRefreshToken(?PersonalAccessToken $token, string $tokenSecret): bool
     {
-        if ($token === null || ! hash_equals($token->token, hash('sha256', $tokenSecret))) {
+        if ($token === null || ! is_string($token->token) || ! hash_equals($token->token, hash('sha256', $tokenSecret))) {
             return false;
         }
 
-        if (! str_starts_with($token->name, self::REFRESH_TOKEN_PREFIX)) {
+        $tokenName = $this->tokenName($token);
+
+        if ($tokenName === null || ! str_starts_with($tokenName, self::REFRESH_TOKEN_PREFIX)) {
             return false;
         }
 
@@ -151,14 +155,27 @@ final class TokenService
 
     private function sessionIdFromToken(PersonalAccessToken $token): ?string
     {
+        $tokenName = $this->tokenName($token);
+
+        if ($tokenName === null) {
+            return null;
+        }
+
         foreach ([self::ACCESS_TOKEN_PREFIX, self::REFRESH_TOKEN_PREFIX] as $prefix) {
-            if (str_starts_with($token->name, $prefix)) {
-                $sessionId = substr($token->name, strlen($prefix));
+            if (str_starts_with($tokenName, $prefix)) {
+                $sessionId = substr($tokenName, strlen($prefix));
 
                 return $sessionId !== '' ? $sessionId : null;
             }
         }
 
         return null;
+    }
+
+    private function tokenName(PersonalAccessToken $token): ?string
+    {
+        $name = $token->name;
+
+        return is_string($name) && $name !== '' ? $name : null;
     }
 }
