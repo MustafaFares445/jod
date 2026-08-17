@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'campaign_id',
     'category_id',
     'author_id',
+    'author_name',
     'rejection_reason',
     'views_count',
     'reactions_count',
