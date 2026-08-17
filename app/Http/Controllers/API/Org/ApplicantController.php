@@ -10,8 +10,8 @@ use App\Http\Requests\Org\ApplicantRequest;
 use App\Http\Resources\ApplicantResource;
 use App\Models\CampaignApplication;
 use App\Services\ApplicantService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
 class ApplicantController extends Controller
@@ -60,13 +60,13 @@ class ApplicantController extends Controller
         return ApplicantResource::make($applicant);
     }
 
-    public function destroy(CampaignApplication $applicant): Response
+    public function destroy(CampaignApplication $applicant): JsonResponse
     {
         $this->authorize('delete', $applicant);
 
         $applicant->delete();
 
-        return response()->noContent();
+        return response()->json(['message' => 'Data deleted successfully.']);
     }
 
     private function organizationId(): string
