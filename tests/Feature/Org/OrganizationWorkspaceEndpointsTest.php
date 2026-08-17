@@ -97,7 +97,7 @@ test('post publish archive restore transitions', function () {
         ->assertOk()
         ->assertJsonPath('data.status', 'draft');
 });
-test('donor crud and filtering', function () {
+test('donor contract matches dashboard request props, filtering, pagination and partial updates', function () {
     Donation::query()->create([
         'organization_id' => $this->organization->id,
         'name' => 'Donor A',
@@ -120,9 +120,13 @@ test('donor crud and filtering', function () {
         'created_by' => $this->user->id,
     ]);
 
-    $this->getJson('/api/v1/org/donors?filter.city=Riyadh')
+    // Axios serializes the dashboard filter object as filter[city]=Riyadh.
+    $this->getJson('/api/v1/org/donors?filter%5Bcity%5D=Riyadh&perPage=1&sort=name')
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.name', 'Donor A')
+        ->assertJsonPath('meta.per_page', 1)
+        ->assertJsonStructure(['data', 'links' => ['first', 'last', 'prev', 'next'], 'meta']);
 
     Campaign::factory()->create([
         'organization_id' => $this->organization->id,
@@ -130,30 +134,42 @@ test('donor crud and filtering', function () {
         'status' => 'active',
     ]);
 
+    // Exact DonorCreateRequest shape from the dashboard: no donatedAt prop.
     $createPayload = [
         'name' => 'Donor C',
         'email' => 'c@example.com',
         'phone' => '+966500000000',
         'campaignTitle' => 'Health Initiative',
         'amountOrType' => '1200',
-        'donatedAt' => now()->toIso8601String(),
         'city' => 'Riyadh',
+        'paymentMethod' => 'card',
+        'assignedTo' => 'Finance Team',
+        'internalNotes' => 'Created from dashboard contract test.',
     ];
 
-    $created = $this->postJson('/api/v1/org/donors', $createPayload)
+    $createdResponse = $this->postJson('/api/v1/org/donors', $createPayload)
         ->assertCreated()
-        ->json('data.id');
+        ->assertJsonPath('data.name', 'Donor C')
+        ->assertJsonPath('data.amountOrType', '1200')
+        ->assertJsonPath('data.paymentMethod', 'card');
 
+    $created = $createdResponse->json('data.id');
+    expect($createdResponse->json('data.donatedAt'))->not->toBeNull();
+
+    // DonorUpdateRequest is partial in the frontend and must work as PATCH.
     $this->patchJson("/api/v1/org/donors/{$created}", [
-        ...$createPayload,
         'name' => 'Donor C Updated',
-    ])->assertOk()->assertJsonPath('data.name', 'Donor C Updated');
+        'internalNotes' => 'Updated with a partial dashboard payload.',
+    ])->assertOk()
+        ->assertJsonPath('data.name', 'Donor C Updated')
+        ->assertJsonPath('data.email', 'c@example.com')
+        ->assertJsonPath('data.internalNotes', 'Updated with a partial dashboard payload.');
 
     $this->deleteJson("/api/v1/org/donors/{$created}")
         ->assertOk()
         ->assertJsonPath('message', 'Data deleted successfully.');
 });
-test('applicant filtering and crud', function () {
+test('applicant contract matches dashboard request props, filtering and partial updates', function () {
     CampaignApplication::query()->create([
         'organization_id' => $this->organization->id,
         'name' => 'Applicant A',
@@ -174,9 +190,12 @@ test('applicant filtering and crud', function () {
         'created_by' => $this->user->id,
     ]);
 
-    $this->getJson('/api/v1/org/applicants?filter.applicantStatus=approved')
+    $this->getJson('/api/v1/org/applicants?filter%5BapplicantStatus%5D=approved&perPage=1')
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.name', 'Applicant A')
+        ->assertJsonPath('meta.per_page', 1)
+        ->assertJsonStructure(['data', 'links' => ['first', 'last', 'prev', 'next'], 'meta']);
 
     Campaign::factory()->create([
         'organization_id' => $this->organization->id,
@@ -184,24 +203,37 @@ test('applicant filtering and crud', function () {
         'status' => 'active',
     ]);
 
+    // Exact ApplicantCreateRequest shape from the dashboard: no applicantStatus/appliedAt props.
     $payload = [
         'name' => 'Applicant C',
         'email' => 'cc@example.com',
         'phone' => '+966500000001',
         'campaignTitle' => 'Volunteer Program',
-        'applicantStatus' => 'under_review',
-        'appliedAt' => now()->toIso8601String(),
+        'amountOrType' => 'under_review',
+        'city' => 'Riyadh',
         'requestType' => 'field_volunteer',
+        'campaignRef' => 'VOL-2026',
+        'assignedTo' => 'Volunteer Team',
+        'internalNotes' => 'Created from dashboard contract test.',
     ];
 
-    $created = $this->postJson('/api/v1/org/applicants', $payload)
+    $createdResponse = $this->postJson('/api/v1/org/applicants', $payload)
         ->assertCreated()
-        ->json('data.id');
+        ->assertJsonPath('data.name', 'Applicant C')
+        ->assertJsonPath('data.amountOrType', 'under_review')
+        ->assertJsonPath('data.requestType', 'field_volunteer');
 
+    $created = $createdResponse->json('data.id');
+    expect($createdResponse->json('data.appliedAt'))->not->toBeNull();
+
+    // ApplicantUpdateRequest is partial in the frontend and uses amountOrType.
     $this->patchJson("/api/v1/org/applicants/{$created}", [
-        ...$payload,
-        'applicantStatus' => 'accepted',
-    ])->assertOk()->assertJsonPath('data.applicantStatus', 'accepted');
+        'amountOrType' => 'accepted',
+        'assignedTo' => 'Senior Volunteer Team',
+    ])->assertOk()
+        ->assertJsonPath('data.amountOrType', 'accepted')
+        ->assertJsonPath('data.email', 'cc@example.com')
+        ->assertJsonPath('data.assignedTo', 'Senior Volunteer Team');
 
     $this->deleteJson("/api/v1/org/applicants/{$created}")
         ->assertOk()
