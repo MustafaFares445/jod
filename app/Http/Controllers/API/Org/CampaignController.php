@@ -14,6 +14,7 @@ use App\Models\Campaign;
 use App\Services\CampaignService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class CampaignController extends Controller
@@ -52,12 +53,38 @@ class CampaignController extends Controller
     {
         $this->authorize('updateOrganization', $campaign);
 
-        $campaign = $this->service->update(
-            $campaign,
-            CampaignData::from($request->validated()),
-        );
+        $validated = $request->validated();
 
-        return CampaignResource::make($campaign);
+        return DB::transaction(function () use ($campaign, $validated): CampaignResource {
+            $requestedStatus = array_key_exists('status', $validated)
+                ? (string) $validated['status']
+                : null;
+
+            $campaign = $this->service->update(
+                $campaign,
+                CampaignData::from([
+                    'title' => $validated['title'] ?? $campaign->title,
+                    'summary' => $validated['summary'] ?? $campaign->summary,
+                    'category' => $validated['category'] ?? $campaign->category,
+                    'status' => $campaign->status,
+                    'location' => $validated['location'] ?? $campaign->location,
+                    'goalAmount' => $validated['goalAmount'] ?? (float) $campaign->goal_amount,
+                    'beneficiariesCount' => $validated['beneficiariesCount'] ?? (int) $campaign->beneficiaries_count,
+                    'startDate' => $validated['startDate'] ?? $campaign->start_date?->toDateString(),
+                    'endDate' => $validated['endDate'] ?? $campaign->end_date?->toDateString(),
+                ]),
+            );
+
+            if ($requestedStatus !== null && $requestedStatus !== $campaign->status) {
+                if ($requestedStatus === 'closed') {
+                    $this->authorize('closeOrganization', $campaign);
+                }
+
+                $campaign = $this->service->updateStatus($campaign, $requestedStatus);
+            }
+
+            return CampaignResource::make($campaign->refresh());
+        });
     }
 
     public function updateStatus(CampaignStatusRequest $request, Campaign $campaign): CampaignResource
