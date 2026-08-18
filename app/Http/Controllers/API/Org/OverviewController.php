@@ -8,13 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Services\OrganizationOverviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class OverviewController extends Controller
 {
     public function __invoke(Request $request, OrganizationOverviewService $service): JsonResponse
     {
-        $this->authorize('viewAny', 'org-dashboard');
+        Gate::authorize('org-dashboard');
         $organization = $request->user()->organization;
 
         if ($organization === null) {
