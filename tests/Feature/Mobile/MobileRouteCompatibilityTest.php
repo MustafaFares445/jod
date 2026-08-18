@@ -14,6 +14,8 @@ test('existing mobile route names and paths remain registered', function () {
         'mobile.discovery.posts.show' => ['GET', 'api/mobile/discovery/posts/{post}'],
         'mobile.discovery.campaigns' => ['GET', 'api/mobile/discovery/campaigns'],
         'mobile.discovery.campaigns.show' => ['GET', 'api/mobile/discovery/campaigns/{campaign}'],
+        'mobile.discovery.articles' => ['GET', 'api/mobile/discovery/articles'],
+        'mobile.discovery.articles.show' => ['GET', 'api/mobile/discovery/articles/{article}'],
         'mobile.discovery.categories' => ['GET', 'api/mobile/discovery/categories'],
         'mobile.me.profile' => ['GET', 'api/mobile/me'],
         'mobile.me.profile.update' => ['PATCH', 'api/mobile/me/profile'],
@@ -49,6 +51,8 @@ test('public discovery routes are throttled', function () {
         'mobile.discovery.posts.show',
         'mobile.discovery.campaigns',
         'mobile.discovery.campaigns.show',
+        'mobile.discovery.articles',
+        'mobile.discovery.articles.show',
         'mobile.discovery.categories',
     ];
 

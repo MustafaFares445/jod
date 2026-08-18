@@ -8,10 +8,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\CampaignDiscoveryRequest;
 use App\Http\Requests\Mobile\CategoryDiscoveryRequest;
 use App\Http\Requests\Mobile\PostDiscoveryRequest;
+use App\Http\Resources\ArticleResource;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\Mobile\MobileCampaignResource;
 use App\Http\Resources\Mobile\MobileHomePostResource;
 use App\Http\Resources\Mobile\MobilePublisherResource;
+use App\Models\Article;
 use App\Models\User;
 use App\Services\CampaignService;
 use App\Services\CategoryService;
@@ -141,6 +143,58 @@ class DiscoveryController extends Controller
         return MobileApiResponse::success(
             MobileCampaignResource::make($model)->resolve($request),
             'Campaign retrieved successfully.',
+            $this->viewerMeta($viewer),
+        );
+    }
+
+    /**
+     * List published articles for mobile discovery.
+     */
+    public function articles(Request $request): JsonResponse
+    {
+        $perPage = max(1, min((int) $request->query('perPage', 20), 100));
+        $search = (string) $request->query('search', '');
+        $viewer = $this->viewer($request);
+
+        $paginator = Article::query()
+            ->where('status', 'published')
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($inner) use ($search): void {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('excerpt', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+
+        return MobileApiResponse::paginated(
+            $paginator->through(fn (Article $article) => ArticleResource::make($article)->resolve($request)),
+            'Articles retrieved successfully.',
+            $this->viewerMeta($viewer),
+        );
+    }
+
+    /**
+     * Show one published article for mobile discovery.
+     */
+    public function showArticle(Request $request, string $article): JsonResponse
+    {
+        $model = Article::query()
+            ->whereKey($article)
+            ->where('status', 'published')
+            ->first();
+
+        if ($model === null) {
+            return MobileApiResponse::error('not_found', 'The requested article could not be found.', null, 404);
+        }
+
+        $viewer = $this->viewer($request);
+
+        return MobileApiResponse::success(
+            ArticleResource::make($model)->resolve($request),
+            'Article retrieved successfully.',
             $this->viewerMeta($viewer),
         );
     }

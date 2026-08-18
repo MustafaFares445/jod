@@ -97,7 +97,7 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('platform-settings', SettingsController::class.'@update');
     });
 
-    Route::prefix('v1/org')->group(function () {
+    Route::prefix('v1/org')->middleware('org-active')->group(function () {
         Route::get('overview', App\Http\Controllers\API\Org\OverviewController::class);
         Route::get('dashboard/overview', App\Http\Controllers\API\Org\OverviewController::class);
 
