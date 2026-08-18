@@ -83,7 +83,9 @@ test('remove staff member', function () {
     $response = $this->actingAs($this->owner)
         ->deleteJson("/api/v1/org/staff/{$staff->id}");
 
-    $response->assertNoContent();
+    $response->assertOk()
+        ->assertJsonPath('statusCode', 200)
+        ->assertJsonPath('item', null);
     $this->assertDatabaseMissing('organization_staff', ['id' => $staff->id]);
 });
 test('staff role must belong to the same organization', function () {
