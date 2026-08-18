@@ -198,7 +198,7 @@ class CampaignService
         return [
             'organization',
             'creator',
-            'posts' => static fn (Builder $builder) => $builder
+            'posts' => static fn ($relation) => $relation
                 ->where('status', 'published')
                 ->orderByDesc('published_at')
                 ->orderByDesc('created_at')

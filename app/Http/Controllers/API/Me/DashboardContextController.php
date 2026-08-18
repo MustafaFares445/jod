@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API\Me;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\Notification;
 use App\Models\OrganizationStaff;
 use App\Models\Post;
 use App\Models\Report;
@@ -80,11 +81,15 @@ class DashboardContextController extends Controller
         return $membership->isOwner() ? 'org_owner' : 'org_staff';
     }
 
-    /** @return array{pendingReviews: int, openReports: int} */
+    /** @return array{unreadNotifications: int, pendingReviews: int, openReports: int} */
     private function counters(User $user): array
     {
         if ($user->user_type === 'admin') {
             return [
+                'unreadNotifications' => Notification::query()
+                    ->where('mailbox', 'inbox')
+                    ->where('status', 'unread')
+                    ->count(),
                 'pendingReviews' => Post::query()->where('status', 'pending')->count()
                     + Campaign::query()->where('status', 'pending')->count(),
                 'openReports' => Report::query()
@@ -96,6 +101,19 @@ class DashboardContextController extends Controller
         $organizationId = (string) $user->organization_id;
 
         return [
+            'unreadNotifications' => Notification::query()
+                ->where('mailbox', 'inbox')
+                ->where('status', 'unread')
+                ->where(function ($query) use ($user, $organizationId): void {
+                    $query->where(function ($inner) use ($user): void {
+                        $inner->where('recipient_scope', 'users')
+                            ->where('recipient_id', $user->id);
+                    })->orWhere(function ($inner) use ($organizationId): void {
+                        $inner->where('recipient_scope', 'organizations')
+                            ->where('organization_id', $organizationId);
+                    });
+                })
+                ->count(),
             'pendingReviews' => Post::query()
                 ->where('organization_id', $organizationId)
                 ->where('status', 'pending')
