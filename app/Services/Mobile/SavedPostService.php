@@ -7,7 +7,6 @@ namespace App\Services\Mobile;
 use App\Models\SavedPost;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 
 class SavedPostService
 {
@@ -24,7 +23,7 @@ class SavedPostService
                 'post.campaign',
                 'post.author',
                 'post.images',
-                'post.campaignApplications' => static fn (Builder $builder) => $builder->where('created_by', $user->id),
+                'post.campaignApplications' => static fn ($relation) => $relation->where('created_by', $user->id),
             ])
             ->where('user_id', $user->id)
             ->whereHas('post', fn ($query) => $query->where('status', 'published'))
