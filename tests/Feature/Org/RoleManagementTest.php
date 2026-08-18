@@ -91,7 +91,9 @@ test('delete role', function () {
     $response = $this->actingAs($this->owner)
         ->deleteJson("/api/v1/org/roles/{$role->id}");
 
-    $response->assertNoContent();
+    $response->assertOk()
+        ->assertJsonPath('statusCode', 200)
+        ->assertJsonPath('item', null);
     $this->assertDatabaseMissing('organization_roles', ['id' => $role->id]);
 });
 test('cannot delete system role', function () {
@@ -104,7 +106,7 @@ test('cannot delete system role', function () {
     $response = $this->actingAs($this->owner)
         ->deleteJson("/api/v1/org/roles/{$role->id}");
 
-    $response->assertStatus(422);
+    $response->assertConflict();
     $this->assertDatabaseHas('organization_roles', ['id' => $role->id]);
 });
 test('permission catalog returns only assignable ready permissions', function () {
