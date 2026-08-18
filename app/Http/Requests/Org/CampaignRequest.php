@@ -22,7 +22,7 @@ class CampaignRequest extends FormRequest
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
             'category' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['health', 'education', 'food', 'shelter', 'employment'])],
-            'status' => [$isUpdate ? 'sometimes' : 'sometimes', Rule::in($isUpdate ? ['draft', 'active', 'closed'] : ['draft'])],
+            'status' => [$isUpdate ? 'sometimes' : 'sometimes', Rule::in($isUpdate ? ['draft', 'active', 'closed'] : ['draft', 'active'])],
             'closedReason' => [$isUpdate ? 'nullable' : 'prohibited', 'string', 'min:8', 'max:500'],
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'goalAmount' => [$isUpdate ? 'sometimes' : 'required', 'numeric', 'min:0'],

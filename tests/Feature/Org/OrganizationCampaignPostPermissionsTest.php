@@ -9,7 +9,9 @@ use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
 use App\Models\Post;
 use App\Models\User;
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('owner can create campaign and post without assignable permissions', function () {
     [$owner, $organization] = organization_campaign_post_permissions_test_organizationUser(true);
@@ -20,6 +22,26 @@ test('owner can create campaign and post without assignable permissions', functi
 
     $this->actingAs($owner)
         ->postJson('/api/v1/org/posts', postPayload())
+        ->assertCreated();
+
+    $this->assertDatabaseHas('campaigns', ['organization_id' => $organization->id, 'status' => 'active']);
+    $this->assertDatabaseHas('posts', ['organization_id' => $organization->id, 'status' => 'published']);
+});
+test('owner can still create draft campaign and post explicitly', function () {
+    [$owner, $organization] = organization_campaign_post_permissions_test_organizationUser(true);
+
+    $this->actingAs($owner)
+        ->postJson('/api/v1/org/campaigns', [
+            ...campaignPayload(),
+            'status' => 'draft',
+        ])
+        ->assertCreated();
+
+    $this->actingAs($owner)
+        ->postJson('/api/v1/org/posts', [
+            ...postPayload(),
+            'status' => 'draft',
+        ])
         ->assertCreated();
 
     $this->assertDatabaseHas('campaigns', ['organization_id' => $organization->id, 'status' => 'draft']);
@@ -69,7 +91,10 @@ test('campaign related post rejects other organization campaign', function () {
 /** @return array{User, Organization} */
 function organization_campaign_post_permissions_test_organizationUser(bool $owner): array
 {
-    $organization = Organization::factory()->create();
+    $organization = Organization::factory()->create([
+        'status' => 'active',
+        'verification_status' => 'verified',
+    ]);
     $user = User::factory()->create(['organization_id' => $organization->id]);
     $role = OrganizationRole::factory()->create([
         'organization_id' => $organization->id,

@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAccessToken;
 use App\Http\Middleware\EnsureApiResponseMessage;
 use App\Http\Middleware\EnsureMobileAccessToken;
+use App\Http\Middleware\EnsureOrganizationIsActive;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'access-token' => EnsureAccessToken::class,
             'mobile-access-token' => EnsureMobileAccessToken::class,
+            'org-active' => EnsureOrganizationIsActive::class,
         ]);
 
         $middleware->api(append: [

@@ -33,7 +33,9 @@ class CampaignController extends Controller
         $this->authorize('createOrganization', Campaign::class);
 
         $campaign = $this->service->create(
-            CampaignData::from($request->validated()),
+            CampaignData::from($request->safe()->merge([
+                'status' => $request->validated('status', 'active'),
+            ])->all()),
             $this->organizationId(),
         );
 
