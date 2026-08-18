@@ -8,8 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\CampaignDiscoveryRequest;
 use App\Http\Requests\Mobile\CategoryDiscoveryRequest;
 use App\Http\Requests\Mobile\PostDiscoveryRequest;
-use App\Http\Resources\CampaignResource;
 use App\Http\Resources\CategoryResource;
+use App\Http\Resources\Mobile\MobileCampaignResource;
 use App\Http\Resources\Mobile\MobileHomePostResource;
 use App\Http\Resources\Mobile\MobilePublisherResource;
 use App\Models\User;
@@ -119,7 +119,7 @@ class DiscoveryController extends Controller
         $viewer = $this->viewer($request);
 
         return MobileApiResponse::paginated(
-            $paginator->through(fn ($campaign) => CampaignResource::make($campaign)->resolve($request)),
+            $paginator->through(fn ($campaign) => MobileCampaignResource::make($campaign)->resolve($request)),
             'Campaigns retrieved successfully.',
             $this->viewerMeta($viewer),
         );
@@ -139,7 +139,7 @@ class DiscoveryController extends Controller
         $viewer = $this->viewer($request);
 
         return MobileApiResponse::success(
-            CampaignResource::make($model)->resolve($request),
+            MobileCampaignResource::make($model)->resolve($request),
             'Campaign retrieved successfully.',
             $this->viewerMeta($viewer),
         );

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Campaign;
@@ -9,6 +10,7 @@ use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
@@ -60,49 +62,47 @@ test('campaign status contract endpoint enforces lifecycle', function () {
         ->assertJsonPath('item.status', 'active')
         ->assertJsonPath('data.status', 'active');
 
-        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}/status", [
-            'status' => 'closed',
-            'closedReason' => 'Campaign objectives were completed.',
-        ])
-            ->assertOk()
-            ->assertJsonPath('item.status', 'closed')
-            ->assertJsonPath('item.closedReason', 'Campaign objectives were completed.');
-    }
+    $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+        'status' => 'closed',
+        'closedReason' => 'Campaign objectives were completed.',
+    ])
+        ->assertOk()
+        ->assertJsonPath('item.status', 'closed')
+        ->assertJsonPath('item.closedReason', 'Campaign objectives were completed.');
+});
 
 
-    public function test_campaign_update_still_works_without_status(): void
-    {
-        $campaign = $this->campaign(['status' => 'draft']);
+test('campaign update still works without status', function () {
 
-        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
-            'title' => 'Updated Campaign',
-        ])
-            ->assertOk()
-            ->assertJsonPath('item.title', 'Updated Campaign')
-            ->assertJsonPath('item.status', 'draft');
-    }
+    $campaign = campaign(['status' => 'draft']);
 
-    public function test_campaign_update_rejects_invalid_status(): void
-    {
-        $campaign = $this->campaign(['status' => 'draft']);
+    $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+        'title' => 'Updated Campaign',
+    ])
+        ->assertOk()
+        ->assertJsonPath('item.title', 'Updated Campaign')
+        ->assertJsonPath('item.status', 'draft');
+});
 
-        $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
-            'status' => 'pending',
-        ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('status');
-    }
+test('campaign update rejects invalid status', function () {
+    $campaign = campaign(['status' => 'draft']);
 
-    public function test_old_campaign_status_endpoint_is_not_registered(): void
-    {
-        $route = collect(app('router')->getRoutes())
-            ->first(fn ($route): bool => in_array('PATCH', $route->methods(), true)
-                && $route->uri() === 'api/v1/org/campaigns/{campaign}/status');
+    $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+        'status' => 'pending',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+});
 
-        $this->assertNull($route);
-    }
+test('old campaign status endpoint is not registered', function () {
+    $route = collect(app('router')->getRoutes())
+        ->first(fn($route): bool => in_array('PATCH', $route->methods(), true)
+            && $route->uri() === 'api/v1/org/campaigns/{campaign}/status');
 
-  test('post status contract endpoint uses existing transition rules', function () {
+    $this->assertNull($route);
+});
+
+test('post status contract endpoint uses existing transition rules', function () {
     $post = Post::query()->create([
         'organization_id' => $this->organization->id,
         'title' => 'Contract Post',

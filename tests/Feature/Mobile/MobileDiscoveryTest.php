@@ -6,11 +6,14 @@ use App\Models\CampaignApplication;
 use App\Models\Category;
 use App\Models\Organization;
 use App\Models\Post;
+use App\Models\PostImage;
 use App\Models\SavedPost;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+
+uses(RefreshDatabase::class);
 
 test('mobile discovery posts returns only published posts', function () {
     $organization = Organization::factory()->create();
@@ -86,6 +89,8 @@ test('mobile discovery posts return canonical home post contract', function () {
         ->assertJsonPath('data.0.publisher.city', 'Damascus')
         ->assertJsonPath('data.0.publisher.verified', true)
         ->assertJsonPath('data.0.publisher.phoneNumber', '0999999999')
+        ->assertJsonPath('data.0.publisher.whatsappNumber', '0999999999')
+        ->assertJsonPath('data.0.publisher.avatarUrl', null)
         ->assertJsonPath('data.0.postType', 'donation_campaign')
         ->assertJsonPath('data.0.content', 'Full campaign details for mobile.')
         ->assertJsonPath('data.0.cta.type', 'donate')
@@ -94,6 +99,8 @@ test('mobile discovery posts return canonical home post contract', function () {
         ->assertJsonPath('data.0.stats.likes', 12)
         ->assertJsonPath('data.0.stats.comments', 0)
         ->assertJsonPath('data.0.stats.shares', 0)
+        ->assertJsonPath('data.0.commentsCount', 0)
+        ->assertJsonPath('data.0.sharesCount', 0)
         ->assertJsonPath('data.0.saved', false)
         ->assertJsonStructure([
             'data' => [[
@@ -180,17 +187,45 @@ test('mobile discovery post show returns 404 for unpublished content', function 
     $response->assertJsonPath('error.code', 'not_found');
 });
 test('mobile discovery campaigns return only active campaigns', function () {
-    $organization = Organization::factory()->create();
+    $organization = Organization::factory()->create([
+        'name' => 'JOD Relief',
+        'email' => 'relief@jod.test',
+        'phone' => '0999999999',
+        'location' => 'Damascus',
+        'description' => 'Community relief organization.',
+        'verification_status' => 'verified',
+    ]);
     $activeCampaign = Campaign::query()->create([
         'id' => (string) Str::uuid(),
         'title' => 'Active campaign',
         'summary' => 'Visible campaign',
+        'content' => 'Full campaign description for mobile.',
         'category' => 'health',
         'status' => 'active',
         'location' => 'Zarqa',
         'organization_id' => $organization->id,
         'goal_amount' => 1000,
         'raised_amount' => 250,
+    ]);
+    $campaignPost = Post::query()->create([
+        'id' => (string) Str::uuid(),
+        'title' => 'Campaign update with image',
+        'content' => 'Campaign post content.',
+        'type' => 'campaign_update',
+        'status' => 'published',
+        'organization_id' => $organization->id,
+        'campaign_id' => $activeCampaign->id,
+        'published_at' => now(),
+    ]);
+    PostImage::query()->create([
+        'id' => (string) Str::uuid(),
+        'post_id' => $campaignPost->id,
+        'disk' => 'public',
+        'path' => 'posts/campaign-image.jpg',
+        'original_name' => 'campaign-image.jpg',
+        'mime_type' => 'image/jpeg',
+        'size' => 1024,
+        'position' => 0,
     ]);
     Campaign::query()->create([
         'id' => (string) Str::uuid(),
@@ -204,7 +239,47 @@ test('mobile discovery campaigns return only active campaigns', function () {
 
     $response->assertOk();
     $response->assertJsonPath('data.0.id', $activeCampaign->id);
+    $response->assertJsonPath('data.0.content', 'Full campaign description for mobile.');
+    $response->assertJsonPath('data.0.publisher.id', $organization->id);
+    $response->assertJsonPath('data.0.publisher.name', 'JOD Relief');
+    $response->assertJsonPath('data.0.publisher.avatarUrl', null);
+    $response->assertJsonPath('data.0.publisher.verified', true);
+    $response->assertJsonPath('data.0.publisher.phoneNumber', '0999999999');
+    $response->assertJsonPath('data.0.publisher.whatsappNumber', '0999999999');
+    $response->assertJsonPath('data.0.images.0', '/storage/posts/campaign-image.jpg');
+    $response->assertJsonPath('data.0.stats.comments', 0);
+    $response->assertJsonPath('data.0.stats.shares', 0);
+    $response->assertJsonPath('data.0.commentsCount', 0);
+    $response->assertJsonPath('data.0.sharesCount', 0);
+    $response->assertJsonPath('data.0.organizationName', 'JOD Relief');
     $response->assertJsonMissing(['title' => 'Closed campaign']);
+});
+test('mobile discovery campaign show returns mobile rendering fields', function () {
+    $organization = Organization::factory()->create([
+        'phone' => '0911111111',
+        'verification_status' => 'verified',
+    ]);
+    $campaign = Campaign::query()->create([
+        'id' => (string) Str::uuid(),
+        'title' => 'Active campaign',
+        'summary' => 'Visible campaign',
+        'content' => 'Long detail copy for the campaign screen.',
+        'category' => 'health',
+        'status' => 'active',
+        'organization_id' => $organization->id,
+    ]);
+
+    $response = $this->getJson("/api/mobile/discovery/campaigns/{$campaign->id}");
+
+    $response->assertOk()
+        ->assertJsonPath('data.id', $campaign->id)
+        ->assertJsonPath('data.content', 'Long detail copy for the campaign screen.')
+        ->assertJsonPath('data.publisher.id', $organization->id)
+        ->assertJsonPath('data.publisher.phoneNumber', '0911111111')
+        ->assertJsonPath('data.publisher.whatsappNumber', '0911111111')
+        ->assertJsonPath('data.images', [])
+        ->assertJsonPath('data.commentsCount', 0)
+        ->assertJsonPath('data.sharesCount', 0);
 });
 test('mobile discovery campaign show returns 404 for inactive content', function () {
     $campaign = Campaign::query()->create([

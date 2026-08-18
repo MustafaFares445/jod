@@ -4,16 +4,23 @@ declare(strict_types=1);
 use App\Models\Category;
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+
+uses(RefreshDatabase::class);
 
 test('my posts returns only owned posts with pagination', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     Sanctum::actingAs($user);
 
-    $ownedPost = mobile_publishing_test_createPost($user, ['title' => 'Owned post', 'status' => 'draft']);
+    $ownedPost = mobile_publishing_test_createPost($user, [
+        'title' => 'Owned post',
+        'status' => 'draft',
+        'views_count' => 9,
+        'reactions_count' => 4,
+    ]);
     mobile_publishing_test_createPost($otherUser, ['title' => 'Other post', 'status' => 'draft']);
 
     $response = $this->getJson('/api/mobile/me/posts?perPage=10');
@@ -22,6 +29,11 @@ test('my posts returns only owned posts with pagination', function () {
     $response->assertJsonPath('success', true);
     $response->assertJsonPath('data.0.id', $ownedPost->id);
     $response->assertJsonPath('data.0.ownerId', $user->id);
+    $response->assertJsonPath('data.0.viewsCount', 9);
+    $response->assertJsonPath('data.0.reactionsCount', 4);
+    $response->assertJsonPath('data.0.commentsCount', 0);
+    $response->assertJsonPath('data.0.sharesCount', 0);
+    $response->assertJsonPath('data.0.stats.likes', 4);
     $response->assertJsonMissing(['title' => 'Other post']);
     $response->assertJsonPath('meta.currentPage', 1);
     $response->assertJsonPath('meta.perPage', 10);

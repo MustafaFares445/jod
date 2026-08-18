@@ -36,6 +36,7 @@ class MobilePublisherResource extends JsonResource
             'id' => (string) $organization->id,
             'name' => (string) $organization->name,
             'username' => $this->username($organization->email, (string) $organization->name),
+            'avatarUrl' => null,
             'verified' => $organization->verification_status === 'verified',
         ];
 
@@ -49,6 +50,7 @@ class MobilePublisherResource extends JsonResource
 
         if (filled($organization->phone)) {
             $data['phoneNumber'] = $organization->phone;
+            $data['whatsappNumber'] = $organization->phone;
         }
 
         return $data;
@@ -63,6 +65,7 @@ class MobilePublisherResource extends JsonResource
             'id' => (string) $user->id,
             'name' => (string) $user->name,
             'username' => $this->username($user->email, (string) $user->name),
+            'avatarUrl' => null,
             'verified' => $user->email_verified_at !== null,
         ];
 
@@ -76,6 +79,7 @@ class MobilePublisherResource extends JsonResource
 
         if (filled($user->phone)) {
             $data['phoneNumber'] = $user->phone;
+            $data['whatsappNumber'] = $user->phone;
         }
 
         return $data;

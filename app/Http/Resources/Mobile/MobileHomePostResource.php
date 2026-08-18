@@ -56,6 +56,10 @@ class MobileHomePostResource extends JsonResource
                 'comments' => 0,
                 'shares' => 0,
             ],
+            'viewsCount' => (int) $this->views_count,
+            'reactionsCount' => (int) $this->reactions_count,
+            'commentsCount' => 0,
+            'sharesCount' => 0,
             'saved' => $this->relationLoaded('saves') && $this->saves->isNotEmpty(),
 
             // Keep a small compatibility tail while mobile callers migrate to the
@@ -105,6 +109,7 @@ class MobileHomePostResource extends JsonResource
             'id' => (string) $publisherId,
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
+            'avatarUrl' => null,
             'verified' => $organization !== null
                 ? $organization->verification_status === 'verified'
                 : $author?->email_verified_at !== null,
@@ -120,6 +125,7 @@ class MobileHomePostResource extends JsonResource
 
         if (filled($phone)) {
             $publisher['phoneNumber'] = $phone;
+            $publisher['whatsappNumber'] = $phone;
         }
 
         return $publisher;

@@ -11,7 +11,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class UserPostResource extends JsonResource
 {
     /**
-     * @return array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}
+     * @return array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, viewsCount: int, reactionsCount: int, commentsCount: int, sharesCount: int, stats: array{likes: int, comments: int, shares: int}, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}
      */
     public function toArray(Request $request): array
     {
@@ -33,6 +33,15 @@ class UserPostResource extends JsonResource
             'categoryId' => $this->category_id ? (string) $this->category_id : null,
             'images' => array_column($imageMedia, 'url'),
             'imageMedia' => $imageMedia,
+            'viewsCount' => (int) $this->views_count,
+            'reactionsCount' => (int) $this->reactions_count,
+            'commentsCount' => 0,
+            'sharesCount' => 0,
+            'stats' => [
+                'likes' => (int) $this->reactions_count,
+                'comments' => 0,
+                'shares' => 0,
+            ],
             'status' => $this->status === 'published' ? 'active' : $this->status,
             'rejectionReason' => $this->rejection_reason,
             'createdAt' => $this->created_at?->toISOString(),

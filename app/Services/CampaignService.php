@@ -18,7 +18,7 @@ class CampaignService
         $sort = $this->normalizeDiscoverySort($params);
 
         $query = Campaign::query()
-            ->with(['organization', 'creator'])
+            ->with($this->mobileDiscoveryRelations())
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->where('category', $params['category']))
@@ -47,7 +47,7 @@ class CampaignService
     public function findPublicCampaign(string $id): ?Campaign
     {
         return Campaign::query()
-            ->with(['organization', 'creator'])
+            ->with($this->mobileDiscoveryRelations())
             ->whereKey($id)
             ->where('status', 'active')
             ->first();
@@ -188,6 +188,22 @@ class CampaignService
             'progress_lowest' => 'progress',
             default => '-updatedAt',
         };
+    }
+
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function mobileDiscoveryRelations(): array
+    {
+        return [
+            'organization',
+            'creator',
+            'posts' => static fn (Builder $builder) => $builder
+                ->where('status', 'published')
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->with('images'),
+        ];
     }
 
     private function normalizeDiscoverySort(array $params): string
