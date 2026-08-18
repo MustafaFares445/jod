@@ -21,6 +21,7 @@ final class EnsureMobileAccessToken
         $currentToken = $user?->currentAccessToken();
         $hasAccessAbility = $user?->tokenCan(TokenService::ACCESS_ABILITY) ?? false;
         $hasValidBearerToken = ! $currentToken instanceof PersonalAccessToken
+            || ! is_string($currentToken->name)
             || $this->tokenService->isAccessToken($currentToken);
 
         if (! $hasAccessAbility || ! $hasValidBearerToken) {
