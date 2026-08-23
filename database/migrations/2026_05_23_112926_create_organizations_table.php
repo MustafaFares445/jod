@@ -6,19 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        if (!Schema::hasTable('organizations')) {
+        if (! Schema::hasTable('organizations')) {
             Schema::create('organizations', function (Blueprint $table) {
                 $table->string('id')->primary();
                 $table->string('name');
                 $table->string('email')->unique();
                 $table->string('phone')->nullable();
+                $table->string('organization_number')->nullable()->unique();
                 $table->string('organization_type')->nullable();
-                $table->string('registration_number')->nullable();
+                $table->string('registration_number')->nullable()->unique();
+                $table->string('bank_account_number')->nullable();
+                $table->string('logo_path')->nullable();
                 $table->date('establishment_date')->nullable();
                 $table->string('short_address')->nullable();
                 $table->text('description')->nullable();
@@ -44,9 +44,6 @@ return new class extends Migration
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('organizations');
