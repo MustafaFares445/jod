@@ -17,6 +17,7 @@ class OrgNotificationResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'category' => $this->category,
+            'eventType' => $this->event_type,
             'recipientScope' => $this->recipient_scope,
             'recipientLabel' => $this->recipient_label,
             'priority' => $this->priority,
