@@ -17,7 +17,6 @@ use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Collection;
 
 class SearchController extends Controller
 {
