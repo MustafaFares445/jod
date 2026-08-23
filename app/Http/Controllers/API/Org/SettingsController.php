@@ -7,15 +7,15 @@ namespace App\Http\Controllers\API\Org;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\BankAccountRequest;
 use App\Http\Requests\Org\OrganizationProfileRequest;
+use App\Http\Resources\MediaResource;
 use App\Models\Organization;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
     public function profile(): JsonResponse
     {
-        $org = $this->organization();
+        $org = $this->organization()->loadMissing('logoMedia');
         $this->authorize('viewSettings', $org);
 
         return response()->json(['data' => $this->profileData($org)]);
@@ -27,7 +27,7 @@ class SettingsController extends Controller
         $this->authorize('updateSettings', $org);
         $data = $request->validated();
 
-        $updates = [
+        $org->update([
             'name' => $data['companyName'] ?? $org->name,
             'owner_full_name' => $data['ownerName'] ?? $org->owner_full_name,
             'organization_number' => $data['organizationNumber'] ?? $org->organization_number,
@@ -39,18 +39,9 @@ class SettingsController extends Controller
             'owner_phone' => $data['companyPhone'] ?? $org->owner_phone,
             'location' => $data['location'] ?? $org->location,
             'website' => array_key_exists('website', $data) ? $data['website'] : $org->website,
-        ];
+        ]);
 
-        if ($request->hasFile('image')) {
-            if ($org->logo_path) {
-                Storage::disk('public')->delete($org->logo_path);
-            }
-            $updates['logo_path'] = $request->file('image')->store('organizations/logos', 'public');
-        }
-
-        $org->update($updates);
-
-        return response()->json(['data' => $this->profileData($org->refresh())]);
+        return response()->json(['data' => $this->profileData($org->refresh()->load('logoMedia'))]);
     }
 
     public function bankAccount(): JsonResponse
@@ -96,6 +87,8 @@ class SettingsController extends Controller
     /** @return array<string, mixed> */
     private function profileData(Organization $org): array
     {
+        $logo = $org->relationLoaded('logoMedia') ? $org->logoMedia : null;
+
         return [
             'id' => $org->id,
             'companyName' => $org->name,
@@ -107,7 +100,8 @@ class SettingsController extends Controller
             'companyPhone' => $org->phone,
             'location' => $org->location,
             'website' => $org->website,
-            'image' => $org->logo_path ? Storage::disk('public')->url($org->logo_path) : null,
+            'image' => $logo?->publicUrl(),
+            'logo' => $logo ? MediaResource::make($logo)->resolve() : null,
         ];
     }
 }
