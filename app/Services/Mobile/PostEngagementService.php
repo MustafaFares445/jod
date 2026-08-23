@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Enums\NotificationEventType;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\Report;
 use App\Models\SavedPost;
 use App\Models\User;
+use App\Services\NotificationEventService;
 use Illuminate\Support\Facades\DB;
 
 class PostEngagementService
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     /** @return array{postId: string, isLiked: bool, likesCount: int} */
     public function like(User $user, string $postId): array
     {
@@ -84,7 +88,7 @@ class PostEngagementService
             $details = filled($data['details'] ?? null) ? trim((string) $data['details']) : null;
             $label = $this->labelForReason($reason);
 
-            return Report::query()->create([
+            $report = Report::query()->create([
                 'title' => mb_substr("بلاغ عن منشور: {$label}", 0, 255),
                 'description' => $details ?: $label,
                 'category' => $this->categoryForReason($reason),
@@ -108,6 +112,31 @@ class PostEngagementService
                     ],
                 ],
             ]);
+
+            $this->notifications->notifyUser(
+                $user,
+                NotificationEventType::ReportSubmitted,
+                'تم استلام بلاغك',
+                'تم إرسال البلاغ بنجاح وسيتم مراجعته من الإدارة.',
+                'report',
+                'normal',
+                $report->title,
+                '/reports/'.$report->id,
+                $report->organization_id !== null ? (string) $report->organization_id : null,
+            );
+
+            $this->notifications->notifyAdmins(
+                NotificationEventType::ReportSubmitted,
+                'بلاغ جديد يحتاج للمراجعة',
+                "تم استلام بلاغ جديد من {$user->name}: {$report->title}",
+                'report',
+                'high',
+                $report->title,
+                '/admin/reports/'.$report->id,
+                (string) $user->id,
+            );
+
+            return $report;
         });
     }
 
