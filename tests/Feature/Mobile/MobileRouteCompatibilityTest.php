@@ -1,7 +1,8 @@
 <?php
 
 declare(strict_types=1);
-test('existing mobile route names and paths remain registered', function () {
+
+test('existing and requested mobile route names and paths remain registered', function () {
     $expectedRoutes = [
         'mobile.auth.register' => ['POST', 'api/mobile/auth/register'],
         'mobile.auth.login' => ['POST', 'api/mobile/auth/login'],
@@ -10,6 +11,7 @@ test('existing mobile route names and paths remain registered', function () {
         'mobile.auth.forgot-password' => ['POST', 'api/mobile/auth/forgot-password'],
         'mobile.auth.verify-reset-code' => ['POST', 'api/mobile/auth/verify-reset-code'],
         'mobile.auth.reset-password' => ['POST', 'api/mobile/auth/reset-password'],
+        'mobile.search' => ['GET', 'api/mobile/search'],
         'mobile.discovery.posts' => ['GET', 'api/mobile/discovery/posts'],
         'mobile.discovery.posts.show' => ['GET', 'api/mobile/discovery/posts/{post}'],
         'mobile.discovery.campaigns' => ['GET', 'api/mobile/discovery/campaigns'],
@@ -21,6 +23,9 @@ test('existing mobile route names and paths remain registered', function () {
         'mobile.me.profile.update' => ['PATCH', 'api/mobile/me/profile'],
         'mobile.me.change-password' => ['PATCH', 'api/mobile/me/change-password'],
         'mobile.me.permissions' => ['GET', 'api/mobile/me/permissions'],
+        'mobile.me.posts.index' => ['GET', 'api/mobile/me/posts'],
+        'mobile.me.posts.show' => ['GET', 'api/mobile/me/posts/{post}'],
+        'mobile.me.saved-posts.index' => ['GET', 'api/mobile/me/saved-posts'],
         'mobile.me.donations.index' => ['GET', 'api/mobile/me/donations'],
         'mobile.me.donations.show' => ['GET', 'api/mobile/me/donations/{donation}'],
         'mobile.me.devices.store' => ['PUT', 'api/mobile/me/devices'],
@@ -45,8 +50,10 @@ test('existing mobile route names and paths remain registered', function () {
         expect($route->methods())->toContain($method);
     }
 });
-test('public discovery routes are throttled', function () {
+
+test('public discovery and global search routes are throttled', function () {
     $routeNames = [
+        'mobile.search',
         'mobile.discovery.posts',
         'mobile.discovery.posts.show',
         'mobile.discovery.campaigns',
@@ -63,8 +70,9 @@ test('public discovery routes are throttled', function () {
         expect($route->gatherMiddleware())->toContain('throttle:60,1');
     }
 });
+
 test('authenticated mobile routes require access token ability', function () {
-    foreach (['mobile.auth.logout', 'mobile.me.profile', 'mobile.me.devices.store', 'mobile.posts.images.store'] as $routeName) {
+    foreach (['mobile.auth.logout', 'mobile.me.profile', 'mobile.me.posts.show', 'mobile.me.devices.store', 'mobile.posts.images.store'] as $routeName) {
         $route = app('router')->getRoutes()->getByName($routeName);
 
         expect($route)->not->toBeNull("Route [{$routeName}] is not registered.");
