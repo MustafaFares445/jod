@@ -26,8 +26,6 @@ class CompanyRegisterRequest extends FormRequest
             'companyPhone' => ['required', 'string', 'max:30'],
             'location' => ['required', 'string', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
-            'image' => ['required_without:logo', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'password' => ['required', 'confirmed', Password::min(8)],
         ];
     }
