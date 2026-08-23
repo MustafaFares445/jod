@@ -31,6 +31,31 @@ class PostReviewPolicy
             && $this->authorizeAction($user, PermissionAction::VIEW);
     }
 
+    public function viewAdmin(User $user, Post $model): bool
+    {
+        return $model->organization_id === null
+            && $model->author?->user_type === 'admin'
+            && $this->authorizeAction($user, PermissionAction::VIEW);
+    }
+
+    public function createAdmin(User $user): bool
+    {
+        return $user->user_type === 'admin'
+            && $this->authorizeAction($user, PermissionAction::APPROVE);
+    }
+
+    public function updateAdmin(User $user, Post $model): bool
+    {
+        return $model->organization_id === null
+            && $model->author?->user_type === 'admin'
+            && $this->authorizeAction($user, PermissionAction::APPROVE);
+    }
+
+    public function deleteAdmin(User $user, Post $model): bool
+    {
+        return $this->updateAdmin($user, $model);
+    }
+
     public function viewAnyOrganization(User $user): bool
     {
         return $user->organization_id !== null
