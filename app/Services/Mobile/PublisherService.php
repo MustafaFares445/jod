@@ -17,7 +17,7 @@ class PublisherService
         $organization = Organization::query()
             ->whereKey($id)
             ->where('status', 'active')
-            ->whereHas('posts', fn (Builder $post) => $post->where('status', 'published'))
+            ->whereHas('posts', fn (Builder $post) => $post->whereIn('status', ['published', 'approved']))
             ->first();
 
         if ($organization !== null) {
@@ -28,7 +28,7 @@ class PublisherService
             ->whereKey($id)
             ->where('status', 'active')
             ->whereHas('posts', function (Builder $post): void {
-                $post->where('status', 'published')
+                $post->whereIn('status', ['published', 'approved'])
                     ->whereNull('organization_id');
             })
             ->first();
@@ -43,13 +43,11 @@ class PublisherService
 
         $query = Post::query()
             ->with($this->postRelations($viewer))
-            ->where('status', 'published');
+            ->whereIn('status', ['published', 'approved']);
 
         if ($publisher instanceof Organization) {
             $query->where('organization_id', $publisher->id);
         } else {
-            // Organization-backed posts render the organization as publisher,
-            // so a user publisher page only contains truly individual posts.
             $query->where('author_id', $publisher->id)
                 ->whereNull('organization_id');
         }
@@ -70,7 +68,7 @@ class PublisherService
         match ($sort) {
             'title', 'title_asc' => $query->orderBy('title'),
             '-title', 'title_desc' => $query->orderByDesc('title'),
-            'updatedAt', 'updated_oldest' => $query->orderBy('updated_at'),
+            'updatedAt', 'updated_oldest', 'oldest' => $query->orderBy('published_at')->orderBy('created_at'),
             'most_engaged' => $query->orderByDesc('reactions_count')->orderByDesc('updated_at'),
             default => $query->orderByDesc('published_at')->orderByDesc('updated_at'),
         };
@@ -78,9 +76,7 @@ class PublisherService
         return $query->orderBy('id')->paginate($perPage);
     }
 
-    /**
-     * @return array<int|string, mixed>
-     */
+    /** @return array<int|string, mixed> */
     private function postRelations(?User $viewer): array
     {
         $relations = ['organization', 'campaign', 'author', 'images'];
