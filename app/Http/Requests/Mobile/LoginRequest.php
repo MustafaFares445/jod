@@ -14,13 +14,16 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Email + password is the primary mobile login flow. Phone login remains
+     * accepted for backwards compatibility with existing clients.
+     *
      * @return array<string, list<string>>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['prohibited'],
+            'email' => ['nullable', 'email', 'max:255', 'required_without:phone'],
+            'phone' => ['nullable', 'string', 'max:20', 'required_without:email'],
             'password' => ['required', 'string', 'min:8'],
         ];
     }
