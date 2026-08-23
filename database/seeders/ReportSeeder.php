@@ -20,13 +20,13 @@ class ReportSeeder extends Seeder
             'entity_type' => 'campaign',
             'entity_id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'status' => 'new',
-            'evidence' => json_encode([
+            'evidence' => [
                 ['type' => 'url', 'content' => 'https://example.com/campaign-update'],
                 ['type' => 'text', 'content' => 'تعرض الحملة تبرعات دون نشر تحديثات واضحة عن الأنشطة.'],
-            ]),
-            'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now(), 'note' => 'تم إرسال البلاغ.'],
-            ]),
+            ],
+            'timeline' => [
+                ['status' => 'new', 'timestamp' => now()->toIso8601String(), 'note' => 'تم إرسال البلاغ.'],
+            ],
             'created_at' => now()->subDay(),
             'updated_at' => now()->subDay(),
         ]);
@@ -42,13 +42,13 @@ class ReportSeeder extends Seeder
             'entity_type' => 'post',
             'entity_id' => SeedIds::id('posts.volunteerOpportunityTeacherNeeded'),
             'status' => 'in_progress',
-            'evidence' => json_encode([
+            'evidence' => [
                 ['type' => 'screenshot', 'content' => 'screenshot_001.jpg'],
-            ]),
-            'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(2), 'note' => 'تم إرسال البلاغ.'],
-                ['status' => 'in_progress', 'timestamp' => now()->subDay(), 'note' => 'تم إسناد البلاغ إلى مدير للمراجعة.'],
-            ]),
+            ],
+            'timeline' => [
+                ['status' => 'new', 'timestamp' => now()->subDays(2)->toIso8601String(), 'note' => 'تم إرسال البلاغ.'],
+                ['status' => 'in_progress', 'timestamp' => now()->subDay()->toIso8601String(), 'note' => 'تم إسناد البلاغ إلى مدير للمراجعة.'],
+            ],
             'created_at' => now()->subDays(3),
             'updated_at' => now()->subDay(),
         ]);
@@ -64,12 +64,12 @@ class ReportSeeder extends Seeder
             'entity_type' => 'user',
             'entity_id' => SeedIds::id('users.fatimaHassan'),
             'status' => 'in_progress',
-            'evidence' => json_encode([]),
-            'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(3), 'note' => 'تم إرسال البلاغ.'],
-                ['status' => 'in_progress', 'timestamp' => now()->subDays(2), 'note' => 'البلاغ قيد التحقيق.'],
-                ['action' => 'request_info', 'status' => 'in_progress', 'timestamp' => now()->subDay(), 'note' => 'تم طلب معلومات إضافية.'],
-            ]),
+            'evidence' => [],
+            'timeline' => [
+                ['status' => 'new', 'timestamp' => now()->subDays(3)->toIso8601String(), 'note' => 'تم إرسال البلاغ.'],
+                ['status' => 'in_progress', 'timestamp' => now()->subDays(2)->toIso8601String(), 'note' => 'البلاغ قيد التحقيق.'],
+                ['action' => 'request_info', 'status' => 'in_progress', 'timestamp' => now()->subDay()->toIso8601String(), 'note' => 'تم طلب معلومات إضافية.'],
+            ],
             'created_at' => now()->subDays(4),
             'updated_at' => now()->subDay(),
         ]);
@@ -85,12 +85,12 @@ class ReportSeeder extends Seeder
             'entity_type' => 'post',
             'entity_id' => SeedIds::id('posts.draftPostNotPublished'),
             'status' => 'closed',
-            'evidence' => json_encode([]),
-            'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDays(7), 'note' => 'تم إرسال البلاغ.'],
-                ['status' => 'in_progress', 'timestamp' => now()->subDays(6), 'note' => 'البلاغ قيد المراجعة.'],
-                ['status' => 'closed', 'timestamp' => now()->subDays(5), 'note' => 'تم إيقاف حساب المستخدم.'],
-            ]),
+            'evidence' => [],
+            'timeline' => [
+                ['status' => 'new', 'timestamp' => now()->subDays(7)->toIso8601String(), 'note' => 'تم إرسال البلاغ.'],
+                ['status' => 'in_progress', 'timestamp' => now()->subDays(6)->toIso8601String(), 'note' => 'البلاغ قيد المراجعة.'],
+                ['status' => 'closed', 'timestamp' => now()->subDays(5)->toIso8601String(), 'note' => 'تم إيقاف حساب المستخدم.'],
+            ],
             'created_at' => now()->subDays(8),
             'updated_at' => now()->subDays(5),
         ]);
@@ -106,10 +106,10 @@ class ReportSeeder extends Seeder
             'entity_type' => 'campaign',
             'entity_id' => SeedIds::id('campaigns.foodSecurityProgram'),
             'status' => 'new',
-            'evidence' => json_encode([]),
-            'timeline' => json_encode([
-                ['status' => 'new', 'timestamp' => now()->subDay(), 'note' => 'تم إرسال البلاغ.'],
-            ]),
+            'evidence' => [],
+            'timeline' => [
+                ['status' => 'new', 'timestamp' => now()->subDay()->toIso8601String(), 'note' => 'تم إرسال البلاغ.'],
+            ],
             'created_at' => now()->subDay(),
             'updated_at' => now()->subDay(),
         ]);
