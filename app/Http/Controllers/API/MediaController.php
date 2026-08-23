@@ -8,9 +8,6 @@ use App\Enums\MediaModel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Media\MediaUploadRequest;
 use App\Http\Resources\MediaResource;
-use App\Models\Campaign;
-use App\Models\Organization;
-use App\Models\Post;
 use App\Services\MediaService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +40,7 @@ class MediaController extends Controller
         string $model,
         string $modelId,
         string $prop,
-        string $media,
+        string $mediaId,
     ): MediaResource {
         $mediaModel = MediaModel::from($model);
         $target = $this->service->resolveTarget($mediaModel, $modelId);
@@ -53,17 +50,17 @@ class MediaController extends Controller
             $mediaModel,
             $modelId,
             $prop,
-            $media,
+            $mediaId,
             $request->file('file'),
         ));
     }
 
-    public function destroy(string $model, string $modelId, string $prop, string $media): Response
+    public function destroy(string $model, string $modelId, string $prop, string $mediaId): Response
     {
         $mediaModel = MediaModel::from($model);
         $target = $this->service->resolveTarget($mediaModel, $modelId);
         $this->authorizeTarget($mediaModel, $target);
-        $this->service->delete($mediaModel, $modelId, $prop, $media);
+        $this->service->delete($mediaModel, $modelId, $prop, $mediaId);
 
         return response()->noContent();
     }
@@ -71,9 +68,8 @@ class MediaController extends Controller
     private function authorizeTarget(MediaModel $model, Model $target): void
     {
         match ($model) {
-            MediaModel::ORGANIZATION => $this->authorize('updateSettings', $target instanceof Organization ? $target : Organization::class),
-            MediaModel::CAMPAIGN => $this->authorize('updateOrganization', $target instanceof Campaign ? $target : Campaign::class),
-            MediaModel::POST => $this->authorize('updateOrganization', $target instanceof Post ? $target : Post::class),
+            MediaModel::ORGANIZATION => $this->authorize('updateSettings', $target),
+            MediaModel::CAMPAIGN, MediaModel::POST => $this->authorize('updateOrganization', $target),
         };
     }
 }
