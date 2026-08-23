@@ -16,6 +16,7 @@ use App\Http\Controllers\API\Me\DashboardContextController;
 use App\Http\Controllers\API\Me\PermissionsController;
 use App\Http\Controllers\API\Me\ProfileController;
 use App\Http\Controllers\API\Org\ApplicantController;
+use App\Http\Controllers\API\Org\BriefController;
 use App\Http\Controllers\API\Org\CampaignController;
 use App\Http\Controllers\API\Org\DonorController;
 use App\Http\Controllers\API\Org\PostController;
@@ -60,7 +61,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
             Route::get('posts/{post}', App\Http\Controllers\API\Admin\Review\PostController::class.'@show');
             Route::post('posts/{post}/approve', App\Http\Controllers\API\Admin\Review\PostController::class.'@approve');
             Route::post('posts/{post}/reject', App\Http\Controllers\API\Admin\Review\PostController::class.'@reject');
-
         });
 
         Route::prefix('reports')->group(function () {
@@ -75,7 +75,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('notifications/{notification}/read-state', NotificationController::class.'@updateReadState');
         Route::post('notifications/{notification}/resend', NotificationController::class.'@resend');
 
-        // Phase 2: Admin secondary endpoints
         Route::apiResource('badges', BadgeController::class);
         Route::patch('badges/{badge}/status', BadgeController::class.'@updateStatus');
 
@@ -96,6 +95,9 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
     Route::prefix('v1/org')->middleware('org-active')->group(function () {
         Route::get('overview', App\Http\Controllers\API\Org\OverviewController::class);
         Route::get('dashboard/overview', App\Http\Controllers\API\Org\OverviewController::class);
+
+        Route::get('categories/brief', [BriefController::class, 'categories']);
+        Route::get('campaigns/brief', [BriefController::class, 'campaigns']);
 
         Route::apiResource('campaigns', CampaignController::class);
         Route::post('campaigns/{campaign}/close', CampaignController::class.'@close');
@@ -126,6 +128,7 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::put('profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
         Route::get('settings/profile', App\Http\Controllers\API\Org\SettingsController::class.'@profile');
         Route::patch('settings/profile', App\Http\Controllers\API\Org\SettingsController::class.'@updateProfile');
+        Route::patch('settings/password', [ProfileController::class, 'updatePassword']);
         Route::get('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@bankAccount');
         Route::patch('settings/bank-account', App\Http\Controllers\API\Org\SettingsController::class.'@updateBankAccount');
 
