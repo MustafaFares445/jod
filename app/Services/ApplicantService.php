@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\NotificationEventType;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Validation\ValidationException;
 
 class ApplicantService
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
@@ -57,14 +59,42 @@ class ApplicantService
 
     public function update(CampaignApplication $application, array $attributes, string $organizationId): CampaignApplication
     {
+        $previousStatus = (string) $application->applicant_status;
+        $nextStatus = (string) $attributes['applicantStatus'];
+
         $application->update([
             'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
             'phone' => $attributes['phone'],
             'campaign_title' => $attributes['campaignTitle'],
-            'applicant_status' => $attributes['applicantStatus'],
+            'applicant_status' => $nextStatus,
             'applied_at' => $attributes['appliedAt'],
         ]);
+
+        if ($previousStatus !== $nextStatus && filled($application->created_by)) {
+            $eventType = match ($nextStatus) {
+                'accepted', 'approved' => NotificationEventType::ApplicationAccepted,
+                'rejected' => NotificationEventType::ApplicationRejected,
+                default => null,
+            };
+
+            if ($eventType !== null) {
+                $accepted = $eventType === NotificationEventType::ApplicationAccepted;
+                $this->notifications->notifyUser(
+                    (string) $application->created_by,
+                    $eventType,
+                    $accepted ? 'تم قبول طلب التطوع' : 'تم رفض طلب التطوع',
+                    $accepted
+                        ? "تم قبول طلبك للتطوع في حملة {$application->campaign_title}."
+                        : "لم يتم قبول طلبك للتطوع في حملة {$application->campaign_title}.",
+                    'applicant',
+                    'high',
+                    $application->campaign_title,
+                    '/applications/'.$application->id,
+                    $organizationId,
+                );
+            }
+        }
 
         return $application->refresh();
     }
