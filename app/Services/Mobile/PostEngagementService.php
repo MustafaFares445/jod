@@ -9,7 +9,6 @@ use App\Models\PostLike;
 use App\Models\Report;
 use App\Models\SavedPost;
 use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 class PostEngagementService
@@ -118,7 +117,7 @@ class PostEngagementService
             ->whereKey($postId)
             ->whereIn('status', ['published', 'approved'])
             ->lockForUpdate()
-            ->firstOr(fn () => throw new ModelNotFoundException);
+            ->firstOrFail();
     }
 
     /** @return array{postId: string, isLiked: bool, likesCount: int} */
