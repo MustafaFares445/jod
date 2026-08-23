@@ -17,25 +17,26 @@ use Illuminate\Support\Facades\DB;
 
 class CompanyRegistrationService
 {
-    /**
-     * @param array<string, mixed> $data
-     */
+    /** @param array<string, mixed> $data */
     public function register(array $data): User
     {
         return DB::transaction(function () use ($data): User {
+            $image = $data['image'] ?? $data['logo'] ?? null;
+            $logoPath = $image?->store('organizations/logos', 'public');
+
             $organization = Organization::query()->create([
                 'name' => $data['companyName'],
                 'email' => $data['companyEmail'],
                 'phone' => $data['companyPhone'],
-                'organization_type' => $data['organizationType'],
+                'organization_number' => $data['organizationNumber'],
                 'registration_number' => $data['registrationNumber'],
+                'bank_account_number' => $data['bankAccountNumber'],
+                'logo_path' => $logoPath,
                 'location' => $data['location'],
-                'description' => $data['description'] ?? null,
                 'website' => $data['website'] ?? null,
-                'establishment_date' => $data['establishmentDate'] ?? null,
                 'owner_full_name' => $data['ownerName'],
-                'owner_email' => $data['ownerEmail'],
-                'owner_phone' => $data['ownerPhone'],
+                'owner_email' => $data['companyEmail'],
+                'owner_phone' => $data['companyPhone'],
                 'status' => 'pending',
                 'verification_status' => 'pending',
                 'last_active_at' => now(),
@@ -43,8 +44,8 @@ class CompanyRegistrationService
 
             $user = User::query()->create([
                 'name' => $data['ownerName'],
-                'email' => $data['ownerEmail'],
-                'phone' => $data['ownerPhone'],
+                'email' => $data['companyEmail'],
+                'phone' => $data['companyPhone'],
                 'password' => $data['password'],
                 'user_type' => 'general',
                 'organization_id' => $organization->id,
