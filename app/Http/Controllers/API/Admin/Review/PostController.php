@@ -36,6 +36,10 @@ class PostController extends Controller
         $query = Post::query()
             ->with(self::RELATIONS)
             ->whereNull('organization_id')
+            ->where(function (Builder $builder): void {
+                $builder->whereDoesntHave('author')
+                    ->orWhereHas('author', fn (Builder $author) => $author->where('user_type', '!=', 'admin'));
+            })
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->queryParam($request, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type));
 
