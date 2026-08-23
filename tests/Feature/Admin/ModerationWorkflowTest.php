@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Campaign;
@@ -10,10 +11,11 @@ use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    $this->user = User::factory()->create(['user_type' => 'admin']);
     $this->organization = Organization::query()->create([
         'name' => 'Moderation Org',
         'email' => 'moderation@example.com',
@@ -39,42 +41,57 @@ beforeEach(function () {
 
     Sanctum::actingAs($this->user);
 });
-test('reviews posts', function () {
+
+test('reviews posts and returns audit actors and timestamps', function () {
+    $owner = User::factory()->create(['name' => 'Post Owner']);
     $post = Post::query()->create([
-        'organization_id' => $this->organization->id,
         'title' => 'Review Post',
         'summary' => 'Summary',
+        'content' => 'Post body',
         'type' => 'general',
         'status' => 'pending',
-        'author_name' => 'Author',
+        'author_id' => $owner->id,
+        'updated_by' => $owner->id,
+        'submitted_at' => now()->subMinute(),
         'location' => 'Amman',
     ]);
 
-    $this->getJson('/api/v1/admin/review/posts?filter.status=pending')
+    $this->getJson('/api/v1/admin/review/posts?filter%5Bstatus%5D=pending')
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.author.name', 'Post Owner')
+        ->assertJsonPath('data.0.updatedBy.name', 'Post Owner')
+        ->assertJsonStructure(['data' => [['submittedAt']]]);
 
     $this->postJson("/api/v1/admin/review/posts/{$post->id}/approve")
         ->assertOk()
-        ->assertJsonPath('data.status', 'approved');
+        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.approvedBy.id', $this->user->id)
+        ->assertJsonStructure(['data' => ['approvedAt', 'publishedAt']]);
 
     $post->refresh();
-    expect($post->status)->toEqual('approved');
+    expect($post->status)->toEqual('published');
+    expect($post->approved_by)->toEqual($this->user->id);
 
     $rejected = Post::query()->create([
-        'organization_id' => $this->organization->id,
         'title' => 'Reject Post',
         'summary' => 'Summary',
         'type' => 'general',
         'status' => 'pending',
-        'author_name' => 'Author',
+        'author_id' => $owner->id,
+        'updated_by' => $owner->id,
+        'submitted_at' => now(),
         'location' => 'Amman',
     ]);
 
     $this->postJson("/api/v1/admin/review/posts/{$rejected->id}/reject", [
         'reason' => 'Does not meet content requirements',
-    ])->assertOk()->assertJsonPath('data.status', 'rejected');
+    ])->assertOk()
+        ->assertJsonPath('data.status', 'rejected')
+        ->assertJsonPath('data.rejectedBy.id', $this->user->id)
+        ->assertJsonStructure(['data' => ['rejectedAt']]);
 });
+
 test('reviews campaigns', function () {
     $campaign = Campaign::query()->create([
         'organization_id' => $this->organization->id,
@@ -97,8 +114,15 @@ test('reviews campaigns', function () {
         ->assertOk()
         ->assertJsonPath('data.status', 'approved');
 });
-test('manages reports', function () {
+
+test('manages reports with three states and reported entity details', function () {
     $reporter = User::factory()->create();
+    $reportedPost = Post::query()->create([
+        'title' => 'Reported post',
+        'content' => 'Reported content',
+        'status' => 'published',
+        'author_id' => $reporter->id,
+    ]);
     $report = Report::query()->create([
         'title' => 'Report issue',
         'description' => 'Something happened',
@@ -106,14 +130,17 @@ test('manages reports', function () {
         'status' => 'new',
         'severity' => 'high',
         'entity_type' => 'post',
-        'entity_id' => 'post-1',
+        'entity_id' => $reportedPost->id,
         'organization_id' => $this->organization->id,
         'reporter_id' => $reporter->id,
     ]);
 
-    $this->getJson('/api/v1/admin/reports?filter.status=new')
+    $this->getJson('/api/v1/admin/reports?filter%5Bstatus%5D=new')
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.entity.type', 'post')
+        ->assertJsonPath('data.0.entity.data.id', $reportedPost->id)
+        ->assertJsonPath('data.0.entity.data.title', 'Reported post');
 
     $this->postJson("/api/v1/admin/reports/{$report->id}/claim")
         ->assertOk()
@@ -121,12 +148,13 @@ test('manages reports', function () {
 
     $this->postJson("/api/v1/admin/reports/{$report->id}/request-info", [
         'note' => 'Need more context',
-    ])->assertOk()->assertJsonPath('data.status', 'waiting_response');
+    ])->assertOk()->assertJsonPath('data.status', 'in_progress');
 
     $this->postJson("/api/v1/admin/reports/{$report->id}/close", [
         'note' => 'Resolved',
     ])->assertOk()->assertJsonPath('data.status', 'closed');
 });
+
 test('manages notifications', function () {
     $notification = Notification::query()->create([
         'title' => 'Existing notification',
