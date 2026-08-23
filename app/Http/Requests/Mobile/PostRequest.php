@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Requests\Mobile;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 
 class PostRequest extends FormRequest
@@ -16,7 +15,7 @@ class PostRequest extends FormRequest
     }
 
     /**
-     * @return array{type: list<mixed>, title: list<mixed>, details: list<mixed>, city: list<mixed>, categoryId: list<mixed>, images: list<mixed>, "images.*"?: list<mixed>, saveAsDraft?: list<mixed>}
+     * @return array<string, list<mixed>>
      */
     public function rules(): array
     {
@@ -40,25 +39,7 @@ class PostRequest extends FormRequest
             'details' => [$requiredWhenSubmitting, 'string', 'min:10'],
             'city' => [$requiredWhenSubmitting, 'string', 'min:2', 'max:100'],
             'categoryId' => ['nullable', 'string', 'exists:categories,id'],
-            'images' => [
-                'sometimes',
-                'array',
-                'max:5',
-                static function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (! is_array($value)) {
-                        return;
-                    }
-
-                    foreach ($value as $image) {
-                        if (! $image instanceof UploadedFile) {
-                            $fail('Every image must be an uploaded image file.');
-
-                            return;
-                        }
-                    }
-                },
-            ],
-            'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images' => ['prohibited'],
             'saveAsDraft' => ['sometimes', 'boolean'],
         ];
     }

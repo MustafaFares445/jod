@@ -132,6 +132,11 @@ class PostReviewPolicy
             && in_array($model->status, ['draft', 'rejected'], true);
     }
 
+    public function manageOwnMedia(User $user, Post $model): bool
+    {
+        return $this->updateOwn($user, $model);
+    }
+
     public function submitOwn(User $user, Post $model): bool
     {
         return $this->ownsPost($user, $model)
@@ -141,7 +146,7 @@ class PostReviewPolicy
     public function archiveOwn(User $user, Post $model): bool
     {
         return $this->ownsPost($user, $model)
-            && $model->status === 'published';
+            && in_array($model->status, ['published', 'approved'], true);
     }
 
     public function repostOwn(User $user, Post $model): bool

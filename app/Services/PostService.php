@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
 class PostService
 {
     /**
-     * @param  array{page?: int|string|null, perPage?: int|string|null, perPAge?: int|string|null, search?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
+     * @param  array{page?: int|string|null, perPage?: int|string|null, perPAge?: int|string|null, search?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, categoryId?: string|null, category?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
      */
     public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
@@ -29,6 +29,14 @@ class PostService
             ->whereIn('status', ['published', 'approved'])
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
             ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
+            ->when(filled($params['categoryId'] ?? null), fn (Builder $builder) => $builder->where('category_id', $params['categoryId']))
+            ->when(filled($params['category'] ?? null), function (Builder $builder) use ($params): void {
+                $category = (string) $params['category'];
+                $builder->where(function (Builder $inner) use ($category): void {
+                    $inner->where('category_id', $category)
+                        ->orWhereHas('category', fn (Builder $categoryQuery) => $categoryQuery->where('name', $category));
+                });
+            })
             ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
             ->when(filled($params['actionState'] ?? null), function (Builder $builder) use ($params, $viewer): void {
                 $this->applyActionStateFilter($builder, (string) $params['actionState'], $viewer);
@@ -40,6 +48,7 @@ class PostService
                         ->orWhere('summary', 'like', "%{$search}%")
                         ->orWhere('content', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('organization', function (Builder $organization) use ($search): void {
                             $organization->where('name', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%")
@@ -57,7 +66,8 @@ class PostService
             '-title' => $query->orderByDesc('title'),
             'updatedAt' => $query->orderBy('updated_at'),
             '-updatedAt' => $query->orderByDesc('updated_at'),
-            'newest' => $query->orderByDesc('published_at')->orderByDesc('updated_at'),
+            'newest' => $query->orderByDesc('published_at')->orderByDesc('created_at'),
+            'oldest' => $query->orderBy('published_at')->orderBy('created_at'),
             'most_engaged' => $query->orderByDesc('reactions_count')->orderByDesc('updated_at'),
             default => $query->orderByDesc('updated_at'),
         };
@@ -231,6 +241,7 @@ class PostService
             'title_desc' => '-title',
             'updated_oldest' => 'updatedAt',
             'newest' => 'newest',
+            'oldest' => 'oldest',
             'most_engaged' => 'most_engaged',
             default => 'newest',
         };
@@ -332,5 +343,17 @@ class PostService
                 }
             });
         });
+    }
+
+    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
+    {
+        if (! filled($campaignTitle)) {
+            return null;
+        }
+
+        return Campaign::query()
+            ->where('organization_id', $organizationId)
+            ->where('title', $campaignTitle)
+            ->value('id');
     }
 }

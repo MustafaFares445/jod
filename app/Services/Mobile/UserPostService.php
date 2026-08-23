@@ -7,7 +7,6 @@ namespace App\Services\Mobile;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -24,8 +23,10 @@ class UserPostService
         $query = Post::query()->with('images')->where('author_id', $user->id);
         $status = $params['filter']['status'] ?? null;
 
-        if ($status) {
-            $query->where('status', $this->toInternalStatus($status));
+        if ($status === 'active') {
+            $query->whereIn('status', ['published', 'approved']);
+        } elseif ($status) {
+            $query->where('status', $status);
         }
 
         [$column, $direction] = $this->normalizeSort($params['sort'] ?? '-createdAt');
@@ -37,7 +38,7 @@ class UserPostService
     }
 
     /**
-     * @param  array{type: string, title?: string|null, details?: string|null, city?: string|null, categoryId?: string|null, images?: list<UploadedFile>, saveAsDraft?: bool}  $data
+     * @param  array{type: string, title?: string|null, details?: string|null, city?: string|null, categoryId?: string|null, saveAsDraft?: bool}  $data
      */
     public function create(User $user, array $data): Post
     {
@@ -56,10 +57,7 @@ class UserPostService
                 'submitted_at' => $isDraft ? null : now(),
             ]);
 
-            /** @var list<UploadedFile> $images */
-            $images = $data['images'] ?? [];
-
-            return $this->imageService->add($post, $images);
+            return $post->load('images');
         });
     }
 
@@ -125,7 +123,22 @@ class UserPostService
 
     public function archive(Post $post): Post
     {
-        return $this->transition($post, 'published', 'archived', 'Only active posts can be archived.');
+        return DB::transaction(function () use ($post): Post {
+            $lockedPost = Post::query()->whereKey($post->id)->lockForUpdate()->firstOrFail();
+
+            if (! in_array($lockedPost->status, ['published', 'approved'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['Only active posts can be archived.'],
+                ]);
+            }
+
+            $lockedPost->update([
+                'status' => 'archived',
+                'updated_by' => $lockedPost->author_id,
+            ]);
+
+            return $lockedPost->refresh()->load('images');
+        });
     }
 
     public function repost(Post $post): Post
@@ -153,31 +166,6 @@ class UserPostService
     {
         $this->imageService->purge($post);
         $post->delete();
-    }
-
-    private function transition(Post $post, string $fromStatus, string $toStatus, string $message): Post
-    {
-        return DB::transaction(function () use ($post, $fromStatus, $toStatus, $message): Post {
-            $lockedPost = Post::query()->whereKey($post->id)->lockForUpdate()->firstOrFail();
-
-            if ($lockedPost->status !== $fromStatus) {
-                throw ValidationException::withMessages([
-                    'status' => [$message],
-                ]);
-            }
-
-            $lockedPost->update([
-                'status' => $toStatus,
-                'updated_by' => $lockedPost->author_id,
-            ]);
-
-            return $lockedPost->refresh()->load('images');
-        });
-    }
-
-    private function toInternalStatus(string $status): string
-    {
-        return $status === 'active' ? 'published' : $status;
     }
 
     /** @return array{0: string, 1: string} */

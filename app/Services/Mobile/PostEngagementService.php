@@ -9,14 +9,11 @@ use App\Models\PostLike;
 use App\Models\Report;
 use App\Models\SavedPost;
 use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 
 class PostEngagementService
 {
-    /**
-     * @return array{postId: string, isLiked: bool, likesCount: int}
-     */
+    /** @return array{postId: string, isLiked: bool, likesCount: int} */
     public function like(User $user, string $postId): array
     {
         return DB::transaction(function () use ($user, $postId): array {
@@ -31,9 +28,7 @@ class PostEngagementService
         });
     }
 
-    /**
-     * @return array{postId: string, isLiked: bool, likesCount: int}
-     */
+    /** @return array{postId: string, isLiked: bool, likesCount: int} */
     public function unlike(User $user, string $postId): array
     {
         return DB::transaction(function () use ($user, $postId): array {
@@ -48,9 +43,7 @@ class PostEngagementService
         });
     }
 
-    /**
-     * @return array{postId: string, isSaved: bool, savesCount: int}
-     */
+    /** @return array{postId: string, isSaved: bool, savesCount: int} */
     public function save(User $user, string $postId): array
     {
         return DB::transaction(function () use ($user, $postId): array {
@@ -65,9 +58,7 @@ class PostEngagementService
         });
     }
 
-    /**
-     * @return array{postId: string, isSaved: bool, savesCount: int}
-     */
+    /** @return array{postId: string, isSaved: bool, savesCount: int} */
     public function unsave(User $user, string $postId): array
     {
         return DB::transaction(function () use ($user, $postId): array {
@@ -91,10 +82,11 @@ class PostEngagementService
             $post = $this->findPublicPostForUpdate($postId);
             $reason = trim($data['reason']);
             $details = filled($data['details'] ?? null) ? trim((string) $data['details']) : null;
+            $label = $this->labelForReason($reason);
 
             return Report::query()->create([
-                'title' => mb_substr("Mobile post report: {$reason}", 0, 255),
-                'description' => $details ?: $reason,
+                'title' => mb_substr("بلاغ عن منشور: {$label}", 0, 255),
+                'description' => $details ?: $label,
                 'category' => $this->categoryForReason($reason),
                 'status' => 'new',
                 'severity' => 'medium',
@@ -105,6 +97,7 @@ class PostEngagementService
                 'evidence' => [
                     'source' => 'mobile',
                     'reason' => $reason,
+                    'reasonLabel' => $label,
                     'details' => $details,
                 ],
                 'timeline' => [
@@ -122,14 +115,12 @@ class PostEngagementService
     {
         return Post::query()
             ->whereKey($postId)
-            ->where('status', 'published')
+            ->whereIn('status', ['published', 'approved'])
             ->lockForUpdate()
-            ->firstOr(fn () => throw new ModelNotFoundException);
+            ->firstOrFail();
     }
 
-    /**
-     * @return array{postId: string, isLiked: bool, likesCount: int}
-     */
+    /** @return array{postId: string, isLiked: bool, likesCount: int} */
     private function likeState(Post $post, bool $isLiked): array
     {
         $likesCount = PostLike::query()->where('post_id', $post->id)->count();
@@ -142,9 +133,7 @@ class PostEngagementService
         ];
     }
 
-    /**
-     * @return array{postId: string, isSaved: bool, savesCount: int}
-     */
+    /** @return array{postId: string, isSaved: bool, savesCount: int} */
     private function saveState(Post $post, bool $isSaved): array
     {
         return [
@@ -156,10 +145,21 @@ class PostEngagementService
 
     private function categoryForReason(string $reason): string
     {
-        $category = strtolower($reason);
+        return match ($reason) {
+            'abusive' => 'abuse',
+            'fraud', 'impersonation' => 'fraud',
+            default => 'other',
+        };
+    }
 
-        return in_array($category, ['fraud', 'abuse', 'inappropriate', 'spam', 'other'], true)
-            ? $category
-            : 'other';
+    private function labelForReason(string $reason): string
+    {
+        return match ($reason) {
+            'misleading' => 'محتوى مضلل',
+            'abusive' => 'محتوى مسيء أو غير لائق',
+            'fraud' => 'احتيال أو طلب تبرع مشبوه',
+            'impersonation' => 'انتحال جهة أو شخصية',
+            default => 'سبب آخر',
+        };
     }
 }

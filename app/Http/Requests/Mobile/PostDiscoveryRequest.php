@@ -13,9 +13,7 @@ class PostDiscoveryRequest extends FormRequest
         return true;
     }
 
-    /**
-     * @return array<string, list<string>>
-     */
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return [
@@ -27,9 +25,11 @@ class PostDiscoveryRequest extends FormRequest
             'actionState' => ['nullable', 'string', 'in:open,submitted,closed'],
             'type' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
+            'categoryId' => ['nullable', 'string', 'exists:categories,id'],
+            'category' => ['nullable', 'string', 'max:255'],
             'organizationId' => ['nullable', 'string', 'max:255'],
-            'sort' => ['nullable', 'string', 'in:title,-title,updatedAt,-updatedAt,newest,most_engaged'],
-            'sortBy' => ['nullable', 'string', 'in:title_asc,title_desc,updated_oldest,newest,most_engaged'],
+            'sort' => ['nullable', 'string', 'in:title,-title,updatedAt,-updatedAt,newest,oldest,most_engaged'],
+            'sortBy' => ['nullable', 'string', 'in:title_asc,title_desc,updated_oldest,newest,oldest,most_engaged'],
         ];
     }
 }

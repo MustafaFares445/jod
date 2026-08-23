@@ -88,13 +88,19 @@ class MediaController extends Controller
 
         $target->loadMissing('author');
 
-        if ($target->organization_id === null && $target->author?->user_type === 'admin') {
+        if ($target->organization_id !== null) {
+            $this->authorize('updateOrganization', $target);
+
+            return;
+        }
+
+        if ($target->author?->user_type === 'admin') {
             $this->authorize('updateAdmin', $target);
 
             return;
         }
 
-        $this->authorize('updateOrganization', $target);
+        $this->authorize('manageOwnMedia', $target);
     }
 
     private function markPostUpdated(Model $target): void

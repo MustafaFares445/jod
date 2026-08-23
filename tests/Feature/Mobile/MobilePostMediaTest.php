@@ -16,185 +16,139 @@ beforeEach(function () {
     Storage::fake('public');
 });
 
-test('user can create post with images and receives ordered urls', function () {
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
+test('mobile post create body does not accept media files', function () {
+    Sanctum::actingAs(User::factory()->create());
 
-    $response = $this->post('/api/mobile/posts', [
+    $this->post('/api/mobile/posts', [
         'type' => 'help_request',
         'saveAsDraft' => true,
-        'images' => [
-            UploadedFile::fake()->image('first.jpg', 800, 600),
-            UploadedFile::fake()->image('second.png', 640, 480),
-        ],
-    ], ['Accept' => 'application/json']);
-
-    $response->assertOk()
-        ->assertJsonPath('data.status', 'draft')
-        ->assertJsonCount(2, 'data.images');
-
-    $postId = (string) $response->json('data.id');
-    $images = mobile_post_media($postId);
-
-    expect($images)->toHaveCount(2);
-    expect($images->pluck('position')->map(fn ($value) => (int) $value)->all())->toBe([0, 1]);
-
-    foreach ($images as $index => $image) {
-        Storage::disk('public')->assertExists($image->path);
-        expect($response->json("data.images.{$index}"))->toBe(Storage::disk('public')->url($image->path));
-    }
-});
-
-test('user can add reorder and delete images on editable post', function () {
-    $user = User::factory()->create();
-    $post = mobile_post_media_test_createPost($user);
-    Sanctum::actingAs($user);
-
-    $this->post("/api/mobile/posts/{$post->id}/images", [
-        'images' => [
-            UploadedFile::fake()->image('one.jpg'),
-            UploadedFile::fake()->image('two.jpg'),
-            UploadedFile::fake()->image('three.webp'),
-        ],
-    ], ['Accept' => 'application/json'])
-        ->assertOk()
-        ->assertJsonCount(3, 'data.images');
-
-    $images = mobile_post_media((string) $post->id);
-    $reversedIds = $images->pluck('id')->map(fn ($id): string => (string) $id)->reverse()->values()->all();
-
-    $response = $this->patchJson("/api/mobile/posts/{$post->id}/images/order", [
-        'imageIds' => $reversedIds,
-    ]);
-
-    $response->assertOk()->assertJsonCount(3, 'data.images');
-
-    $reordered = mobile_post_media((string) $post->id);
-    expect($reordered->pluck('id')->map(fn ($id): string => (string) $id)->all())->toBe($reversedIds);
-
-    $imageToDelete = $reordered->first();
-    $pathToDelete = $imageToDelete->path;
-
-    $this->deleteJson("/api/mobile/posts/{$post->id}/images/{$imageToDelete->id}")
-        ->assertOk()
-        ->assertJsonCount(2, 'data.images');
-
-    Storage::disk('public')->assertMissing($pathToDelete);
-    $this->assertDatabaseMissing('media', ['id' => $imageToDelete->id]);
-    expect(mobile_post_media((string) $post->id)->pluck('position')->map(fn ($value) => (int) $value)->all())->toBe([0, 1]);
-});
-
-test('image limits types and complete reorder set are validated', function () {
-    $user = User::factory()->create();
-    $post = mobile_post_media_test_createPost($user);
-    Sanctum::actingAs($user);
-
-    $this->post("/api/mobile/posts/{$post->id}/images", [
-        'images' => [UploadedFile::fake()->create('not-image.txt', 10, 'text/plain')],
-    ], ['Accept' => 'application/json'])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['images.0'], 'error.details');
-
-    $this->post("/api/mobile/posts/{$post->id}/images", [
-        'images' => [
-            UploadedFile::fake()->image('1.jpg'),
-            UploadedFile::fake()->image('2.jpg'),
-            UploadedFile::fake()->image('3.jpg'),
-            UploadedFile::fake()->image('4.jpg'),
-            UploadedFile::fake()->image('5.jpg'),
-        ],
-    ], ['Accept' => 'application/json'])->assertOk();
-
-    $this->post("/api/mobile/posts/{$post->id}/images", [
-        'images' => [UploadedFile::fake()->image('6.jpg')],
+        'images' => [UploadedFile::fake()->image('embedded.jpg')],
     ], ['Accept' => 'application/json'])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['images'], 'error.details');
-
-    $firstImageId = (string) mobile_post_media((string) $post->id)->firstOrFail()->id;
-
-    $this->patchJson("/api/mobile/posts/{$post->id}/images/order", [
-        'imageIds' => [$firstImageId],
-    ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['imageIds'], 'error.details');
 });
 
-test('media management requires ownership and editable status', function () {
+test('personal post images use the general media manager one file per request', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $draft = $this->postJson('/api/mobile/posts', [
+        'type' => 'help_request',
+        'title' => 'Need winter supplies',
+        'details' => 'A family needs winter supplies and warm clothes.',
+        'city' => 'Damascus',
+        'saveAsDraft' => true,
+    ])->assertOk()->assertJsonPath('data.status', 'draft');
+
+    $postId = (string) $draft->json('data.id');
+
+    $first = $this->post("/api/v1/media/post/{$postId}/images", [
+        'file' => UploadedFile::fake()->image('first.jpg', 800, 600),
+    ], ['Accept' => 'application/json'])
+        ->assertCreated()
+        ->assertJsonPath('data.model', 'post')
+        ->assertJsonPath('data.modelId', $postId)
+        ->assertJsonPath('data.prop', 'images')
+        ->assertJsonPath('data.position', 0);
+
+    $second = $this->post("/api/v1/media/post/{$postId}/images", [
+        'file' => UploadedFile::fake()->image('second.webp', 640, 480),
+    ], ['Accept' => 'application/json'])
+        ->assertCreated()
+        ->assertJsonPath('data.position', 1);
+
+    expect($first->json('data.id'))->not->toBe($second->json('data.id'));
+    expect(mobile_post_media($postId))->toHaveCount(2);
+
+    $this->getJson("/api/mobile/me/posts/{$postId}")
+        ->assertOk()
+        ->assertJsonCount(2, 'data.images')
+        ->assertJsonCount(2, 'data.imageMedia')
+        ->assertJsonPath('data.imageMedia.0.id', $first->json('data.id'))
+        ->assertJsonPath('data.imageMedia.1.id', $second->json('data.id'));
+});
+
+test('personal post media can be replaced and deleted by media id', function () {
+    $user = User::factory()->create();
+    $post = mobile_post_media_test_createPost($user);
+    Sanctum::actingAs($user);
+
+    $uploaded = $this->post("/api/v1/media/post/{$post->id}/images", [
+        'file' => UploadedFile::fake()->image('before.jpg'),
+    ], ['Accept' => 'application/json'])
+        ->assertCreated();
+
+    $mediaId = (string) $uploaded->json('data.id');
+    $oldPath = mobile_post_media((string) $post->id)->firstOrFail()->path;
+
+    $this->post("/api/v1/media/post/{$post->id}/images/{$mediaId}/replace", [
+        'file' => UploadedFile::fake()->image('after.png'),
+    ], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('data.id', $mediaId)
+        ->assertJsonPath('data.originalName', 'after.png')
+        ->assertJsonPath('data.position', 0);
+
+    Storage::disk('public')->assertMissing($oldPath);
+    $replacement = mobile_post_media((string) $post->id)->firstOrFail();
+    Storage::disk('public')->assertExists($replacement->path);
+
+    $this->deleteJson("/api/v1/media/post/{$post->id}/images/{$mediaId}")
+        ->assertOk();
+
+    Storage::disk('public')->assertMissing($replacement->path);
+    $this->assertDatabaseMissing('media', ['id' => $mediaId]);
+});
+
+test('general media manager enforces personal post ownership and editable status', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $otherPost = mobile_post_media_test_createPost($otherUser);
-    $publishedPost = mobile_post_media_test_createPost($user, ['status' => 'published']);
+    $pendingPost = mobile_post_media_test_createPost($user, ['status' => 'pending']);
+    $approvedPost = mobile_post_media_test_createPost($user, ['status' => 'approved', 'published_at' => now()]);
     Sanctum::actingAs($user);
 
-    $this->post("/api/mobile/posts/{$otherPost->id}/images", [
-        'images' => [UploadedFile::fake()->image('other.jpg')],
-    ], ['Accept' => 'application/json'])->assertForbidden();
-
-    $this->post("/api/mobile/posts/{$publishedPost->id}/images", [
-        'images' => [UploadedFile::fake()->image('published.jpg')],
-    ], ['Accept' => 'application/json'])->assertForbidden();
+    foreach ([$otherPost, $pendingPost, $approvedPost] as $post) {
+        $this->post("/api/v1/media/post/{$post->id}/images", [
+            'file' => UploadedFile::fake()->image('blocked.jpg'),
+        ], ['Accept' => 'application/json'])->assertForbidden();
+    }
 });
 
-test('cross post image ids cannot be deleted or used for reorder', function () {
+test('draft can upload media then be submitted for review', function () {
     $user = User::factory()->create();
-    $firstPost = mobile_post_media_test_createPost($user);
-    $secondPost = mobile_post_media_test_createPost($user);
+    $post = mobile_post_media_test_createPost($user);
     Sanctum::actingAs($user);
 
-    $this->post("/api/mobile/posts/{$firstPost->id}/images", [
-        'images' => [UploadedFile::fake()->image('first.jpg')],
-    ], ['Accept' => 'application/json'])->assertOk();
-    $this->post("/api/mobile/posts/{$secondPost->id}/images", [
-        'images' => [UploadedFile::fake()->image('second.jpg')],
-    ], ['Accept' => 'application/json'])->assertOk();
+    $this->post("/api/v1/media/post/{$post->id}/images", [
+        'file' => UploadedFile::fake()->image('review.jpg'),
+    ], ['Accept' => 'application/json'])->assertCreated();
 
-    $firstImage = mobile_post_media((string) $firstPost->id)->firstOrFail();
-    $secondImage = mobile_post_media((string) $secondPost->id)->firstOrFail();
-
-    $this->deleteJson("/api/mobile/posts/{$firstPost->id}/images/{$secondImage->id}")
-        ->assertNotFound();
-    $this->assertDatabaseHas('media', ['id' => $secondImage->id]);
-
-    $this->patchJson("/api/mobile/posts/{$firstPost->id}/images/order", [
-        'imageIds' => [(string) $secondImage->id],
-    ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['imageIds'], 'error.details');
-
-    $this->assertDatabaseHas('media', [
-        'id' => $firstImage->id,
-        'model_type' => 'post',
-        'model_id' => $firstPost->id,
-        'prop' => 'images',
-    ]);
-});
-
-test('discovery returns images and deleting post purges files', function () {
-    $user = User::factory()->create();
-    $post = mobile_post_media_test_createPost($user, ['status' => 'published', 'published_at' => now()]);
-    $path = "media/post/{$post->id}/images/existing.jpg";
-    Storage::disk('public')->put($path, 'image-content');
-    Media::query()->create([
-        'model_type' => 'post',
-        'model_id' => $post->id,
-        'prop' => 'images',
-        'disk' => 'public',
-        'path' => $path,
-        'original_name' => 'existing.jpg',
-        'mime_type' => 'image/jpeg',
-        'size' => 13,
-        'position' => 0,
-    ]);
-
-    $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+    $this->postJson("/api/mobile/posts/{$post->id}/submit")
         ->assertOk()
-        ->assertJsonPath('data.images.0', Storage::disk('public')->url($path));
+        ->assertJsonPath('data.status', 'pending')
+        ->assertJsonCount(1, 'data.images');
 
-    $post->update(['status' => 'draft', 'published_at' => null]);
+    $this->post("/api/v1/media/post/{$post->id}/images", [
+        'file' => UploadedFile::fake()->image('too-late.jpg'),
+    ], ['Accept' => 'application/json'])->assertForbidden();
+});
+
+test('deleting a personal post purges general media files', function () {
+    $user = User::factory()->create();
+    $post = mobile_post_media_test_createPost($user);
     Sanctum::actingAs($user);
+
+    $this->post("/api/v1/media/post/{$post->id}/images", [
+        'file' => UploadedFile::fake()->image('delete-me.jpg'),
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    $media = mobile_post_media((string) $post->id)->firstOrFail();
+    Storage::disk('public')->assertExists($media->path);
 
     $this->deleteJson("/api/mobile/posts/{$post->id}")->assertOk();
 
-    Storage::disk('public')->assertMissing($path);
+    Storage::disk('public')->assertMissing($media->path);
     $this->assertDatabaseMissing('media', [
         'model_type' => 'post',
         'model_id' => $post->id,
@@ -213,7 +167,7 @@ function mobile_post_media(string $postId)
         ->get();
 }
 
-/** @param array{status?: string, published_at?: mixed, title?: string|null, content?: string|null, location?: string|null} $overrides */
+/** @param array<string, mixed> $overrides */
 function mobile_post_media_test_createPost(User $user, array $overrides = []): Post
 {
     return Post::query()->create(array_merge([
@@ -223,7 +177,7 @@ function mobile_post_media_test_createPost(User $user, array $overrides = []): P
         'content' => 'Mobile media details with enough content.',
         'type' => 'help_request',
         'status' => 'draft',
-        'location' => 'Amman',
+        'location' => 'Damascus',
         'author_id' => $user->id,
     ], $overrides));
 }

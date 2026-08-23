@@ -29,13 +29,16 @@ class CampaignService
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('location', 'like', "%{$search}%");
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('organization', fn (Builder $organization) => $organization->where('name', 'like', "%{$search}%"));
                 });
             });
 
         match ($sort) {
             'updatedAt' => $query->orderBy('updated_at'),
             '-updatedAt' => $query->orderByDesc('updated_at'),
+            'newest' => $query->orderByDesc('created_at'),
+            'oldest' => $query->orderBy('created_at'),
             'progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END ASC'),
             '-progress' => $query->orderByRaw('CASE WHEN goal_amount > 0 THEN (raised_amount / goal_amount) ELSE 0 END DESC'),
             default => $query->orderByDesc('updated_at'),
@@ -204,7 +207,7 @@ class CampaignService
             'creator',
             'imageMedia',
             'posts' => static fn ($relation) => $relation
-                ->where('status', 'published')
+                ->whereIn('status', ['published', 'approved'])
                 ->orderByDesc('published_at')
                 ->orderByDesc('created_at')
                 ->with('images'),
@@ -224,6 +227,8 @@ class CampaignService
             'progress_highest' => '-progress',
             'progress_lowest' => 'progress',
             'updated_oldest' => 'updatedAt',
+            'newest' => 'newest',
+            'oldest' => 'oldest',
             default => '-updatedAt',
         };
     }

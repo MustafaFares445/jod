@@ -14,6 +14,7 @@ use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostImageController;
 use App\Http\Controllers\Mobile\PostReportController;
 use App\Http\Controllers\Mobile\SavedPostController;
+use App\Http\Controllers\Mobile\SearchController;
 use App\Http\Controllers\Mobile\UserPostController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,10 @@ Route::prefix('auth')
         Route::post('verify-reset-code', [AuthController::class, 'verifyResetCode'])->name('verify-reset-code');
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
     });
+
+Route::get('search', SearchController::class)
+    ->middleware('throttle:60,1')
+    ->name('search');
 
 Route::prefix('discovery')
     ->name('discovery.')
@@ -81,6 +86,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         ->group(function (): void {
             Route::get('/', [MeController::class, 'profile'])->name('profile');
             Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
+            Route::get('posts/{post}', [UserPostController::class, 'show'])->name('posts.show');
             Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
             Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
             Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
@@ -116,9 +122,13 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         ->group(function (): void {
             Route::post('/', [UserPostController::class, 'store'])->name('store');
             Route::patch('{post}', [UserPostController::class, 'update'])->name('update');
+
+            // Legacy mobile image routes remain as compatibility adapters. New clients
+            // should use /api/v1/media/post/{postId}/images and the replace/delete routes.
             Route::post('{post}/images', [PostImageController::class, 'store'])->name('images.store');
             Route::patch('{post}/images/order', [PostImageController::class, 'reorder'])->name('images.reorder');
             Route::delete('{post}/images/{image}', [PostImageController::class, 'destroy'])->name('images.destroy');
+
             Route::post('{post}/like', [PostEngagementController::class, 'like'])->name('like');
             Route::delete('{post}/like', [PostEngagementController::class, 'unlike'])->name('unlike');
             Route::post('{post}/save', [PostEngagementController::class, 'save'])->name('save');

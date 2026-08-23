@@ -14,6 +14,9 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Email + password is the primary mobile login flow. Phone login remains
+     * accepted for backwards compatibility with existing clients.
+     *
      * @return array<string, list<string>>
      */
     public function rules(): array
