@@ -26,7 +26,7 @@ class NotificationController extends Controller
      * @queryParam category string optional Filter by notification category.
      * @queryParam priority string optional Filter by priority. Allowed: normal, high.
      *
-     * @response array{success: true, message: string, data: array<int, array{id: string, title: string, body: string, category: string, priority: string, status: string, isRead: bool, referenceLabel: string|null, referencePath: string|null, sentAt: string|null, readAt: string|null, createdAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int}}
+     * @response array{success: true, message: string, data: array<int, array{id: string, title: string, body: string, category: string, eventType: string|null, priority: string, status: string, isRead: bool, referenceLabel: string|null, referencePath: string|null, sentAt: string|null, readAt: string|null, createdAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int}}
      */
     public function index(NotificationHistoryRequest $request): JsonResponse
     {
@@ -59,7 +59,7 @@ class NotificationController extends Controller
      *
      * @urlParam notification string required The notification identifier.
      *
-     * @response array{success: true, message: string, data: array{id: string, title: string, body: string, category: string, priority: string, status: string, isRead: bool, referenceLabel: string|null, referencePath: string|null, sentAt: string|null, readAt: string|null, createdAt: string|null}, error: null, meta: object}
+     * @response array{success: true, message: string, data: array{id: string, title: string, body: string, category: string, eventType: string|null, priority: string, status: string, isRead: bool, referenceLabel: string|null, referencePath: string|null, sentAt: string|null, readAt: string|null, createdAt: string|null}, error: null, meta: object}
      */
     public function show(Request $request, string $notification): JsonResponse
     {
