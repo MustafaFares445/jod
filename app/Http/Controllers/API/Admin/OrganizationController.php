@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API\Admin;
 
+use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrganizationResource;
 use App\Models\Organization;
+use App\Services\NotificationEventService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +19,8 @@ use Illuminate\Validation\Rule;
 
 class OrganizationController extends Controller
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Organization::class);
@@ -190,7 +194,25 @@ class OrganizationController extends Controller
             'verificationStatus' => ['required', Rule::in(['verified', 'unverified'])],
         ]);
 
+        $previousStatus = (string) $organization->verification_status;
         $organization->update(['verification_status' => $data['verificationStatus']]);
+
+        if ($previousStatus !== $data['verificationStatus']) {
+            $verified = $data['verificationStatus'] === 'verified';
+            $this->notifications->notifyOrganization(
+                (string) $organization->id,
+                $verified ? NotificationEventType::OrganizationApproved : NotificationEventType::OrganizationRejected,
+                $verified ? 'تم توثيق المؤسسة' : 'تعذر توثيق المؤسسة',
+                $verified
+                    ? "تم توثيق {$organization->name} بنجاح على المنصة."
+                    : "تم تحديث حالة توثيق {$organization->name} إلى غير موثقة.",
+                'account',
+                'high',
+                $organization->name,
+                '/organization/profile',
+                auth()->id() !== null ? (string) auth()->id() : null,
+            );
+        }
 
         return OrganizationResource::make($organization->refresh());
     }
@@ -199,11 +221,26 @@ class OrganizationController extends Controller
     {
         $this->authorize('accept', $organization);
 
+        $wasAccepted = $organization->accepted_at !== null;
         $organization->update([
             'status' => 'active',
             'verification_status' => 'verified',
             'accepted_at' => now(),
         ]);
+
+        if (! $wasAccepted) {
+            $this->notifications->notifyOrganization(
+                (string) $organization->id,
+                NotificationEventType::OrganizationApproved,
+                'تم قبول المؤسسة',
+                "تم قبول {$organization->name} وتفعيل حساب المؤسسة على المنصة.",
+                'account',
+                'high',
+                $organization->name,
+                '/organization/profile',
+                auth()->id() !== null ? (string) auth()->id() : null,
+            );
+        }
 
         return OrganizationResource::make($organization->refresh());
     }
