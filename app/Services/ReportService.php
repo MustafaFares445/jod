@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\NotificationEventType;
 use App\Models\Report;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -11,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class ReportService
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     /** @return list<string> */
     public static function relations(): array
     {
@@ -83,6 +86,14 @@ class ReportService
             'timeline' => $this->appendTimeline($report->timeline, 'claim', 'Report claimed', $actorName, $note),
         ]);
 
+        $this->notifyReporter(
+            $report,
+            NotificationEventType::ReportInProgress,
+            'بدأت مراجعة بلاغك',
+            'تم استلام البلاغ من فريق المراجعة وبدأ العمل عليه.',
+            'normal',
+        );
+
         return $report;
     }
 
@@ -97,6 +108,18 @@ class ReportService
         $report->update([
             'timeline' => $this->appendTimeline($report->timeline, 'request_info', 'Additional information requested', $actorName, $note),
         ]);
+
+        $message = filled($note)
+            ? 'طلب فريق المراجعة معلومات إضافية: '.$note
+            : 'طلب فريق المراجعة معلومات إضافية بخصوص بلاغك.';
+
+        $this->notifyReporter(
+            $report,
+            NotificationEventType::ReportInfoRequested,
+            'مطلوب معلومات إضافية',
+            $message,
+            'high',
+        );
 
         return $report;
     }
@@ -115,6 +138,18 @@ class ReportService
             'timeline' => $this->appendTimeline($report->timeline, 'close', 'Report closed', $actorName, $note),
         ]);
 
+        $message = filled($note)
+            ? 'تم إغلاق البلاغ. ملاحظة المراجعة: '.$note
+            : 'تمت مراجعة البلاغ وإغلاقه.';
+
+        $this->notifyReporter(
+            $report,
+            NotificationEventType::ReportClosed,
+            'تم إغلاق البلاغ',
+            $message,
+            'normal',
+        );
+
         return $report;
     }
 
@@ -131,6 +166,30 @@ class ReportService
                 'status' => ['Unsupported report status transition.'],
             ]),
         };
+    }
+
+    private function notifyReporter(
+        Report $report,
+        NotificationEventType $eventType,
+        string $title,
+        string $body,
+        string $priority,
+    ): void {
+        if (blank($report->reporter_id)) {
+            return;
+        }
+
+        $this->notifications->notifyUser(
+            (string) $report->reporter_id,
+            $eventType,
+            $title,
+            $body,
+            'report',
+            $priority,
+            $report->title,
+            '/reports/'.$report->id,
+            $report->organization_id !== null ? (string) $report->organization_id : null,
+        );
     }
 
     private function appendTimeline(mixed $timeline, string $action, string $label, string $actorName, ?string $note = null): array
@@ -165,7 +224,6 @@ class ReportService
 
         if (is_string($timeline)) {
             $decoded = json_decode($timeline, true);
-
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                 return array_is_list($decoded) ? $decoded : [$decoded];
             }
