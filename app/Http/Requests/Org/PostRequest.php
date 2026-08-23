@@ -33,8 +33,6 @@ class PostRequest extends FormRequest
                 'max:255',
                 Rule::exists('campaigns', 'title')->where('organization_id', $organizationId),
             ],
-            'images' => ['sometimes', 'array', 'max:10'],
-            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 }
