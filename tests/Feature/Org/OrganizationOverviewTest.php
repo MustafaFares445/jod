@@ -10,7 +10,9 @@ use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
 use App\Models\Post;
 use App\Models\User;
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 test('owner receives real organization scoped overview', function () {
     [$organization, $owner] = organization_overview_test_organizationUser(true);
@@ -76,10 +78,22 @@ test('staff without dashboard permission is forbidden', function () {
         ->getJson('/api/v1/org/dashboard/overview')
         ->assertForbidden();
 });
+test('organization dashboard APIs require active verified organization', function () {
+    [$organization, $owner] = organization_overview_test_organizationUser(true);
+    $organization->update(['verification_status' => 'pending']);
+
+    $this->actingAs($owner)
+        ->getJson('/api/v1/org/dashboard/overview')
+        ->assertForbidden()
+        ->assertJsonPath('message', 'Organization must be active and verified to access dashboard APIs.');
+});
 /** @return array{Organization, User} */
 function organization_overview_test_organizationUser(bool $owner): array
 {
-    $organization = Organization::factory()->create();
+    $organization = Organization::factory()->create([
+        'status' => 'active',
+        'verification_status' => 'verified',
+    ]);
     $user = User::factory()->create(['organization_id' => $organization->id]);
     $role = OrganizationRole::factory()->create([
         'organization_id' => $organization->id,

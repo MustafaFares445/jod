@@ -39,8 +39,9 @@ beforeEach(function () {
 
     Sanctum::actingAs($this->user);
 });
+
 test('paginated responses include contract envelope without removing legacy data', function () {
-    $campaign = campaign(['status' => 'active']);
+    $campaign = contract_campaign($this->organization->id, ['status' => 'active']);
 
     $this->getJson('/api/v1/org/campaigns')
         ->assertOk()
@@ -51,8 +52,9 @@ test('paginated responses include contract envelope without removing legacy data
         ->assertJsonPath('item.data.0.id', $campaign->id)
         ->assertJsonPath('data.0.id', $campaign->id);
 });
+
 test('campaign status contract endpoint enforces lifecycle', function () {
-    $campaign = campaign(['status' => 'draft']);
+    $campaign = contract_campaign($this->organization->id, ['status' => 'draft']);
 
     $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
         'status' => 'active',
@@ -71,10 +73,8 @@ test('campaign status contract endpoint enforces lifecycle', function () {
         ->assertJsonPath('item.closedReason', 'Campaign objectives were completed.');
 });
 
-
 test('campaign update still works without status', function () {
-
-    $campaign = campaign(['status' => 'draft']);
+    $campaign = contract_campaign($this->organization->id, ['status' => 'draft']);
 
     $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
         'title' => 'Updated Campaign',
@@ -85,7 +85,7 @@ test('campaign update still works without status', function () {
 });
 
 test('campaign update rejects invalid status', function () {
-    $campaign = campaign(['status' => 'draft']);
+    $campaign = contract_campaign($this->organization->id, ['status' => 'draft']);
 
     $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
         'status' => 'pending',
@@ -125,6 +125,7 @@ test('post status contract endpoint uses existing transition rules', function ()
         ->assertOk()
         ->assertJsonPath('item.status', 'draft');
 });
+
 test('notification read contract endpoint requires no request body', function () {
     $notification = Notification::query()->create([
         'organization_id' => $this->organization->id,
@@ -144,10 +145,11 @@ test('notification read contract endpoint requires no request body', function ()
 
     expect($notification->refresh()->read_at)->not->toBeNull();
 });
-function campaign(array $overrides = []): Campaign
+
+function contract_campaign(string $organizationId, array $overrides = []): Campaign
 {
     return Campaign::query()->create([
-        'organization_id' => $this->organization->id,
+        'organization_id' => $organizationId,
         'title' => 'Contract Campaign',
         'summary' => 'Summary',
         'category' => 'health',

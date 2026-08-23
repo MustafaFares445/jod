@@ -8,6 +8,7 @@ use App\Models\Campaign;
 use App\Models\Donation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
 
 class DonorService
 {
@@ -44,7 +45,7 @@ class DonorService
     {
         return Donation::create([
             'organization_id' => $organizationId,
-            'campaign_id' => $this->resolveCampaignId($attributes['campaignTitle'], $organizationId),
+            'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
             'email' => $attributes['email'],
             'phone' => $attributes['phone'] ?? null,
@@ -64,7 +65,7 @@ class DonorService
     public function update(Donation $donation, array $attributes, string $organizationId): Donation
     {
         $donation->update([
-            'campaign_id' => $this->resolveCampaignId($attributes['campaignTitle'], $organizationId),
+            'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
             'email' => $attributes['email'],
             'phone' => $attributes['phone'] ?? null,
@@ -82,20 +83,29 @@ class DonorService
         return $donation;
     }
 
-    private function resolveCampaignId(string $campaignTitle, string $organizationId): ?string
+    private function resolveCampaignId(array $attributes, string $organizationId): ?string
     {
-        $campaignId = Campaign::query()
-            ->where('organization_id', $organizationId)
-            ->where('title', $campaignTitle)
-            ->value('id');
+        if (! empty($attributes['campaignId'])) {
+            $campaignId = Campaign::query()
+                ->where('organization_id', $organizationId)
+                ->whereKey($attributes['campaignId'])
+                ->value('id');
 
-        if ($campaignId === null) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'campaignTitle' => ['Selected campaign does not belong to the organization.'],
-            ]);
+            if ($campaignId === null) {
+                throw ValidationException::withMessages([
+                    'campaignId' => ['Selected campaign does not belong to the organization.'],
+                ]);
+            }
+
+            return (string) $campaignId;
         }
 
-        return (string) $campaignId;
+        $campaignId = Campaign::query()
+            ->where('organization_id', $organizationId)
+            ->where('title', $attributes['campaignTitle'])
+            ->value('id');
+
+        return $campaignId === null ? null : (string) $campaignId;
     }
 
     private function normalizeSort(array $params): string

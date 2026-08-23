@@ -204,14 +204,8 @@ test('delivery job removes stale device and records attempt', function () {
     ]);
 });
 test('firebase access token provider signs service account assertion and caches token', function () {
-    $key = openssl_pkey_new([
-        'private_key_bits' => 2048,
-        'private_key_type' => OPENSSL_KEYTYPE_RSA,
-    ]);
-    $this->assertNotFalse($key);
-
-    $privateKey = '';
-    expect(openssl_pkey_export($key, $privateKey))->toBeTrue();
+    $privateKey = file_get_contents(base_path('tests/Fixtures/firebase-test-private-key.pem'));
+    $this->assertNotFalse($privateKey);
 
     $credentialsPath = tempnam(sys_get_temp_dir(), 'jod-firebase-');
     $this->assertNotFalse($credentialsPath);

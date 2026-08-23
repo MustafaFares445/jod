@@ -151,14 +151,15 @@ test('resend creates a fresh batch without mutating existing read history', func
     $copies = Notification::query()
         ->where('source_notification_id', $source->id)
         ->where('recipient_id', $recipient->id)
-        ->orderBy('created_at')
         ->get();
+    $newInbox = $copies->firstWhere('id', '!=', $firstInbox->id);
 
     expect($copies)->toHaveCount(2);
-    expect($copies->first()->status)->toBe('read');
-    expect($copies->first()->read_at)->not->toBeNull();
-    expect($copies->last()->status)->toBe('unread');
-    expect($copies->last()->read_at)->toBeNull();
+    expect($firstInbox->refresh()->status)->toBe('read');
+    expect($firstInbox->read_at)->not->toBeNull();
+    expect($newInbox)->not->toBeNull();
+    expect($newInbox->status)->toBe('unread');
+    expect($newInbox->read_at)->toBeNull();
 });
 test('organization dashboard service hides recipient copies and keeps creator', function () {
     Queue::fake();

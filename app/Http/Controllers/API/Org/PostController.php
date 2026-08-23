@@ -33,7 +33,9 @@ class PostController extends Controller
         $this->authorize('createOrganization', Post::class);
 
         $post = $this->service->create(
-            PostData::from($request->validated()),
+            PostData::from($request->safe()->merge([
+                'status' => $request->validated('status', 'published'),
+            ])->all()),
             $this->organizationId(),
         );
 

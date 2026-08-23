@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAccessToken;
 use App\Http\Middleware\EnsureApiResponseMessage;
 use App\Http\Middleware\EnsureMobileAccessToken;
+use App\Http\Middleware\EnsureOrganizationIsActive;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'access-token' => EnsureAccessToken::class,
             'mobile-access-token' => EnsureMobileAccessToken::class,
+            'org-active' => EnsureOrganizationIsActive::class,
         ]);
 
         $middleware->api(append: [
@@ -36,7 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(static function (Request $request): bool {
-            return $request->is('api/mobile/*') || $request->is('api/mobile');
+            return $request->is('api/*') || $request->expectsJson();
         });
 
         $exceptions->render(static function (AuthenticationException $exception, Request $request): ?JsonResponse {

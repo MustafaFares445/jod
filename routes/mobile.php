@@ -44,6 +44,8 @@ Route::prefix('discovery')
         Route::get('publishers/{publisher}/posts', [DiscoveryController::class, 'publisherPosts'])->name('publishers.posts');
         Route::get('campaigns', [DiscoveryController::class, 'campaigns'])->name('campaigns');
         Route::get('campaigns/{campaign}', [DiscoveryController::class, 'showCampaign'])->name('campaigns.show');
+        Route::get('articles', [DiscoveryController::class, 'articles'])->name('articles');
+        Route::get('articles/{article}', [DiscoveryController::class, 'showArticle'])->name('articles.show');
         Route::get('categories', [DiscoveryController::class, 'categories'])->name('categories');
     });
 

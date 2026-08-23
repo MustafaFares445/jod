@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Category;
@@ -317,6 +318,45 @@ test('mobile discovery campaign show returns 404 for inactive content', function
 
     $response->assertNotFound();
     $response->assertJsonPath('error.code', 'not_found');
+});
+test('mobile discovery articles return only published articles', function () {
+    $published = Article::factory()->published()->create([
+        'title' => 'Published mobile article',
+        'excerpt' => 'Visible article excerpt',
+        'content' => 'Visible article content',
+    ]);
+    Article::factory()->draft()->create([
+        'title' => 'Draft mobile article',
+    ]);
+
+    $response = $this->getJson('/api/mobile/discovery/articles?perPage=10');
+
+    $response->assertOk()
+        ->assertJsonPath('data.0.id', $published->id)
+        ->assertJsonPath('data.0.title', 'Published mobile article')
+        ->assertJsonPath('data.0.content', 'Visible article content')
+        ->assertJsonMissing(['title' => 'Draft mobile article'])
+        ->assertJsonPath('meta.total', 1);
+});
+test('mobile discovery article show returns published article detail', function () {
+    $article = Article::factory()->published()->create([
+        'title' => 'Article detail',
+        'content' => 'Full article detail for mobile.',
+    ]);
+
+    $response = $this->getJson("/api/mobile/discovery/articles/{$article->id}");
+
+    $response->assertOk()
+        ->assertJsonPath('data.id', $article->id)
+        ->assertJsonPath('data.title', 'Article detail')
+        ->assertJsonPath('data.content', 'Full article detail for mobile.');
+});
+test('mobile discovery article show returns 404 for drafts', function () {
+    $article = Article::factory()->draft()->create();
+
+    $this->getJson("/api/mobile/discovery/articles/{$article->id}")
+        ->assertNotFound()
+        ->assertJsonPath('error.code', 'not_found');
 });
 test('mobile discovery categories return active categories and pagination meta', function () {
     Category::query()->create([
