@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\Campaign;
 use App\Models\Donation;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Validation\ValidationException;
 
 class DonorService
 {
@@ -20,22 +18,22 @@ class DonorService
 
         $query = Donation::query()
             ->where('organization_id', $organizationId)
-            ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', $campaignId))
             ->when(($city = $this->param($params, 'filter.city')) && $city !== 'all', fn (Builder $builder) => $builder->where('city', $city))
             ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('campaign_title', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%");
                 });
             });
 
         match ($sort) {
             'name' => $query->orderBy('name'),
             '-name' => $query->orderByDesc('name'),
-            'donatedAt' => $query->orderBy('donated_at'),
-            '-donatedAt' => $query->orderByDesc('donated_at'),
-            default => $query->orderByDesc('donated_at'),
+            'donatedAt' => $query->orderBy('created_at'),
+            '-donatedAt' => $query->orderByDesc('created_at'),
+            default => $query->orderByDesc('created_at'),
         };
 
         return $query->paginate($perPage);
@@ -43,21 +41,12 @@ class DonorService
 
     public function create(array $attributes, string $organizationId, string $userId): Donation
     {
-        return Donation::create([
+        return Donation::query()->create([
             'organization_id' => $organizationId,
-            'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
             'email' => $attributes['email'],
-            'phone' => $attributes['phone'] ?? null,
-            'campaign_title' => $attributes['campaignTitle'],
-            'amount_or_type' => $attributes['amountOrType'],
-            'donated_at' => $attributes['donatedAt'],
-            'city' => $attributes['city'] ?? null,
-            'source' => $attributes['source'] ?? null,
-            'payment_method' => $attributes['paymentMethod'] ?? null,
-            'campaign_ref' => $attributes['campaignRef'] ?? null,
-            'assigned_to' => $attributes['assignedTo'] ?? null,
-            'internal_notes' => $attributes['internalNotes'] ?? null,
+            'phone' => $attributes['phone'],
+            'city' => $attributes['city'],
             'created_by' => $userId,
         ]);
     }
@@ -65,47 +54,13 @@ class DonorService
     public function update(Donation $donation, array $attributes, string $organizationId): Donation
     {
         $donation->update([
-            'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
             'email' => $attributes['email'],
-            'phone' => $attributes['phone'] ?? null,
-            'campaign_title' => $attributes['campaignTitle'],
-            'amount_or_type' => $attributes['amountOrType'],
-            'donated_at' => $attributes['donatedAt'],
-            'city' => $attributes['city'] ?? null,
-            'source' => $attributes['source'] ?? null,
-            'payment_method' => $attributes['paymentMethod'] ?? null,
-            'campaign_ref' => $attributes['campaignRef'] ?? null,
-            'assigned_to' => $attributes['assignedTo'] ?? null,
-            'internal_notes' => $attributes['internalNotes'] ?? null,
+            'phone' => $attributes['phone'],
+            'city' => $attributes['city'],
         ]);
 
-        return $donation;
-    }
-
-    private function resolveCampaignId(array $attributes, string $organizationId): ?string
-    {
-        if (! empty($attributes['campaignId'])) {
-            $campaignId = Campaign::query()
-                ->where('organization_id', $organizationId)
-                ->whereKey($attributes['campaignId'])
-                ->value('id');
-
-            if ($campaignId === null) {
-                throw ValidationException::withMessages([
-                    'campaignId' => ['Selected campaign does not belong to the organization.'],
-                ]);
-            }
-
-            return (string) $campaignId;
-        }
-
-        $campaignId = Campaign::query()
-            ->where('organization_id', $organizationId)
-            ->where('title', $attributes['campaignTitle'])
-            ->value('id');
-
-        return $campaignId === null ? null : (string) $campaignId;
+        return $donation->refresh();
     }
 
     private function normalizeSort(array $params): string

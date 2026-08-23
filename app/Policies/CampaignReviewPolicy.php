@@ -22,12 +22,12 @@ class CampaignReviewPolicy
 
     public function viewAny(User $user): bool
     {
-        return $this->authorizeAction($user, PermissionAction::VIEW);
+        return false;
     }
 
     public function view(User $user, Campaign $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::VIEW);
+        return false;
     }
 
     public function viewAnyOrganization(User $user): bool
@@ -44,12 +44,12 @@ class CampaignReviewPolicy
 
     public function approve(User $user, Campaign $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::APPROVE);
+        return false;
     }
 
     public function reject(User $user, Campaign $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::REJECT);
+        return false;
     }
 
     public function createOrganization(User $user): bool

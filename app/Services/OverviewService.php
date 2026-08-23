@@ -33,15 +33,15 @@ class OverviewService
                 [
                     'id' => 'pending_posts',
                     'label' => 'Pending Posts',
-                    'value' => Post::where('status', 'pending')->count(),
+                    'value' => Post::where('status', 'pending')->whereNull('organization_id')->count(),
                     'subLabel' => 'Awaiting review',
                     'icon' => 'document',
                 ],
                 [
-                    'id' => 'pending_campaigns',
-                    'label' => 'Pending Campaigns',
-                    'value' => Campaign::where('status', 'pending')->count(),
-                    'subLabel' => 'Awaiting review',
+                    'id' => 'active_campaigns',
+                    'label' => 'Active Campaigns',
+                    'value' => Campaign::where('status', 'active')->count(),
+                    'subLabel' => 'Published by organizations',
                     'icon' => 'flag',
                 ],
                 [
@@ -65,7 +65,9 @@ class OverviewService
             ->map(fn(Post $post) => [
                 'id' => "post-{$post->id}",
                 'title' => "{$post->title}",
-                'detail' => "New post submitted by organization",
+                'detail' => $post->organization_id === null
+                    ? "New user post submitted for review"
+                    : "Organization post published",
                 'at' => $post->created_at->toIso8601String(),
             ]);
 
@@ -75,7 +77,7 @@ class OverviewService
             ->map(fn(Campaign $campaign) => [
                 'id' => "campaign-{$campaign->id}",
                 'title' => "{$campaign->title}",
-                'detail' => "New campaign submitted by organization",
+                'detail' => "Organization campaign published",
                 'at' => $campaign->created_at->toIso8601String(),
             ]);
 

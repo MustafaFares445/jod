@@ -631,7 +631,6 @@ interface OrganizationPostItem {
     | 'campaign_update'
     | 'campaign_summary'
   status: 'draft' | 'published' | 'archived'
-  authorName: string
   location: string
   campaignTitle?: string | null
   createdAt: string
@@ -655,12 +654,13 @@ interface PostFormValues {
     | 'campaign_teaser'
     | 'campaign_update'
     | 'campaign_summary'
-  status: 'draft' | 'published' | 'archived'
-  authorName: string
+  status: 'draft' | 'published'
   location: string
   campaignTitle: string
 }
 ```
+
+For create requests, `status` defaults to `published` when omitted. The dashboard presents `published` as the active state (`نشط`). Generic post updates do not change lifecycle status; status changes use the dedicated status endpoint below.
 
 `campaignTitle` is required for campaign-related post types and MUST reference a campaign from the same organization.
 
@@ -683,7 +683,6 @@ Allowed search columns:
 ```text
 title
 summary
-authorName
 location
 type
 status

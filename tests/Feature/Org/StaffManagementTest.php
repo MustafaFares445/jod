@@ -48,8 +48,8 @@ test('invite staff member', function () {
     $data = [
         'name' => 'Jane Doe',
         'email' => 'jane@example.com',
-        'phone' => '1234567890',
-        'organization_role_id' => $this->managerRole->id,
+        'phone' => '0912345678',
+        'organizationRoleId' => $this->managerRole->id,
     ];
 
     $response = $this->actingAs($this->owner)
@@ -61,6 +61,18 @@ test('invite staff member', function () {
 
     $this->assertDatabaseHas('organization_staff', ['email' => 'jane@example.com']);
 });
+test('staff phone must be a Syrian mobile number', function () {
+    $this->actingAs($this->owner)
+        ->postJson('/api/v1/org/staff', [
+            'name' => 'Invalid Staff',
+            'email' => 'invalid@example.com',
+            'phone' => '1234567890',
+            'organizationRoleId' => $this->managerRole->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('phone');
+});
+
 test('update staff member', function () {
     $staff = OrganizationStaff::factory()->create([
         'organization_id' => $this->organization->id,
@@ -71,7 +83,8 @@ test('update staff member', function () {
         ->patchJson("/api/v1/org/staff/{$staff->id}", [
             'name' => 'New Name',
             'email' => $staff->email,
-            'organization_role_id' => $this->managerRole->id,
+            'phone' => '0998765432',
+            'organizationRoleId' => $this->managerRole->id,
         ]);
 
     $response->assertStatus(200)
@@ -99,7 +112,8 @@ test('staff role must belong to the same organization', function () {
         ->postJson('/api/v1/org/staff', [
             'name' => 'Cross Org Staff',
             'email' => 'cross-org@example.com',
-            'organization_role_id' => $otherRole->id,
+            'phone' => '0934567890',
+            'organizationRoleId' => $otherRole->id,
         ])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('organization_role_id');
@@ -133,6 +147,9 @@ test('final owner cannot be demoted', function () {
 
     $this->actingAs($this->owner)
         ->patchJson("/api/v1/org/staff/{$ownerMembership->id}", [
+            'name' => $ownerMembership->name,
+            'email' => $ownerMembership->email,
+            'phone' => $ownerMembership->phone ?: '0911111111',
             'organizationRoleId' => $this->managerRole->id,
         ])
         ->assertConflict();

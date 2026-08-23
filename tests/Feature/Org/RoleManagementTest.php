@@ -48,7 +48,7 @@ test('create role', function () {
             PermissionNameResolver::resolve(PermissionGroup::ORG_CAMPAIGN, PermissionAction::VIEW),
             PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::VIEW),
         ],
-        'is_active' => true,
+        'isActive' => true,
     ];
 
     $response = $this->actingAs($this->owner)
@@ -76,11 +76,12 @@ test('update role', function () {
                 PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::CREATE),
                 PermissionNameResolver::resolve(PermissionGroup::ORG_POST, PermissionAction::UPDATE),
             ],
-            'is_active' => true,
+            'isActive' => false,
         ]);
 
     $response->assertStatus(200)
-        ->assertJsonPath('data.role', 'Advanced Editor');
+        ->assertJsonPath('data.role', 'Advanced Editor')
+        ->assertJsonPath('data.isActive', false);
 });
 test('delete role', function () {
     $role = OrganizationRole::factory()->create([
