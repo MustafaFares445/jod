@@ -12,7 +12,9 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('notifications:campaign-closing-soon', function (NotificationEventService $notifications): void {
+Artisan::command('notifications:campaign-closing-soon', function (): void {
+    $notifications = app(NotificationEventService::class);
+
     Campaign::query()
         ->where('status', 'active')
         ->whereDate('end_date', now()->addDays(3)->toDateString())
@@ -20,39 +22,45 @@ Artisan::command('notifications:campaign-closing-soon', function (NotificationEv
             foreach ($campaigns as $campaign) {
                 $referencePath = '/campaigns/'.$campaign->id;
                 $organizationPath = '/org/campaigns/'.$campaign->id;
-                $alreadySentToday = Notification::query()
+                $body = "ستنتهي حملة {$campaign->title} خلال 3 أيام.";
+
+                $organizationAlreadySent = Notification::query()
                     ->where('event_type', NotificationEventType::CampaignClosingSoon->value)
-                    ->whereIn('reference_path', [$referencePath, $organizationPath])
+                    ->where('reference_path', $organizationPath)
                     ->whereDate('created_at', now()->toDateString())
                     ->exists();
 
-                if ($alreadySentToday) {
-                    continue;
+                if (! $organizationAlreadySent) {
+                    $notifications->notifyOrganization(
+                        (string) $campaign->organization_id,
+                        NotificationEventType::CampaignClosingSoon,
+                        'الحملة تقترب من موعد الانتهاء',
+                        $body,
+                        'campaign',
+                        'normal',
+                        $campaign->title,
+                        $organizationPath,
+                    );
                 }
 
-                $body = "ستنتهي حملة {$campaign->title} خلال 3 أيام.";
+                $participantsAlreadySent = Notification::query()
+                    ->where('event_type', NotificationEventType::CampaignClosingSoon->value)
+                    ->where('reference_path', $referencePath)
+                    ->whereDate('created_at', now()->toDateString())
+                    ->exists();
 
-                $notifications->notifyOrganization(
-                    (string) $campaign->organization_id,
-                    NotificationEventType::CampaignClosingSoon,
-                    'الحملة تقترب من موعد الانتهاء',
-                    $body,
-                    'campaign',
-                    'normal',
-                    $campaign->title,
-                    $organizationPath,
-                );
-
-                $notifications->notifyCampaignParticipants(
-                    $campaign,
-                    NotificationEventType::CampaignClosingSoon,
-                    'الحملة تقترب من موعد الانتهاء',
-                    $body,
-                    'campaign',
-                    'normal',
-                    $campaign->title,
-                    $referencePath,
-                );
+                if (! $participantsAlreadySent) {
+                    $notifications->notifyCampaignParticipants(
+                        $campaign,
+                        NotificationEventType::CampaignClosingSoon,
+                        'الحملة تقترب من موعد الانتهاء',
+                        $body,
+                        'campaign',
+                        'normal',
+                        $campaign->title,
+                        $referencePath,
+                    );
+                }
             }
         });
 })->purpose('Send notifications for active campaigns ending in three days');
