@@ -19,9 +19,10 @@ Artisan::command('notifications:campaign-closing-soon', function (NotificationEv
         ->chunkById(100, function ($campaigns) use ($notifications): void {
             foreach ($campaigns as $campaign) {
                 $referencePath = '/campaigns/'.$campaign->id;
+                $organizationPath = '/org/campaigns/'.$campaign->id;
                 $alreadySentToday = Notification::query()
                     ->where('event_type', NotificationEventType::CampaignClosingSoon->value)
-                    ->where('reference_path', $referencePath)
+                    ->whereIn('reference_path', [$referencePath, $organizationPath])
                     ->whereDate('created_at', now()->toDateString())
                     ->exists();
 
@@ -39,7 +40,7 @@ Artisan::command('notifications:campaign-closing-soon', function (NotificationEv
                     'campaign',
                     'normal',
                     $campaign->title,
-                    '/org/campaigns/'.$campaign->id,
+                    $organizationPath,
                 );
 
                 $notifications->notifyCampaignParticipants(
