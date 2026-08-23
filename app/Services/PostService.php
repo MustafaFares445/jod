@@ -26,8 +26,7 @@ class PostService
 
         $query = Post::query()
             ->with($this->mobileRelations($viewer))
-            ->where('status', 'published')
-            ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
+            ->whereIn('status', ['published', 'approved'])
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
             ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
             ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
@@ -72,7 +71,7 @@ class PostService
         return Post::query()
             ->with($this->mobileRelations($viewer))
             ->whereKey($id)
-            ->where('status', 'published')
+            ->whereIn('status', ['published', 'approved'])
             ->first();
     }
 
@@ -193,9 +192,86 @@ class PostService
         $post->delete();
     }
 
-    /**
-     * @return array<int|string, mixed>
-     */
+    private function normalizeSort(array $params): string
+    {
+        $sortingField = (string) ($params['sortingField'] ?? '');
+        if ($sortingField !== '') {
+            $direction = ($params['sortingDir'] ?? 'desc') === 'asc' ? '' : '-';
+
+            return $direction.$sortingField;
+        }
+
+        $sort = (string) ($params['sort'] ?? '');
+        if ($sort !== '') {
+            return $sort;
+        }
+
+        $sortBy = (string) ($params['sortBy'] ?? '');
+
+        return match ($sortBy) {
+            'updated_oldest' => 'updatedAt',
+            'title_asc' => 'title',
+            'title_desc' => '-title',
+            default => '-updatedAt',
+        };
+    }
+
+    /** @param array{sort?: string|null, sortBy?: string|null} $params */
+    private function normalizeDiscoverySort(array $params): string
+    {
+        $sort = (string) ($params['sort'] ?? '');
+        if ($sort !== '') {
+            return $sort;
+        }
+
+        $sortBy = (string) ($params['sortBy'] ?? '');
+
+        return match ($sortBy) {
+            'title_asc' => 'title',
+            'title_desc' => '-title',
+            'updated_oldest' => 'updatedAt',
+            'newest' => 'newest',
+            'most_engaged' => 'most_engaged',
+            default => 'newest',
+        };
+    }
+
+    private function param(array $params, string $key): mixed
+    {
+        if (array_key_exists($key, $params)) {
+            return $params[$key];
+        }
+
+        $flatKey = str_replace('.', '_', $key);
+        if (array_key_exists($flatKey, $params)) {
+            return $params[$flatKey];
+        }
+
+        return data_get($params, $key);
+    }
+
+    /** @param array{status: string, published_at?: mixed} $attributes */
+    private function transitionStatus(Post $post, string $expectedStatus, array $attributes, string $message): Post
+    {
+        return DB::transaction(function () use ($post, $expectedStatus, $attributes, $message): Post {
+            $lockedPost = Post::query()
+                ->whereKey($post->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedPost->status !== $expectedStatus) {
+                throw ValidationException::withMessages([
+                    'status' => [$message],
+                ]);
+            }
+
+            $lockedPost->update($attributes);
+
+            return $lockedPost;
+        });
+    }
+
+    /** @return array<int|string, mixed> */
     private function mobileRelations(?User $viewer): array
     {
         $relations = ['organization', 'campaign', 'author', 'images'];
@@ -255,109 +331,6 @@ class PostService
                     );
                 }
             });
-        });
-    }
-
-    private function resolveCampaignId(?string $campaignTitle, string $organizationId): ?string
-    {
-        if (! $campaignTitle) {
-            return null;
-        }
-
-        $campaignId = Campaign::query()
-            ->where('organization_id', $organizationId)
-            ->where('title', $campaignTitle)
-            ->value('id');
-
-        if ($campaignId === null) {
-            throw ValidationException::withMessages([
-                'campaignTitle' => ['Selected campaign does not belong to the organization.'],
-            ]);
-        }
-
-        return (string) $campaignId;
-    }
-
-    private function normalizeSort(array $params): string
-    {
-        $sortingField = (string) ($params['sortingField'] ?? '');
-        if ($sortingField !== '') {
-            $direction = ($params['sortingDir'] ?? 'desc') === 'asc' ? '' : '-';
-
-            return $direction.$sortingField;
-        }
-
-        $sort = (string) ($params['sort'] ?? '');
-        if ($sort !== '') {
-            return $sort;
-        }
-
-        $sortBy = (string) ($params['sortBy'] ?? '');
-
-        return match ($sortBy) {
-            'updated_oldest' => 'updatedAt',
-            'title_asc' => 'title',
-            'title_desc' => '-title',
-            default => '-updatedAt',
-        };
-    }
-
-    /**
-     * @param  array{sort?: string|null, sortBy?: string|null}  $params
-     */
-    private function normalizeDiscoverySort(array $params): string
-    {
-        $sort = (string) ($params['sort'] ?? '');
-        if ($sort !== '') {
-            return $sort;
-        }
-
-        $sortBy = (string) ($params['sortBy'] ?? '');
-
-        return match ($sortBy) {
-            'title_asc' => 'title',
-            'title_desc' => '-title',
-            'updated_oldest' => 'updatedAt',
-            'newest' => 'newest',
-            'most_engaged' => 'most_engaged',
-            default => 'newest',
-        };
-    }
-
-    private function param(array $params, string $key): mixed
-    {
-        if (array_key_exists($key, $params)) {
-            return $params[$key];
-        }
-
-        $flatKey = str_replace('.', '_', $key);
-        if (array_key_exists($flatKey, $params)) {
-            return $params[$flatKey];
-        }
-
-        return data_get($params, $key);
-    }
-
-    /**
-     * @param  array{status: string, published_at?: mixed}  $attributes
-     */
-    private function transitionStatus(Post $post, string $expectedStatus, array $attributes, string $message): Post
-    {
-        return DB::transaction(function () use ($post, $expectedStatus, $attributes, $message): Post {
-            $lockedPost = Post::query()
-                ->whereKey($post->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($lockedPost->status !== $expectedStatus) {
-                throw ValidationException::withMessages([
-                    'status' => [$message],
-                ]);
-            }
-
-            $lockedPost->update($attributes);
-
-            return $lockedPost;
         });
     }
 }
