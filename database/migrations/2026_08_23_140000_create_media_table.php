@@ -14,6 +14,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('model_type', 32);
             $table->uuid('model_id');
+            $table->uuid('post_id')->nullable()->index(); // compatibility alias for legacy mobile post media code
             $table->string('prop', 64);
             $table->string('disk', 32)->default('public');
             $table->string('path');
