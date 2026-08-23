@@ -173,6 +173,29 @@ test('mobile discovery posts include viewer state when authenticated', function 
     $response->assertJsonPath('meta.viewer.isAuthenticated', true);
     $response->assertJsonPath('meta.viewer.userId', $user->id);
 });
+test('authenticated mobile discovery posts constrain viewer relations on index', function () {
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create();
+    $post = Post::query()->create([
+        'id' => (string) Str::uuid(),
+        'title' => 'Saved post',
+        'type' => 'general',
+        'status' => 'published',
+        'organization_id' => $organization->id,
+        'published_at' => now(),
+    ]);
+    SavedPost::factory()->create([
+        'user_id' => $user->id,
+        'post_id' => $post->id,
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->getJson('/api/mobile/discovery/posts?page=1&perPAge=10')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $post->id)
+        ->assertJsonPath('data.0.saved', true)
+        ->assertJsonPath('meta.perPage', 10);
+});
 test('mobile discovery post show returns 404 for unpublished content', function () {
     $post = Post::query()->create([
         'id' => (string) Str::uuid(),

@@ -6,6 +6,7 @@ use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
+use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\MobileDeviceController;
 use App\Http\Controllers\Mobile\NotificationController;
@@ -44,6 +45,20 @@ Route::prefix('discovery')
         Route::get('campaigns', [DiscoveryController::class, 'campaigns'])->name('campaigns');
         Route::get('campaigns/{campaign}', [DiscoveryController::class, 'showCampaign'])->name('campaigns.show');
         Route::get('categories', [DiscoveryController::class, 'categories'])->name('categories');
+    });
+
+Route::prefix('lookups')
+    ->name('lookups.')
+    ->middleware('throttle:60,1')
+    ->group(function (): void {
+        Route::get('cities', [LookupController::class, 'cities'])->name('cities');
+        Route::get('report-reasons', [LookupController::class, 'reportReasons'])->name('report-reasons');
+        Route::get('post-types', [LookupController::class, 'postTypes'])->name('post-types');
+        Route::get('post-statuses', [LookupController::class, 'postStatuses'])->name('post-statuses');
+        Route::get('cta-states', [LookupController::class, 'ctaStates'])->name('cta-states');
+        Route::get('notification-types', [LookupController::class, 'notificationTypes'])->name('notification-types');
+        Route::get('donation-flows', [LookupController::class, 'donationFlows'])->name('donation-flows');
+        Route::get('donation-statuses', [LookupController::class, 'donationStatuses'])->name('donation-statuses');
     });
 
 /*

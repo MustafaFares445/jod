@@ -9,6 +9,7 @@ use App\Models\Campaign;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,11 +17,11 @@ use Illuminate\Validation\ValidationException;
 class PostService
 {
     /**
-     * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
+     * @param  array{page?: int|string|null, perPage?: int|string|null, perPAge?: int|string|null, search?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
      */
     public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
-        $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $perPage = max(1, min((int) ($params['perPage'] ?? $params['perPAge'] ?? 20), 100));
         $sort = $this->normalizeDiscoverySort($params);
 
         $query = Post::query()
@@ -205,8 +206,9 @@ class PostService
             return $relations;
         }
 
-        $relations['saves'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
-        $relations['campaignApplications'] = static fn (Builder $builder) => $builder->where('created_by', $viewer->id);
+        $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
+        $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
+        $relations['campaignApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
 
         return $relations;
     }

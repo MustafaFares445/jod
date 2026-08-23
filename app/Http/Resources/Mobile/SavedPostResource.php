@@ -16,6 +16,7 @@ class SavedPostResource extends JsonResource
     {
         $post = MobileHomePostResource::make($this->post)->resolve($request);
         $post['saved'] = true;
+        $post['isSaved'] = true;
         $post['savedAt'] = $this->created_at?->toIso8601String();
 
         return $post;

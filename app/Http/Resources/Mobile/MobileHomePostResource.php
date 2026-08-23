@@ -41,6 +41,9 @@ class MobileHomePostResource extends JsonResource
             $cta['state'] = $ctaState;
         }
 
+        $isLiked = $this->relationLoaded('likes') && $this->likes->isNotEmpty();
+        $isSaved = $this->relationLoaded('saves') && $this->saves->isNotEmpty();
+
         $data = [
             'id' => (string) $this->id,
             'publisher' => $publisher,
@@ -60,7 +63,9 @@ class MobileHomePostResource extends JsonResource
             'reactionsCount' => (int) $this->reactions_count,
             'commentsCount' => 0,
             'sharesCount' => 0,
-            'saved' => $this->relationLoaded('saves') && $this->saves->isNotEmpty(),
+            'isLiked' => $isLiked,
+            'isSaved' => $isSaved,
+            'saved' => $isSaved,
 
             // Keep a small compatibility tail while mobile callers migrate to the
             // canonical nested fields above.

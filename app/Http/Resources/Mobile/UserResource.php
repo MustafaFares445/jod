@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'city' => $this->city,
             'bio' => $this->bio,
+            'avatarUrl' => null,
             'verified' => $organization !== null
                 ? $organization->verification_status === 'verified'
                 : $this->email_verified_at !== null,
