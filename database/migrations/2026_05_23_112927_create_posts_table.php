@@ -18,7 +18,7 @@ return new class extends Migration
                 $table->string('summary')->nullable();
                 $table->text('content')->nullable();
                 $table->string('type')->default('general');
-                $table->enum('status', ['draft', 'pending', 'published', 'archived', 'approved', 'rejected'])->default('draft');
+                $table->enum('status', ['draft', 'pending', 'published', 'archived', 'approved', 'rejected'])->default('published');
                 $table->string('location')->nullable();
                 $table->string('organization_id')->nullable();
                 $table->string('campaign_id')->nullable();
