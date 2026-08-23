@@ -22,10 +22,6 @@ class UserPostController extends Controller
 
     /**
      * List the authenticated user's posts.
-     *
-     * Requires a Sanctum bearer token.
-     *
-     * @response array{success: bool, message: string, data: array<int, array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}>, error: null, meta: array{currentPage: int, perPage: int, total: int, lastPage: int}}
      */
     public function index(MyPostRequest $request): JsonResponse
     {
@@ -38,12 +34,24 @@ class UserPostController extends Controller
     }
 
     /**
+     * Show one post owned by the authenticated user, including drafts and rejected posts.
+     */
+    public function show(Request $request, Post $post): JsonResponse
+    {
+        Gate::authorize('viewOwn', $post);
+
+        return MobileApiResponse::success(
+            UserPostResource::make($post->loadMissing('images'))->resolve($request),
+            'User post retrieved successfully.',
+        );
+    }
+
+    /**
      * Create a draft or submit a new post for review.
      *
-     * Requires a Sanctum bearer token. Send images as multipart/form-data when present.
-     *
-     * @bodyParam images file[] optional Up to five JPEG, PNG, or WebP images, 5 MB each.
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * Media is intentionally not accepted in this request. If images are needed,
+     * create the post with saveAsDraft=true, upload each file through the general
+     * media manager, then call the submit endpoint.
      */
     public function store(PostRequest $request): JsonResponse
     {
@@ -61,9 +69,7 @@ class UserPostController extends Controller
     /**
      * Update the authenticated user's draft or rejected post.
      *
-     * Requires a Sanctum bearer token. Manage images through the dedicated post image endpoints.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
+     * Media changes are handled through /api/v1/media/post/{postId}/images.
      */
     public function update(PostRequest $request, Post $post): JsonResponse
     {
@@ -75,13 +81,6 @@ class UserPostController extends Controller
         );
     }
 
-    /**
-     * Submit or resubmit the authenticated user's draft or rejected post.
-     *
-     * Requires a Sanctum bearer token.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
-     */
     public function submit(PostSubmitRequest $request, Post $post): JsonResponse
     {
         Gate::authorize('submitOwn', $post);
@@ -92,13 +91,6 @@ class UserPostController extends Controller
         );
     }
 
-    /**
-     * Archive the authenticated user's active post.
-     *
-     * Requires a Sanctum bearer token.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
-     */
     public function archive(Request $request, Post $post): JsonResponse
     {
         Gate::authorize('archiveOwn', $post);
@@ -109,13 +101,6 @@ class UserPostController extends Controller
         );
     }
 
-    /**
-     * Repost the authenticated user's archived post.
-     *
-     * Requires a Sanctum bearer token.
-     *
-     * @response array{success: bool, message: string, data: array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}, error: null, meta: array{}}
-     */
     public function repost(Request $request, Post $post): JsonResponse
     {
         Gate::authorize('repostOwn', $post);
@@ -126,13 +111,6 @@ class UserPostController extends Controller
         );
     }
 
-    /**
-     * Delete the authenticated user's post.
-     *
-     * Requires a Sanctum bearer token.
-     *
-     * @response array{success: bool, message: string, data: null, error: null, meta: array{}}
-     */
     public function destroy(Request $request, Post $post): JsonResponse
     {
         Gate::authorize('deleteOwn', $post);
