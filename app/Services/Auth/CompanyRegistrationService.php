@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Auth;
 
+use App\Enums\NotificationEventType;
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Enums\PermissionModule;
@@ -11,12 +12,15 @@ use App\Models\Organization;
 use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
 use App\Models\User;
+use App\Services\NotificationEventService;
 use App\Support\Permissions\PermissionCatalog;
 use App\Support\Permissions\PermissionNameResolver;
 use Illuminate\Support\Facades\DB;
 
 class CompanyRegistrationService
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     /** @param array<string, mixed> $data */
     public function register(array $data): User
     {
@@ -73,6 +77,29 @@ class CompanyRegistrationService
                 'invited_at' => now(),
                 'accepted_at' => now(),
             ]);
+
+            $this->notifications->notifyUser(
+                $user,
+                NotificationEventType::OrganizationSubmitted,
+                'تم إرسال طلب تسجيل المؤسسة',
+                "تم إرسال طلب تسجيل {$organization->name} وهو الآن بانتظار مراجعة الإدارة.",
+                'account',
+                'normal',
+                $organization->name,
+                '/organization/profile',
+                (string) $organization->id,
+            );
+
+            $this->notifications->notifyAdmins(
+                NotificationEventType::OrganizationSubmitted,
+                'مؤسسة جديدة بانتظار المراجعة',
+                "تم تسجيل {$organization->name} وتحتاج إلى مراجعة وتوثيق.",
+                'account',
+                'high',
+                $organization->name,
+                '/admin/organizations/'.$organization->id,
+                (string) $user->id,
+            );
 
             return $user->refresh();
         });
