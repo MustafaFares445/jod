@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'category',
     'status',
     'location',
+    'images',
     'organization_id',
     'creator_id',
     'goal_amount',
@@ -46,6 +47,7 @@ class Campaign extends Model
     protected function casts(): array
     {
         return [
+            'images' => 'array',
             'start_date' => 'date',
             'end_date' => 'date',
             'submitted_at' => 'datetime',
