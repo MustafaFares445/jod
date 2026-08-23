@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Enums\NotificationEventType;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\User;
+use App\Services\NotificationEventService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 class CampaignApplicationService
 {
     public const INACTIVE_STATUSES = ['rejected', 'withdrawn'];
+
+    public function __construct(private readonly NotificationEventService $notifications) {}
 
     /**
      * @param  array{page?: int, perPage?: int, campaignId?: string|null, status?: string|null}  $params
@@ -109,6 +113,30 @@ class CampaignApplicationService
 
             $this->syncApplicantCount($campaign);
 
+            $this->notifications->notifyUser(
+                $user,
+                NotificationEventType::ApplicationSubmitted,
+                'تم إرسال طلب التطوع',
+                "تم إرسال طلبك للتطوع في حملة {$campaign->title} وهو الآن بانتظار المراجعة.",
+                'applicant',
+                'normal',
+                $campaign->title,
+                '/applications/'.$application->id,
+                (string) $campaign->organization_id,
+            );
+
+            $this->notifications->notifyOrganization(
+                (string) $campaign->organization_id,
+                NotificationEventType::ApplicationSubmitted,
+                'طلب تطوع جديد',
+                "تم استلام طلب تطوع جديد من {$user->name} لحملة {$campaign->title}.",
+                'applicant',
+                'high',
+                $user->name,
+                '/org/applicants/'.$application->id,
+                (string) $user->id,
+            );
+
             return $application->refresh()->load(['campaign.organization', 'organization']);
         });
     }
@@ -141,12 +169,27 @@ class CampaignApplicationService
                 return null;
             }
 
-            if (! in_array($application->applicant_status, self::INACTIVE_STATUSES, true)) {
+            $wasActive = ! in_array($application->applicant_status, self::INACTIVE_STATUSES, true);
+            if ($wasActive) {
                 $application->update(['applicant_status' => 'withdrawn']);
             }
 
             if ($campaign !== null) {
                 $this->syncApplicantCount($campaign);
+
+                if ($wasActive) {
+                    $this->notifications->notifyOrganization(
+                        (string) $campaign->organization_id,
+                        NotificationEventType::ApplicationWithdrawn,
+                        'تم سحب طلب تطوع',
+                        "قام {$user->name} بسحب طلب التطوع في حملة {$campaign->title}.",
+                        'applicant',
+                        'normal',
+                        $user->name,
+                        '/org/applicants/'.$application->id,
+                        (string) $user->id,
+                    );
+                }
             }
 
             return $application->refresh()->load(['campaign.organization', 'organization']);
