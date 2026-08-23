@@ -13,6 +13,7 @@ use App\Models\Campaign;
 use App\Services\CampaignService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class CampaignController extends Controller
@@ -22,7 +23,6 @@ class CampaignController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAnyOrganization', Campaign::class);
-
         $campaigns = $this->service->paginate(request()->all(), $this->organizationId());
 
         return CampaignResource::collection($campaigns);
@@ -33,13 +33,15 @@ class CampaignController extends Controller
         $this->authorize('createOrganization', Campaign::class);
 
         $campaign = $this->service->create(
-            CampaignData::from($request->safe()->merge([
+            CampaignData::from(collect($request->validated())->except('images')->merge([
                 'status' => $request->validated('status', 'active'),
             ])->all()),
             $this->organizationId(),
         );
 
-        return CampaignResource::make($campaign);
+        $this->storeImages($campaign, $request->file('images', []));
+
+        return CampaignResource::make($campaign->refresh());
     }
 
     public function show(Campaign $campaign): CampaignResource
@@ -54,7 +56,7 @@ class CampaignController extends Controller
         $validated = $request->validated();
         $hasCampaignUpdateFields = $this->hasCampaignUpdateFields($validated);
 
-        if ($hasCampaignUpdateFields || ! array_key_exists('status', $validated)) {
+        if ($hasCampaignUpdateFields || array_key_exists('images', $validated) || ! array_key_exists('status', $validated)) {
             $this->authorize('updateOrganization', $campaign);
         }
 
@@ -65,19 +67,14 @@ class CampaignController extends Controller
             )->refresh();
         }
 
+        if ($request->hasFile('images')) {
+            $this->replaceImages($campaign, $request->file('images', []));
+        }
+
         if (array_key_exists('status', $validated)) {
             $status = (string) $validated['status'];
-
-            $this->authorize(
-                $status === 'closed' ? 'closeOrganization' : 'updateOrganization',
-                $campaign,
-            );
-
-            $campaign = $this->service->updateStatus(
-                $campaign,
-                $status,
-                $validated['closedReason'] ?? null,
-            );
+            $this->authorize($status === 'closed' ? 'closeOrganization' : 'updateOrganization', $campaign);
+            $campaign = $this->service->updateStatus($campaign, $status, $validated['closedReason'] ?? null);
         }
 
         return CampaignResource::make($campaign->refresh());
@@ -86,11 +83,7 @@ class CampaignController extends Controller
     public function close(CloseCampaignRequest $request, Campaign $campaign): CampaignResource
     {
         $this->authorize('closeOrganization', $campaign);
-
-        $campaign = $this->service->close(
-            $campaign,
-            $request->validated('reason'),
-        );
+        $campaign = $this->service->close($campaign, $request->validated('reason'));
 
         return CampaignResource::make($campaign);
     }
@@ -98,6 +91,10 @@ class CampaignController extends Controller
     public function destroy(Campaign $campaign): Response
     {
         $this->authorize('deleteOrganization', $campaign);
+
+        foreach ($campaign->images ?? [] as $path) {
+            Storage::disk('public')->delete($path);
+        }
 
         $this->service->delete($campaign);
 
@@ -116,27 +113,15 @@ class CampaignController extends Controller
         return $organizationId;
     }
 
-    /**
-     * @param  array<string, mixed>  $validated
-     */
+    /** @param array<string, mixed> $validated */
     private function hasCampaignUpdateFields(array $validated): bool
     {
         return count(array_intersect(array_keys($validated), [
-            'title',
-            'summary',
-            'category',
-            'location',
-            'goalAmount',
-            'beneficiariesCount',
-            'startDate',
-            'endDate',
+            'title', 'summary', 'category', 'location', 'goalAmount', 'beneficiariesCount', 'startDate', 'endDate',
         ])) > 0;
     }
 
-    /**
-     * @param  array<string, mixed>  $validated
-     * @return array<string, mixed>
-     */
+    /** @param array<string, mixed> $validated @return array<string, mixed> */
     private function campaignData(Campaign $campaign, array $validated): array
     {
         return [
@@ -150,5 +135,30 @@ class CampaignController extends Controller
             'endDate' => $validated['endDate'] ?? $campaign->end_date?->toDateString(),
             'status' => $campaign->status,
         ];
+    }
+
+    /** @param array<int, \Illuminate\Http\UploadedFile> $images */
+    private function storeImages(Campaign $campaign, array $images): void
+    {
+        if ($images === []) {
+            return;
+        }
+
+        $paths = [];
+        foreach ($images as $image) {
+            $paths[] = $image->store("campaigns/{$campaign->id}", 'public');
+        }
+
+        $campaign->update(['images' => $paths]);
+    }
+
+    /** @param array<int, \Illuminate\Http\UploadedFile> $images */
+    private function replaceImages(Campaign $campaign, array $images): void
+    {
+        foreach ($campaign->images ?? [] as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
+        $this->storeImages($campaign, $images);
     }
 }
