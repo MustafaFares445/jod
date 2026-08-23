@@ -8,6 +8,7 @@ use App\Http\Controllers\API\Admin\CategoryController;
 use App\Http\Controllers\API\Admin\NotificationController;
 use App\Http\Controllers\API\Admin\OrganizationController;
 use App\Http\Controllers\API\Admin\OverviewController;
+use App\Http\Controllers\API\Admin\PostController as AdminPostController;
 use App\Http\Controllers\API\Admin\ReportController;
 use App\Http\Controllers\API\Admin\SettingsController;
 use App\Http\Controllers\API\Admin\UserController;
@@ -55,6 +56,8 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('organizations/{organization}/status', OrganizationController::class.'@updateStatus');
         Route::patch('organizations/{organization}/verification', OrganizationController::class.'@updateVerification');
         Route::post('organizations/{organization}/accept', OrganizationController::class.'@accept');
+
+        Route::apiResource('posts', AdminPostController::class);
 
         Route::prefix('review')->group(function () {
             Route::get('posts', App\Http\Controllers\API\Admin\Review\PostController::class.'@index');
