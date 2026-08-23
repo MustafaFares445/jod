@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\MediaModel;
 use App\Models\Media;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
@@ -17,7 +18,9 @@ class MediaService
 {
     public function resolveTarget(MediaModel $model, string $modelId): Model
     {
-        return $model->modelClass()::query()->findOrFail($modelId);
+        $modelClass = $model->modelClass();
+
+        return $modelClass::query()->findOrFail($modelId);
     }
 
     public function assertProp(MediaModel $model, string $prop): int
@@ -127,7 +130,8 @@ class MediaService
         return $this->query($model, $modelId, $prop)->whereKey($mediaId)->firstOrFail();
     }
 
-    private function query(MediaModel $model, string $modelId, string $prop)
+    /** @return Builder<Media> */
+    private function query(MediaModel $model, string $modelId, string $prop): Builder
     {
         return Media::query()
             ->where('model_type', $model->value)
