@@ -14,7 +14,6 @@ class DonorRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['required', 'string', 'regex:/^09\d{8}$/'],
-            'city' => ['required', 'string', 'max:255'],
         ];
     }
 

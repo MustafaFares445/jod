@@ -87,9 +87,9 @@ class OrganizationRoleService
     {
         abort_if($role->is_system, Response::HTTP_CONFLICT, 'System roles cannot be deleted.');
         abort_if(
-            $role->staff()->where('status', 'active')->exists(),
+            $role->staff()->exists(),
             Response::HTTP_CONFLICT,
-            'Roles assigned to active staff cannot be deleted.',
+            'Roles assigned to staff cannot be deleted. Remove every staff assignment first.',
         );
 
         DB::transaction(function () use ($role, $actorUserId): void {

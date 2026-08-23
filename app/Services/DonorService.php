@@ -23,8 +23,7 @@ class DonorService
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('city', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%");
                 });
             });
 
@@ -46,7 +45,7 @@ class DonorService
             'name' => $attributes['name'],
             'email' => $attributes['email'],
             'phone' => $attributes['phone'],
-            'city' => $attributes['city'],
+            'city' => null,
             'created_by' => $userId,
         ]);
     }
@@ -57,7 +56,6 @@ class DonorService
             'name' => $attributes['name'],
             'email' => $attributes['email'],
             'phone' => $attributes['phone'],
-            'city' => $attributes['city'],
         ]);
 
         return $donation->refresh();

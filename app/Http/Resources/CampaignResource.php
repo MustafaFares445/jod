@@ -6,6 +6,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class CampaignResource extends JsonResource
 {
@@ -20,6 +21,7 @@ class CampaignResource extends JsonResource
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,
             'location' => $this->location,
+            'images' => collect($this->images ?? [])->map(fn (string $path): string => Storage::disk('public')->url($path))->values()->all(),
             'goalAmount' => (float) $this->goal_amount,
             'raisedAmount' => (float) $this->raised_amount,
             'beneficiariesCount' => (int) $this->beneficiaries_count,

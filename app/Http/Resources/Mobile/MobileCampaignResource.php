@@ -8,13 +8,12 @@ use App\Models\Post;
 use App\Models\PostImage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MobileCampaignResource extends JsonResource
 {
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $publisher = $this->publisher();
@@ -53,8 +52,6 @@ class MobileCampaignResource extends JsonResource
             'closedReason' => $this->closed_reason,
             'reviewedBy' => $this->whenLoaded('reviewedBy', fn () => $this->reviewedBy?->name),
             'rejectionReason' => $this->rejection_reason,
-
-            // Compatibility fields for current mobile/admin consumers.
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,
         ];
@@ -70,21 +67,14 @@ class MobileCampaignResource extends JsonResource
         return $data;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function publisher(): array
     {
         $organization = $this->relationLoaded('organization') ? $this->organization : null;
         $manager = $this->relationLoaded('creator') ? $this->creator : null;
 
-        $publisherId = $organization?->id
-            ?? $manager?->id
-            ?? $this->creator_id
-            ?? 'campaign-'.$this->id;
-        $name = $organization?->name
-            ?? $manager?->name
-            ?? 'JOD';
+        $publisherId = $organization?->id ?? $manager?->id ?? $this->creator_id ?? 'campaign-'.$this->id;
+        $name = $organization?->name ?? $manager?->name ?? 'JOD';
         $email = $organization?->email ?? $manager?->email;
         $phone = $organization?->phone ?? $manager?->phone;
         $city = $organization?->location ?? $manager?->city ?? $this->location;
@@ -116,22 +106,26 @@ class MobileCampaignResource extends JsonResource
         return $publisher;
     }
 
-    /**
-     * @return list<string>
-     */
+    /** @return list<string> */
     private function images(): array
     {
+        $campaignImages = collect($this->images ?? [])
+            ->map(static fn (string $path): string => Storage::disk('public')->url($path));
+
         if (! $this->relationLoaded('posts')) {
-            return [];
+            return $campaignImages->take(10)->values()->all();
         }
 
-        return $this->posts
+        $postImages = $this->posts
             ->flatMap(static function (Post $post) {
                 return $post->relationLoaded('images') ? $post->images : [];
             })
-            ->map(static fn (PostImage $image): string => $image->publicUrl())
+            ->map(static fn (PostImage $image): string => $image->publicUrl());
+
+        return $campaignImages
+            ->concat($postImages)
             ->unique()
-            ->take(5)
+            ->take(10)
             ->values()
             ->all();
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Org;
 
+use App\Support\SyrianGovernorates;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class CampaignRequest extends FormRequest
             'closedReason' => $allowsStatusUpdate
                 ? [Rule::requiredIf(fn (): bool => $this->input('status') === 'closed'), 'nullable', 'string', 'min:8', 'max:500']
                 : ['prohibited'],
-            'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
+            'location' => [$isUpdate ? 'sometimes' : 'required', 'string', Rule::in(SyrianGovernorates::ALL)],
             'goalAmount' => [$isUpdate ? 'sometimes' : 'required', 'numeric', 'min:0'],
             'beneficiariesCount' => [$isUpdate ? 'sometimes' : 'required', 'integer', 'min:0'],
             'startDate' => [$isUpdate ? 'sometimes' : 'required', 'date'],
@@ -38,6 +39,8 @@ class CampaignRequest extends FormRequest
                 'date',
                 Rule::when($this->filled('startDate'), ['after_or_equal:startDate']),
             ],
+            'images' => ['sometimes', 'array', 'max:10'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 }

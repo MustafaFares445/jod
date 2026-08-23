@@ -22,7 +22,7 @@ class CampaignService
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->where('category', $params['category']))
-            ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
+            ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', $params['location']))
             ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
             ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
                 $search = (string) $params['search'];
@@ -64,7 +64,7 @@ class CampaignService
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
-            ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
+            ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', $location))
             ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
@@ -195,9 +195,7 @@ class CampaignService
         };
     }
 
-    /**
-     * @return array<int|string, mixed>
-     */
+    /** @return array<int|string, mixed> */
     private function mobileDiscoveryRelations(): array
     {
         return [
