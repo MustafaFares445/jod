@@ -95,6 +95,17 @@ test('returns kpi data for different ranges', function () {
         expect($response->json('data.kpis'))->toBeArray();
     }
 });
+test('kpi percentage change stays integer when previous period has records', function () {
+    User::factory()->create([
+        'created_at' => now()->subDays(45),
+        'updated_at' => now()->subDays(45),
+    ]);
+
+    $response = $this->getJson('/api/v1/admin/analytics/kpis?range=30d');
+
+    $response->assertOk();
+    expect($response->json('data.kpis.0.changeVsLastMonth'))->toBeInt();
+});
 test('returns weekly stats', function () {
     User::factory()->count(5)->create();
     Post::query()->create(['title' => 'Weekly post 1']);
