@@ -13,9 +13,7 @@ class CampaignDiscoveryRequest extends FormRequest
         return true;
     }
 
-    /**
-     * @return array<string, list<string>>
-     */
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return [
@@ -26,8 +24,8 @@ class CampaignDiscoveryRequest extends FormRequest
             'category' => ['nullable', 'string', 'max:50'],
             'location' => ['nullable', 'string', 'max:255'],
             'organizationId' => ['nullable', 'string', 'max:255'],
-            'sort' => ['nullable', 'string', 'in:updatedAt,-updatedAt,progress,-progress'],
-            'sortBy' => ['nullable', 'string', 'in:updated_oldest,progress_highest,progress_lowest'],
+            'sort' => ['nullable', 'string', 'in:updatedAt,-updatedAt,newest,oldest,progress,-progress'],
+            'sortBy' => ['nullable', 'string', 'in:updated_oldest,newest,oldest,progress_highest,progress_lowest'],
         ];
     }
 }
