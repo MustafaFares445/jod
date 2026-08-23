@@ -74,9 +74,22 @@ class Post extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class, 'model_id')
+            ->where('model_type', 'post')
+            ->orderBy('prop')
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
     public function images(): HasMany
     {
-        return $this->hasMany(PostImage::class)->orderBy('position')->orderBy('id');
+        return $this->hasMany(Media::class, 'model_id')
+            ->where('model_type', 'post')
+            ->where('prop', 'images')
+            ->orderBy('position')
+            ->orderBy('id');
     }
 
     public function likes(): HasMany
@@ -89,10 +102,6 @@ class Post extends Model
         return $this->hasMany(SavedPost::class);
     }
 
-    /**
-     * Applications that should put a mobile volunteer CTA in the submitted
-     * state. Rejected/withdrawn applications are intentionally re-applicable.
-     */
     public function campaignApplications(): HasMany
     {
         return $this->hasMany(CampaignApplication::class, 'campaign_id', 'campaign_id')
