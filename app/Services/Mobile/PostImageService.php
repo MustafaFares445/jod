@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Models\Media;
 use App\Models\Post;
-use App\Models\PostImage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,16 +18,13 @@ class PostImageService
 {
     public const MAX_IMAGES = 5;
 
-    /**
-     * @param  list<UploadedFile>  $files
-     */
+    /** @param list<UploadedFile> $files */
     public function add(Post $post, array $files): Post
     {
         if ($files === []) {
             return $post->load('images');
         }
 
-        /** @var list<array{disk: string, path: string}> $storedFiles */
         $storedFiles = [];
 
         try {
@@ -46,7 +43,7 @@ class PostImageService
                 foreach ($files as $file) {
                     $extension = $file->extension() ?: $file->getClientOriginalExtension();
                     $filename = (string) Str::uuid().($extension !== '' ? '.'.$extension : '');
-                    $path = $file->storeAs("mobile/posts/{$lockedPost->id}", $filename, 'public');
+                    $path = $file->storeAs("media/post/{$lockedPost->id}/images", $filename, 'public');
 
                     if ($path === false) {
                         throw new RuntimeException('Unable to store post image.');
@@ -54,7 +51,10 @@ class PostImageService
 
                     $storedFiles[] = ['disk' => 'public', 'path' => $path];
 
-                    $lockedPost->images()->create([
+                    Media::query()->create([
+                        'model_type' => 'post',
+                        'model_id' => $lockedPost->id,
+                        'prop' => 'images',
                         'disk' => 'public',
                         'path' => $path,
                         'original_name' => $file->getClientOriginalName(),
@@ -75,9 +75,7 @@ class PostImageService
         }
     }
 
-    /**
-     * @param  list<string>  $imageIds
-     */
+    /** @param list<string> $imageIds */
     public function reorder(Post $post, array $imageIds): Post
     {
         return DB::transaction(function () use ($post, $imageIds): Post {
@@ -94,8 +92,10 @@ class PostImageService
             }
 
             foreach ($imageIds as $position => $imageId) {
-                PostImage::query()
-                    ->where('post_id', $lockedPost->id)
+                Media::query()
+                    ->where('model_type', 'post')
+                    ->where('model_id', $lockedPost->id)
+                    ->where('prop', 'images')
                     ->whereKey($imageId)
                     ->update(['position' => $position]);
             }
@@ -120,9 +120,9 @@ class PostImageService
                 ->orderBy('id')
                 ->get()
                 ->values()
-                ->each(static function (PostImage $postImage, int $position): void {
-                    if ((int) $postImage->position !== $position) {
-                        $postImage->update(['position' => $position]);
+                ->each(static function (Media $media, int $position): void {
+                    if ((int) $media->position !== $position) {
+                        $media->update(['position' => $position]);
                     }
                 });
         });
