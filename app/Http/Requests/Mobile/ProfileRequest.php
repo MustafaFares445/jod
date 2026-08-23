@@ -30,7 +30,7 @@ class ProfileRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($userId),
             ],
             'phone' => [
-                'nullable',
+                'required',
                 'string',
                 'max:20',
                 Rule::unique('users', 'phone')->ignore($userId),
