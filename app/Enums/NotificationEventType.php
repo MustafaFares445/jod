@@ -37,4 +37,18 @@ enum NotificationEventType: string
 
     case SystemAnnouncement = 'system.announcement';
     case SystemMaintenance = 'system.maintenance';
+
+    public function category(): string
+    {
+        return match ($this) {
+            self::DonationCompleted, self::DonationReceived => 'donation',
+            self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed => 'campaign',
+            self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
+            self::PostSubmitted, self::PostApproved, self::PostRejected => 'post',
+            self::ReportSubmitted, self::ReportInProgress, self::ReportInfoRequested, self::ReportClosed => 'report',
+            self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',
+            self::StaffInvited, self::StaffRoleChanged, self::StaffRemoved => 'staff',
+            self::SystemAnnouncement, self::SystemMaintenance => 'system',
+        };
+    }
 }
