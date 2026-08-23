@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Services\NotificationDistributionService;
 use App\Services\NotificationEventService;
 use Illuminate\Support\Str;
-use InvalidArgumentException;
 use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -59,7 +58,7 @@ test('dispatcher rejects event and category mismatches', function () {
         'Donation completed',
         'Your donation was recorded.',
         'post',
-    ))->toThrow(InvalidArgumentException::class);
+    ))->toThrow(\InvalidArgumentException::class);
 });
 
 test('organization event routing only notifies active users in that organization', function () {
