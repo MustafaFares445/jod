@@ -15,8 +15,8 @@ Route::middleware(['auth:sanctum', 'access-token'])
     ->group(function (): void {
         Route::post('{model}/{modelId}/{prop}', [MediaController::class, 'upload'])
             ->whereIn('model', ['organization', 'campaign', 'post']);
-        Route::post('{model}/{modelId}/{prop}/{media}/replace', [MediaController::class, 'replace'])
+        Route::post('{model}/{modelId}/{prop}/{mediaId}/replace', [MediaController::class, 'replace'])
             ->whereIn('model', ['organization', 'campaign', 'post']);
-        Route::delete('{model}/{modelId}/{prop}/{media}', [MediaController::class, 'destroy'])
+        Route::delete('{model}/{modelId}/{prop}/{mediaId}', [MediaController::class, 'destroy'])
             ->whereIn('model', ['organization', 'campaign', 'post']);
     });
