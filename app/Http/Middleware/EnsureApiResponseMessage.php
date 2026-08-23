@@ -11,6 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureApiResponseMessage
 {
+    private const JSON_OPTIONS = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
@@ -26,7 +28,7 @@ class EnsureApiResponseMessage
                 'statusCode' => Response::HTTP_OK,
                 'message' => $message,
                 'item' => null,
-            ]);
+            ], Response::HTTP_OK, [], self::JSON_OPTIONS);
         }
 
         if (! $response instanceof JsonResponse) {
@@ -48,6 +50,7 @@ class EnsureApiResponseMessage
             $payload['item'] ??= $this->itemFrom($payload);
         }
 
+        $response->setEncodingOptions($response->getEncodingOptions() | self::JSON_OPTIONS);
         $response->setData($payload);
 
         return $response;
