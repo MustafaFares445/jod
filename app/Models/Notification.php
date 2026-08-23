@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'mailbox',
     'status',
     'category',
+    'event_type',
     'recipient_scope',
     'recipient_label',
     'priority',
