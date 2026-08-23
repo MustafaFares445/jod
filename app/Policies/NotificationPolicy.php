@@ -27,8 +27,8 @@ class NotificationPolicy
 
     public function view(User $user, Notification $model): bool
     {
-        return $this->isShared($model)
-            && $this->authorizeAction($user, PermissionAction::VIEW);
+        return $this->isOwnInbox($user, $model)
+            || ($this->isShared($model) && $this->authorizeAction($user, PermissionAction::VIEW));
     }
 
     public function viewAnyOrganization(User $user): bool
@@ -39,9 +39,10 @@ class NotificationPolicy
 
     public function viewOrganization(User $user, Notification $model): bool
     {
-        return $this->isShared($model)
-            && $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
+        return $this->isOwnInbox($user, $model)
+            || ($this->isShared($model)
+                && $this->sameOrganization($user, $model)
+                && $this->authorizeOrganizationAction($user, PermissionAction::VIEW));
     }
 
     public function create(User $user): bool
@@ -63,8 +64,8 @@ class NotificationPolicy
 
     public function updateReadState(User $user, Notification $model): bool
     {
-        return $this->isShared($model)
-            && $this->authorizeAction($user, PermissionAction::UPDATE);
+        return $this->isOwnInbox($user, $model)
+            || ($this->isShared($model) && $this->authorizeAction($user, PermissionAction::UPDATE));
     }
 
     public function updateOrganization(User $user, Notification $model): bool
@@ -76,9 +77,10 @@ class NotificationPolicy
 
     public function updateReadStateOrganization(User $user, Notification $model): bool
     {
-        return $this->isShared($model)
-            && $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE);
+        return $this->isOwnInbox($user, $model)
+            || ($this->isShared($model)
+                && $this->sameOrganization($user, $model)
+                && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE));
     }
 
     public function delete(User $user, Notification $model): bool
@@ -123,5 +125,11 @@ class NotificationPolicy
     private function isShared(Notification $model): bool
     {
         return $model->recipient_id === null;
+    }
+
+    private function isOwnInbox(User $user, Notification $model): bool
+    {
+        return $model->recipient_id !== null
+            && (string) $model->recipient_id === (string) $user->id;
     }
 }
