@@ -76,7 +76,7 @@ class PostController extends Controller
 
         $now = now();
         $post->update([
-            'status' => 'published',
+            'status' => 'approved',
             'published_at' => $now,
             'reviewed_at' => $now,
             'reviewed_by' => auth()->id(),
