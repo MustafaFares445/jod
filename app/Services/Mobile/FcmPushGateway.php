@@ -96,7 +96,7 @@ class FcmPushGateway implements MobilePushGateway
 
         foreach ($details as $detail) {
             if (! is_array($detail)
-                || ($detail['@type'] ?? null) !== 'type.googleapis.com/type.googleapis.com/firebase.fcm.v1.FcmError') {
+                || ($detail['@type'] ?? null) !== 'type.googleapis.com/google.firebase.fcm.v1.FcmError') {
                 continue;
             }
 
