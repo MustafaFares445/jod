@@ -25,13 +25,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'campaign_id',
     'category_id',
     'author_id',
+    'updated_by',
     'rejection_reason',
     'views_count',
     'reactions_count',
     'applications_count',
     'published_at',
+    'submitted_at',
     'reviewed_at',
     'reviewed_by',
+    'approved_at',
+    'approved_by',
+    'rejected_at',
+    'rejected_by',
 ])]
 class Post extends Model
 {
@@ -45,7 +51,10 @@ class Post extends Model
     {
         return [
             'published_at' => 'datetime',
+            'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
     }
 
@@ -69,9 +78,24 @@ class Post extends Model
         return $this->belongsTo(User::class, 'author_id');
     }
 
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function media(): HasMany
