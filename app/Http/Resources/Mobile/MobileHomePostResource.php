@@ -55,7 +55,7 @@ class MobileHomePostResource extends JsonResource
             'isLiked' => $isLiked,
             'isSaved' => $isSaved,
             'saved' => $isSaved,
-            'status' => $this->status,
+            'status' => $this->status === 'approved' ? 'published' : $this->status,
             'campaignId' => $campaign?->id ? (string) $campaign->id : null,
             'location' => $this->location,
         ];
@@ -95,8 +95,12 @@ class MobileHomePostResource extends JsonResource
                 : $author?->email_verified_at !== null,
         ];
 
-        if (filled($bio)) $publisher['bio'] = $bio;
-        if (filled($city)) $publisher['city'] = $city;
+        if (filled($bio)) {
+            $publisher['bio'] = $bio;
+        }
+        if (filled($city)) {
+            $publisher['city'] = $city;
+        }
         if (filled($phone)) {
             $publisher['phoneNumber'] = $phone;
             $publisher['whatsappNumber'] = $phone;
@@ -107,15 +111,23 @@ class MobileHomePostResource extends JsonResource
 
     private function username(?string $email, string $name): string
     {
-        if (filled($email)) return Str::before($email, '@');
+        if (filled($email)) {
+            return Str::before($email, '@');
+        }
+
         $slug = Str::slug($name, '.');
+
         return $slug !== '' ? $slug : 'jod';
     }
 
     private function mobilePostType(): string
     {
         return match ($this->type) {
-            'volunteer_opportunity', 'donation_campaign', 'help_request', 'campaign_update', 'awareness' => $this->type,
+            'volunteer_opportunity',
+            'donation_campaign',
+            'help_request',
+            'campaign_update',
+            'awareness' => $this->type,
             default => 'awareness',
         };
     }
@@ -144,10 +156,24 @@ class MobileHomePostResource extends JsonResource
 
     private function ctaState(string $ctaType): ?string
     {
-        if (! in_array($ctaType, ['apply', 'donate'], true)) return null;
+        if (! in_array($ctaType, ['apply', 'donate'], true)) {
+            return null;
+        }
+
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
-        if ($campaign === null || $campaign->status !== 'active') return 'closed';
-        if ($ctaType === 'apply' && $this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) return 'submitted';
+
+        if ($campaign === null || $campaign->status !== 'active') {
+            return 'closed';
+        }
+
+        if (
+            $ctaType === 'apply'
+            && $this->relationLoaded('campaignApplications')
+            && $this->campaignApplications->isNotEmpty()
+        ) {
+            return 'submitted';
+        }
+
         return 'open';
     }
 }
