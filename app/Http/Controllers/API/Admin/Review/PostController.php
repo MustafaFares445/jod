@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API\Admin\Review;
 
+use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Services\NotificationEventService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,6 +26,8 @@ class PostController extends Controller
         'approvedBy',
         'rejectedBy',
     ];
+
+    public function __construct(private readonly NotificationEventService $notifications) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -89,6 +93,22 @@ class PostController extends Controller
             'rejection_reason' => null,
         ]);
 
+        if (filled($post->author_id)) {
+            $title = filled($post->title) ? (string) $post->title : 'منشورك';
+            $this->notifications->notifyUser(
+                (string) $post->author_id,
+                NotificationEventType::PostApproved,
+                'تمت الموافقة على منشورك',
+                "تمت الموافقة على «{$title}» ونشره على المنصة.",
+                'post',
+                'high',
+                $title,
+                '/posts/'.$post->id,
+                null,
+                auth()->id() !== null ? (string) auth()->id() : null,
+            );
+        }
+
         return PostResource::make($post->refresh()->loadMissing(self::RELATIONS));
     }
 
@@ -110,6 +130,22 @@ class PostController extends Controller
             'rejected_by' => auth()->id(),
             'rejection_reason' => $data['reason'],
         ]);
+
+        if (filled($post->author_id)) {
+            $title = filled($post->title) ? (string) $post->title : 'منشورك';
+            $this->notifications->notifyUser(
+                (string) $post->author_id,
+                NotificationEventType::PostRejected,
+                'تم رفض منشورك',
+                "تم رفض «{$title}». السبب: {$data['reason']}",
+                'post',
+                'high',
+                $title,
+                '/my-posts/'.$post->id,
+                null,
+                auth()->id() !== null ? (string) auth()->id() : null,
+            );
+        }
 
         return PostResource::make($post->refresh()->loadMissing(self::RELATIONS));
     }
