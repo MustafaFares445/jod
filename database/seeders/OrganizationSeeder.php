@@ -26,11 +26,11 @@ class OrganizationSeeder extends Seeder
             'owner_email' => 'sarah@helpfoundation.org',
             'owner_phone' => '+962791234567',
             'website' => 'https://helpfoundation.org',
-            'social_media' => json_encode([
+            'social_media' => [
                 'facebook' => 'facebook.com/helpfoundation',
                 'twitter' => '@helpfoundation',
                 'instagram' => 'helpfoundation',
-            ]),
+            ],
             'status' => 'active',
             'verification_status' => 'verified',
             'accepted_at' => now()->subMonths(6),
@@ -55,11 +55,11 @@ class OrganizationSeeder extends Seeder
             'owner_email' => 'fatima@educationinitiative.org',
             'owner_phone' => '+962791234573',
             'website' => 'https://educationinitiative.org',
-            'social_media' => json_encode([
+            'social_media' => [
                 'facebook' => 'facebook.com/educationinitiative',
                 'twitter' => '@education_init',
                 'linkedin' => 'education-initiative',
-            ]),
+            ],
             'status' => 'active',
             'verification_status' => 'verified',
             'accepted_at' => now()->subMonths(9),
@@ -84,10 +84,10 @@ class OrganizationSeeder extends Seeder
             'owner_email' => 'hassan@techforgood.org',
             'owner_phone' => '+962791234574',
             'website' => 'https://techforgood.org',
-            'social_media' => json_encode([
+            'social_media' => [
                 'github' => 'github.com/techforgood',
                 'twitter' => '@techforgood_jo',
-            ]),
+            ],
             'status' => 'active',
             'verification_status' => 'unverified',
             'accepted_at' => null,
@@ -112,9 +112,9 @@ class OrganizationSeeder extends Seeder
             'owner_email' => 'noor@ammangroup.org',
             'owner_phone' => '+962791234575',
             'website' => null,
-            'social_media' => json_encode([
+            'social_media' => [
                 'facebook' => 'facebook.com/ammangroup',
-            ]),
+            ],
             'status' => 'pending',
             'verification_status' => 'pending',
             'accepted_at' => null,

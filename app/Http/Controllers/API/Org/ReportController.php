@@ -30,7 +30,7 @@ class ReportController extends Controller
     {
         $this->authorize('viewOrganization', $report);
 
-        return ReportResource::make($report->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->loadMissing(ReportService::relations()));
     }
 
     public function updateStatus(Request $request, Report $report): ReportResource
@@ -38,7 +38,7 @@ class ReportController extends Controller
         $this->authorize('updateOrganization', $report);
 
         $data = $request->validate([
-            'status' => ['required', 'string', 'in:in_progress,waiting_response,closed'],
+            'status' => ['required', 'string', 'in:in_progress,closed'],
             'note' => ['nullable', 'string', 'max:2000'],
             'assigneeId' => [
                 'nullable',
@@ -55,7 +55,7 @@ class ReportController extends Controller
             $data['assigneeId'] ?? auth()->id(),
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
     public function claim(Request $request, Report $report): ReportResource
@@ -76,7 +76,7 @@ class ReportController extends Controller
             (string) $request->user()->name,
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
     public function requestInfo(Request $request, Report $report): ReportResource
@@ -93,7 +93,7 @@ class ReportController extends Controller
             (string) $request->user()->name,
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
     public function close(Request $request, Report $report): ReportResource
@@ -110,7 +110,7 @@ class ReportController extends Controller
             (string) $request->user()->name,
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
     private function organizationId(): string

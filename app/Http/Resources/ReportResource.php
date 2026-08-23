@@ -19,6 +19,7 @@ class ReportResource extends JsonResource
             'severity' => $this->severity,
             'entityType' => $this->entity_type,
             'entityId' => $this->entity_id,
+            'entity' => $this->reportedEntity($request),
             'organizationName' => $this->organization?->name,
             'reporterName' => $this->reporter?->name,
             'createdAt' => $this->created_at?->toIso8601String(),
@@ -30,6 +31,36 @@ class ReportResource extends JsonResource
             'timeline' => $this->timeline ?? [],
             'evidence' => $this->evidence ?? [],
             'closedAt' => $this->closed_at?->toIso8601String(),
+        ];
+    }
+
+    /** @return array{type: string, id: string, data: array<string, mixed>}|null */
+    private function reportedEntity(Request $request): ?array
+    {
+        $entity = match ($this->entity_type) {
+            'post' => $this->relationLoaded('reportedPost') ? $this->reportedPost : null,
+            'campaign' => $this->relationLoaded('reportedCampaign') ? $this->reportedCampaign : null,
+            'user' => $this->relationLoaded('reportedUser') ? $this->reportedUser : null,
+            'organization' => $this->relationLoaded('reportedOrganization') ? $this->reportedOrganization : null,
+            default => null,
+        };
+
+        if ($entity === null) {
+            return null;
+        }
+
+        $data = match ($this->entity_type) {
+            'post' => PostResource::make($entity)->resolve($request),
+            'campaign' => CampaignResource::make($entity)->resolve($request),
+            'user' => UserResource::make($entity)->resolve($request),
+            'organization' => OrganizationResource::make($entity)->resolve($request),
+            default => [],
+        };
+
+        return [
+            'type' => (string) $this->entity_type,
+            'id' => (string) $entity->getKey(),
+            'data' => $data,
         ];
     }
 }

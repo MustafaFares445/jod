@@ -42,15 +42,18 @@ class UserPostService
     public function create(User $user, array $data): Post
     {
         return DB::transaction(function () use ($user, $data): Post {
+            $isDraft = (bool) ($data['saveAsDraft'] ?? false);
             $post = Post::query()->create([
                 'title' => $data['title'] ?? null,
                 'summary' => $this->summaryFromDetails($data['details'] ?? null),
                 'content' => $data['details'] ?? null,
                 'type' => $data['type'],
-                'status' => ($data['saveAsDraft'] ?? false) ? 'draft' : 'pending',
+                'status' => $isDraft ? 'draft' : 'pending',
                 'location' => $data['city'] ?? null,
                 'category_id' => $data['categoryId'] ?? null,
                 'author_id' => $user->id,
+                'updated_by' => $user->id,
+                'submitted_at' => $isDraft ? null : now(),
             ]);
 
             /** @var list<UploadedFile> $images */
@@ -88,7 +91,10 @@ class UserPostService
             $attributes['category_id'] = $data['categoryId'];
         }
 
-        $post->update($attributes);
+        if ($attributes !== []) {
+            $attributes['updated_by'] = $post->author_id;
+            $post->update($attributes);
+        }
 
         return $post->refresh()->load('images');
     }
@@ -106,6 +112,8 @@ class UserPostService
 
             $lockedPost->update([
                 'status' => 'pending',
+                'submitted_at' => now(),
+                'updated_by' => $lockedPost->author_id,
                 'rejection_reason' => null,
                 'reviewed_at' => null,
                 'reviewed_by' => null,
@@ -134,6 +142,7 @@ class UserPostService
             $lockedPost->update([
                 'status' => 'published',
                 'published_at' => Carbon::now(),
+                'updated_by' => $lockedPost->author_id,
             ]);
 
             return $lockedPost->refresh()->load('images');
@@ -157,7 +166,10 @@ class UserPostService
                 ]);
             }
 
-            $lockedPost->update(['status' => $toStatus]);
+            $lockedPost->update([
+                'status' => $toStatus,
+                'updated_by' => $lockedPost->author_id,
+            ]);
 
             return $lockedPost->refresh()->load('images');
         });
@@ -168,9 +180,7 @@ class UserPostService
         return $status === 'active' ? 'published' : $status;
     }
 
-    /**
-     * @return array{0: string, 1: string}
-     */
+    /** @return array{0: string, 1: string} */
     private function normalizeSort(string $sort): array
     {
         return match ($sort) {

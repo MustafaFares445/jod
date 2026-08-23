@@ -58,4 +58,24 @@ class Report extends Model
     {
         return $this->belongsTo(User::class, 'assignee_id');
     }
+
+    public function reportedPost(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'entity_id')->withTrashed();
+    }
+
+    public function reportedCampaign(): BelongsTo
+    {
+        return $this->belongsTo(Campaign::class, 'entity_id')->withTrashed();
+    }
+
+    public function reportedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'entity_id');
+    }
+
+    public function reportedOrganization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class, 'entity_id')->withTrashed();
+    }
 }

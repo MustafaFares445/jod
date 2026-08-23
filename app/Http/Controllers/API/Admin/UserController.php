@@ -11,6 +11,7 @@ use App\Http\Requests\Users\UserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -23,15 +24,37 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = User::query()
-            ->when($request->get('filter.status'), fn ($q) => $q->where('status', $request->get('filter.status')))
-            ->when($request->get('filter.role'), fn ($q) => $q->where('user_type', $request->get('filter.role')))
-            ->when($request->get('filter.search') ?? $request->get('search'), fn ($q) => $q->where('name', 'LIKE', '%' . ($request->get('filter.search') ?? $request->get('search')) . '%')
-                ->orWhere('email', 'LIKE', '%' . ($request->get('filter.search') ?? $request->get('search')) . '%'))
-            ->orderByDesc('created_at')
-            ->paginate($request->get('perPage', 20));
+        $validated = $request->validated();
+        $filters = (array) ($validated['filter'] ?? []);
+        $status = $filters['status'] ?? null;
+        $role = $filters['role'] ?? $filters['userType'] ?? null;
+        $search = trim((string) ($filters['search'] ?? $validated['search'] ?? ''));
+        $sort = (string) ($validated['sort'] ?? '-createdAt');
 
-        return UserResource::collection($users);
+        $users = User::query()
+            ->when($status && $status !== 'all', fn (Builder $query) => $query->where('status', $status))
+            ->when($role && $role !== 'all', fn (Builder $query) => $query->where('user_type', $role))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $searchQuery) use ($search): void {
+                    $searchQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            });
+
+        match ($sort) {
+            'createdAt' => $users->orderBy('created_at'),
+            '-createdAt' => $users->orderByDesc('created_at'),
+            'name' => $users->orderBy('name'),
+            '-name' => $users->orderByDesc('name'),
+            'lastActiveAt' => $users->orderBy('last_active_at'),
+            '-lastActiveAt' => $users->orderByDesc('last_active_at'),
+            default => $users->orderByDesc('created_at'),
+        };
+
+        return UserResource::collection(
+            $users->orderBy('id')->paginate((int) ($validated['perPage'] ?? 20)),
+        );
     }
 
     public function store(UserRequest $request): UserResource
@@ -81,7 +104,7 @@ class UserController extends Controller
 
     public function updatePassword(Request $request, User $user): UserResource
     {
-        $this->authorize('resetPassword');
+        $this->authorize('resetPassword', User::class);
 
         $request->validate([
             'newPassword' => ['required', 'string', 'min:8', 'confirmed'],

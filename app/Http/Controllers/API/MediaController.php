@@ -8,6 +8,7 @@ use App\Enums\MediaModel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Media\MediaUploadRequest;
 use App\Http\Resources\MediaResource;
+use App\Models\Post;
 use App\Services\MediaService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -29,6 +30,7 @@ class MediaController extends Controller
             $prop,
             $request->file('file'),
         );
+        $this->markPostUpdated($target);
 
         return MediaResource::make($media)
             ->response()
@@ -46,13 +48,16 @@ class MediaController extends Controller
         $target = $this->service->resolveTarget($mediaModel, $modelId);
         $this->authorizeTarget($mediaModel, $target);
 
-        return MediaResource::make($this->service->replace(
+        $media = $this->service->replace(
             $mediaModel,
             $modelId,
             $prop,
             $mediaId,
             $request->file('file'),
-        ));
+        );
+        $this->markPostUpdated($target);
+
+        return MediaResource::make($media);
     }
 
     public function destroy(string $model, string $modelId, string $prop, string $mediaId): Response
@@ -61,6 +66,7 @@ class MediaController extends Controller
         $target = $this->service->resolveTarget($mediaModel, $modelId);
         $this->authorizeTarget($mediaModel, $target);
         $this->service->delete($mediaModel, $modelId, $prop, $mediaId);
+        $this->markPostUpdated($target);
 
         return response()->noContent();
     }
@@ -69,7 +75,32 @@ class MediaController extends Controller
     {
         match ($model) {
             MediaModel::ORGANIZATION => $this->authorize('updateSettings', $target),
-            MediaModel::CAMPAIGN, MediaModel::POST => $this->authorize('updateOrganization', $target),
+            MediaModel::CAMPAIGN => $this->authorize('updateOrganization', $target),
+            MediaModel::POST => $this->authorizePost($target),
         };
+    }
+
+    private function authorizePost(Model $target): void
+    {
+        if (! $target instanceof Post) {
+            abort(404);
+        }
+
+        $target->loadMissing('author');
+
+        if ($target->organization_id === null && $target->author?->user_type === 'admin') {
+            $this->authorize('updateAdmin', $target);
+
+            return;
+        }
+
+        $this->authorize('updateOrganization', $target);
+    }
+
+    private function markPostUpdated(Model $target): void
+    {
+        if ($target instanceof Post && auth()->id() !== null) {
+            $target->update(['updated_by' => auth()->id()]);
+        }
     }
 }

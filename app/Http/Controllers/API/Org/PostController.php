@@ -37,15 +37,19 @@ class PostController extends Controller
         ])->all();
 
         $post = $this->service->create(PostData::from($data), $this->organizationId());
+        $post->update([
+            'author_id' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
 
-        return PostResource::make($post->refresh()->load(['campaign', 'images']));
+        return PostResource::make($post->refresh()->load(['campaign', 'images', 'author', 'updatedBy']));
     }
 
     public function show(Post $post): PostResource
     {
         $this->authorize('viewOrganization', $post);
 
-        return PostResource::make($post->loadMissing(['campaign', 'images']));
+        return PostResource::make($post->loadMissing(['campaign', 'images', 'author', 'updatedBy']));
     }
 
     public function update(PostRequest $request, Post $post): PostResource
@@ -68,9 +72,10 @@ class PostController extends Controller
                 ]),
                 $this->organizationId(),
             );
+            $post->update(['updated_by' => auth()->id()]);
         }
 
-        return PostResource::make($post->refresh()->load(['campaign', 'images']));
+        return PostResource::make($post->refresh()->load(['campaign', 'images', 'author', 'updatedBy']));
     }
 
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
@@ -85,28 +90,28 @@ class PostController extends Controller
         $this->authorize($ability, $post);
         $post = $this->service->updateStatus($post, $status);
 
-        return PostResource::make($post->refresh()->loadMissing('images'));
+        return PostResource::make($post->refresh()->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function publish(Post $post): PostResource
     {
         $this->authorize('publishOrganization', $post);
 
-        return PostResource::make($this->service->publish($post)->loadMissing('images'));
+        return PostResource::make($this->service->publish($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function archive(Post $post): PostResource
     {
         $this->authorize('archiveOrganization', $post);
 
-        return PostResource::make($this->service->archive($post)->loadMissing('images'));
+        return PostResource::make($this->service->archive($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function restore(Post $post): PostResource
     {
         $this->authorize('restoreOrganization', $post);
 
-        return PostResource::make($this->service->restore($post)->loadMissing('images'));
+        return PostResource::make($this->service->restore($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function destroy(Post $post): Response

@@ -26,7 +26,7 @@ class ReportController extends Controller
     {
         $this->authorize('view', $report);
 
-        return ReportResource::make($report->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->loadMissing(ReportService::relations()));
     }
 
     public function claim(Request $request, Report $report): ReportResource
@@ -43,7 +43,7 @@ class ReportController extends Controller
             (string) $request->user()->name,
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
     public function requestInfo(Request $request, Report $report): ReportResource
@@ -60,7 +60,7 @@ class ReportController extends Controller
             (string) $request->user()->name,
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
     public function close(Request $request, Report $report): ReportResource
@@ -77,6 +77,6 @@ class ReportController extends Controller
             (string) $request->user()->name,
         );
 
-        return ReportResource::make($report->refresh()->loadMissing(['organization', 'reporter', 'assignee']));
+        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 }

@@ -11,13 +11,36 @@ use Illuminate\Validation\ValidationException;
 
 class ReportService
 {
+    /** @return list<string> */
+    public static function relations(): array
+    {
+        return [
+            'organization',
+            'reporter',
+            'assignee',
+            'reportedPost.organization',
+            'reportedPost.campaign',
+            'reportedPost.images',
+            'reportedPost.author',
+            'reportedPost.updatedBy',
+            'reportedPost.reviewedBy',
+            'reportedPost.approvedBy',
+            'reportedPost.rejectedBy',
+            'reportedCampaign.organization',
+            'reportedCampaign.creator',
+            'reportedCampaign.reviewedBy',
+            'reportedCampaign.imageMedia',
+            'reportedUser',
+            'reportedOrganization',
+        ];
+    }
+
     public function paginate(array $params, ?string $organizationId = null): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = (string) ($this->param($params, 'sort') ?? '-createdAt');
 
-        $query = Report::query()
-            ->with(['organization', 'reporter', 'assignee']);
+        $query = Report::query()->with(self::relations());
 
         if ($organizationId !== null && $organizationId !== '') {
             $query->where('organization_id', $organizationId);
@@ -72,7 +95,6 @@ class ReportService
         }
 
         $report->update([
-            'status' => 'waiting_response',
             'timeline' => $this->appendTimeline($report->timeline, 'request_info', 'Additional information requested', $actorName, $note),
         ]);
 
@@ -81,9 +103,9 @@ class ReportService
 
     public function close(Report $report, ?string $note, string $actorName): Report
     {
-        if (! in_array($report->status, ['in_progress', 'waiting_response'], true)) {
+        if ($report->status !== 'in_progress') {
             throw ValidationException::withMessages([
-                'status' => ['Only active reports can be closed.'],
+                'status' => ['Only in progress reports can be closed.'],
             ]);
         }
 
@@ -104,7 +126,6 @@ class ReportService
 
         return match ($status) {
             'in_progress' => $this->claim($report, $assigneeId, $actorName, $note),
-            'waiting_response' => $this->requestInfo($report, $note, $actorName),
             'closed' => $this->close($report, $note, $actorName),
             default => throw ValidationException::withMessages([
                 'status' => ['Unsupported report status transition.'],
@@ -132,14 +153,6 @@ class ReportService
         return $timeline;
     }
 
-    /**
-     * Normalize legacy or malformed timeline values before appending a new entry.
-     *
-     * Some existing rows may contain a JSON string value instead of a JSON array,
-     * so Laravel's array cast returns a string and strict typing used to throw a
-     * TypeError. Invalid timeline values are treated as an empty timeline so the
-     * report action can recover the row by saving a proper JSON array.
-     */
     private function normalizeTimeline(mixed $timeline): array
     {
         if ($timeline === null || $timeline === '') {
