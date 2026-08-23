@@ -61,12 +61,12 @@ class Report extends Model
 
     public function reportedPost(): BelongsTo
     {
-        return $this->belongsTo(Post::class, 'entity_id');
+        return $this->belongsTo(Post::class, 'entity_id')->withTrashed();
     }
 
     public function reportedCampaign(): BelongsTo
     {
-        return $this->belongsTo(Campaign::class, 'entity_id');
+        return $this->belongsTo(Campaign::class, 'entity_id')->withTrashed();
     }
 
     public function reportedUser(): BelongsTo
@@ -76,6 +76,6 @@ class Report extends Model
 
     public function reportedOrganization(): BelongsTo
     {
-        return $this->belongsTo(Organization::class, 'entity_id');
+        return $this->belongsTo(Organization::class, 'entity_id')->withTrashed();
     }
 }
