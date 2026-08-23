@@ -130,7 +130,6 @@ function postPayload(): array
         'title' => 'Post',
         'summary' => 'Summary',
         'type' => 'general',
-        'authorName' => 'Author',
         'location' => 'Amman',
     ];
 }

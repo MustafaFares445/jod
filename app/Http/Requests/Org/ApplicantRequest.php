@@ -12,18 +12,17 @@ class ApplicantRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'campaignId' => ['nullable', 'string', 'exists:campaigns,id'],
+            'phone' => ['required', 'string', 'regex:/^09\d{8}$/'],
             'campaignTitle' => ['required', 'string', 'max:255'],
             'applicantStatus' => ['required', 'string', 'max:100'],
             'appliedAt' => ['required', 'date'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'campaignRef' => ['nullable', 'string', 'max:255'],
-            'assignedTo' => ['nullable', 'string', 'max:255'],
-            'internalNotes' => ['nullable', 'string'],
-            'requestType' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'رقم الهاتف يجب أن يكون رقم موبايل سوري من 10 أرقام ويبدأ بـ 09.',
         ];
     }
 }

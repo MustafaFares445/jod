@@ -17,13 +17,18 @@ class CampaignRequest extends FormRequest
     public function rules(): array
     {
         $isUpdate = $this->route('campaign') !== null;
+        $allowsStatusUpdate = $isUpdate && $this->isMethod('patch');
 
         return [
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
             'category' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['health', 'education', 'food', 'shelter', 'employment', 'emergency', 'donation', 'volunteer', 'community'])],
-            'status' => [$isUpdate ? 'prohibited' : 'sometimes', Rule::in(['draft', 'active'])],
-            'closedReason' => [$isUpdate ? 'nullable' : 'prohibited', 'string', 'min:8', 'max:500'],
+            'status' => $isUpdate
+                ? [$allowsStatusUpdate ? 'sometimes' : 'prohibited', Rule::in(['draft', 'active', 'closed'])]
+                : ['sometimes', Rule::in(['draft', 'active'])],
+            'closedReason' => $allowsStatusUpdate
+                ? [Rule::requiredIf(fn (): bool => $this->input('status') === 'closed'), 'nullable', 'string', 'min:8', 'max:500']
+                : ['prohibited'],
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'goalAmount' => [$isUpdate ? 'sometimes' : 'required', 'numeric', 'min:0'],
             'beneficiariesCount' => [$isUpdate ? 'sometimes' : 'required', 'integer', 'min:0'],

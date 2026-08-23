@@ -131,6 +131,11 @@ class CampaignService
                 'closed_at' => null,
                 'closed_reason' => null,
             ]),
+            'active:draft' => $campaign->update([
+                'status' => 'draft',
+                'closed_at' => null,
+                'closed_reason' => null,
+            ]),
             'active:closed' => $campaign->update([
                 'status' => 'closed',
                 'closed_at' => now(),

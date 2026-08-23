@@ -27,7 +27,8 @@ class PostReviewPolicy
 
     public function view(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::VIEW);
+        return $model->organization_id === null
+            && $this->authorizeAction($user, PermissionAction::VIEW);
     }
 
     public function viewAnyOrganization(User $user): bool
@@ -44,12 +45,14 @@ class PostReviewPolicy
 
     public function approve(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::APPROVE);
+        return $model->organization_id === null
+            && $this->authorizeAction($user, PermissionAction::APPROVE);
     }
 
     public function reject(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::REJECT);
+        return $model->organization_id === null
+            && $this->authorizeAction($user, PermissionAction::REJECT);
     }
 
     public function createOrganization(User $user): bool

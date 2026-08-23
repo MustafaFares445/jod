@@ -126,11 +126,8 @@ test('donor crud and filtering', function () {
     $createPayload = [
         'name' => 'Donor C',
         'email' => 'c@example.com',
-        'phone' => '+966500000000',
-        'campaignTitle' => 'Health Initiative',
-        'amountOrType' => '1200',
-        'donatedAt' => now()->toIso8601String(),
-        'city' => 'Riyadh',
+        'phone' => '0912345678',
+        'city' => 'دمشق',
     ];
 
     $created = $this->postJson('/api/v1/org/donors', $createPayload)
@@ -145,6 +142,17 @@ test('donor crud and filtering', function () {
     $this->deleteJson("/api/v1/org/donors/{$created}")
         ->assertOk()
         ->assertJsonPath('message', 'Data deleted successfully.');
+});
+
+test('donor phone must be a Syrian mobile number', function () {
+    $this->postJson('/api/v1/org/donors', [
+        'name' => 'Invalid Donor',
+        'email' => 'invalid@example.com',
+        'phone' => '1234567890',
+        'city' => 'دمشق',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('phone');
 });
 test('applicant filtering and crud', function () {
     CampaignApplication::query()->create([
@@ -173,12 +181,10 @@ test('applicant filtering and crud', function () {
 
     $payload = [
         'name' => 'Applicant C',
-        'email' => 'cc@example.com',
-        'phone' => '+966500000001',
+        'phone' => '0998765432',
         'campaignTitle' => 'Volunteer Program',
         'applicantStatus' => 'under_review',
         'appliedAt' => now()->toIso8601String(),
-        'requestType' => 'field_volunteer',
     ];
 
     $created = $this->postJson('/api/v1/org/applicants', $payload)
@@ -193,6 +199,18 @@ test('applicant filtering and crud', function () {
     $this->deleteJson("/api/v1/org/applicants/{$created}")
         ->assertOk()
         ->assertJsonPath('message', 'Data deleted successfully.');
+});
+
+test('applicant phone must be a Syrian mobile number', function () {
+    $this->postJson('/api/v1/org/applicants', [
+        'name' => 'Invalid Applicant',
+        'phone' => '098765432',
+        'campaignTitle' => 'Volunteer Program',
+        'applicantStatus' => 'pending',
+        'appliedAt' => now()->toIso8601String(),
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('phone');
 });
 test('org notifications read state flow', function () {
     $notification = Notification::query()->create([

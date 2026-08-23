@@ -23,12 +23,9 @@ class PostController extends Controller
         $sortBy = (string) ($this->queryParam($request, 'sortBy') ?? '');
 
         $query = Post::query()
-            ->with(['organization', 'campaign', 'reviewedBy'])
+            ->with(['campaign', 'reviewedBy', 'author'])
+            ->whereNull('organization_id')
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
-            ->when(($organizationId = $this->queryParam($request, 'filter.organizationId')) && $organizationId !== 'all', fn (Builder $builder) => $builder->where('organization_id', $organizationId))
-            ->when(($organizationName = $this->queryParam($request, 'filter.organizationName')) && $organizationName !== 'all', function (Builder $builder) use ($organizationName): void {
-                $builder->whereHas('organization', fn (Builder $org) => $org->where('name', 'like', '%'.$organizationName.'%'));
-            })
             ->when(($type = $this->queryParam($request, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type));
 
         $normalizedSort = $sort !== '' ? $sort : match ($sortBy) {
@@ -54,7 +51,7 @@ class PostController extends Controller
     {
         $this->authorize('view', $post);
 
-        return PostResource::make($post->loadMissing(['organization', 'campaign', 'reviewedBy']));
+        return PostResource::make($post->loadMissing(['organization', 'campaign', 'reviewedBy', 'author']));
     }
 
     public function approve(Request $request, Post $post): PostResource
@@ -74,7 +71,7 @@ class PostController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return PostResource::make($post->refresh()->loadMissing(['organization', 'campaign', 'reviewedBy']));
+        return PostResource::make($post->refresh()->loadMissing(['organization', 'campaign', 'reviewedBy', 'author']));
     }
 
     public function reject(Request $request, Post $post): PostResource
@@ -94,7 +91,7 @@ class PostController extends Controller
             'rejection_reason' => $data['reason'],
         ]);
 
-        return PostResource::make($post->refresh()->loadMissing(['organization', 'campaign', 'reviewedBy']));
+        return PostResource::make($post->refresh()->loadMissing(['organization', 'campaign', 'reviewedBy', 'author']));
     }
 
     private function assertPending(Post $post): void

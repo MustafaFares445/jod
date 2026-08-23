@@ -25,7 +25,7 @@ class ApplicantService
             ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
                         ->orWhere('campaign_title', 'like', "%{$search}%");
                 });
             });
@@ -43,21 +43,14 @@ class ApplicantService
 
     public function create(array $attributes, string $organizationId, string $userId): CampaignApplication
     {
-        return CampaignApplication::create([
+        return CampaignApplication::query()->create([
             'organization_id' => $organizationId,
             'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
-            'email' => $attributes['email'],
-            'phone' => $attributes['phone'] ?? null,
+            'phone' => $attributes['phone'],
             'campaign_title' => $attributes['campaignTitle'],
             'applicant_status' => $attributes['applicantStatus'],
             'applied_at' => $attributes['appliedAt'],
-            'city' => $attributes['city'] ?? null,
-            'source' => $attributes['source'] ?? null,
-            'campaign_ref' => $attributes['campaignRef'] ?? null,
-            'assigned_to' => $attributes['assignedTo'] ?? null,
-            'internal_notes' => $attributes['internalNotes'] ?? null,
-            'request_type' => $attributes['requestType'] ?? null,
             'created_by' => $userId,
         ]);
     }
@@ -67,39 +60,17 @@ class ApplicantService
         $application->update([
             'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
-            'email' => $attributes['email'],
-            'phone' => $attributes['phone'] ?? null,
+            'phone' => $attributes['phone'],
             'campaign_title' => $attributes['campaignTitle'],
             'applicant_status' => $attributes['applicantStatus'],
             'applied_at' => $attributes['appliedAt'],
-            'city' => $attributes['city'] ?? null,
-            'source' => $attributes['source'] ?? null,
-            'campaign_ref' => $attributes['campaignRef'] ?? null,
-            'assigned_to' => $attributes['assignedTo'] ?? null,
-            'internal_notes' => $attributes['internalNotes'] ?? null,
-            'request_type' => $attributes['requestType'] ?? null,
         ]);
 
-        return $application;
+        return $application->refresh();
     }
 
     private function resolveCampaignId(array $attributes, string $organizationId): ?string
     {
-        if (! empty($attributes['campaignId'])) {
-            $campaignId = Campaign::query()
-                ->where('organization_id', $organizationId)
-                ->whereKey($attributes['campaignId'])
-                ->value('id');
-
-            if ($campaignId === null) {
-                throw ValidationException::withMessages([
-                    'campaignId' => ['Selected campaign does not belong to the organization.'],
-                ]);
-            }
-
-            return (string) $campaignId;
-        }
-
         $campaignId = Campaign::query()
             ->where('organization_id', $organizationId)
             ->where('title', $attributes['campaignTitle'])

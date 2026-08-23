@@ -61,10 +61,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
             Route::post('posts/{post}/approve', App\Http\Controllers\API\Admin\Review\PostController::class.'@approve');
             Route::post('posts/{post}/reject', App\Http\Controllers\API\Admin\Review\PostController::class.'@reject');
 
-            Route::get('campaigns', App\Http\Controllers\API\Admin\Review\CampaignController::class.'@index');
-            Route::get('campaigns/{campaign}', App\Http\Controllers\API\Admin\Review\CampaignController::class.'@show');
-            Route::post('campaigns/{campaign}/approve', App\Http\Controllers\API\Admin\Review\CampaignController::class.'@approve');
-            Route::post('campaigns/{campaign}/reject', App\Http\Controllers\API\Admin\Review\CampaignController::class.'@reject');
         });
 
         Route::prefix('reports')->group(function () {

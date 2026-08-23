@@ -95,7 +95,7 @@ class PostService
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('author_name', 'like', "%{$search}%");
+                        ->orWhere('location', 'like', "%{$search}%");
                 });
             });
 
@@ -120,7 +120,6 @@ class PostService
             'summary' => $data->summary,
             'type' => $data->type,
             'status' => $data->status,
-            'author_name' => $data->authorName,
             'location' => $data->location,
             'organization_id' => $organizationId,
             'campaign_id' => $campaignId,
@@ -136,7 +135,6 @@ class PostService
             'title' => $data->title,
             'summary' => $data->summary,
             'type' => $data->type,
-            'author_name' => $data->authorName,
             'location' => $data->location,
             'campaign_id' => $campaignId,
         ]);

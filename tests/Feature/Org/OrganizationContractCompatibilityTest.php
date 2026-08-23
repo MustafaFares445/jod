@@ -65,12 +65,36 @@ test('campaign status contract endpoint enforces lifecycle', function () {
         ->assertJsonPath('data.status', 'active');
 
     $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+        'status' => 'draft',
+    ])
+        ->assertOk()
+        ->assertJsonPath('item.status', 'draft')
+        ->assertJsonPath('data.status', 'draft');
+
+    $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+        'status' => 'active',
+    ])
+        ->assertOk()
+        ->assertJsonPath('item.status', 'active')
+        ->assertJsonPath('data.status', 'active');
+
+    $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
         'status' => 'closed',
         'closedReason' => 'Campaign objectives were completed.',
     ])
         ->assertOk()
         ->assertJsonPath('item.status', 'closed')
         ->assertJsonPath('item.closedReason', 'Campaign objectives were completed.');
+});
+
+test('campaign close status requires a reason', function () {
+    $campaign = contract_campaign($this->organization->id, ['status' => 'active']);
+
+    $this->patchJson("/api/v1/org/campaigns/{$campaign->id}", [
+        'status' => 'closed',
+    ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('closedReason');
 });
 
 test('campaign update still works without status', function () {
