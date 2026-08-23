@@ -105,6 +105,6 @@ class AnalyticsService
 
         $after = $model::whereBetween('created_at', $dates)->count();
 
-        return $before > 0 ? round((($after - $before) / $before) * 100) : 0;
+        return $before > 0 ? (int) round((($after - $before) / $before) * 100) : 0;
     }
 }
