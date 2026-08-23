@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Enums\NotificationEventType;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\NotificationEventService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class UserPostService
 {
-    public function __construct(private readonly PostImageService $imageService) {}
+    public function __construct(
+        private readonly PostImageService $imageService,
+        private readonly NotificationEventService $notifications,
+    ) {}
 
     /**
      * @param  array{page?: int, perPage?: int, filter?: array{status?: string}, sort?: string}  $params
@@ -56,6 +61,10 @@ class UserPostService
                 'updated_by' => $user->id,
                 'submitted_at' => $isDraft ? null : now(),
             ]);
+
+            if (! $isDraft) {
+                $this->notifyAdminsForReview($post, $user);
+            }
 
             return $post->load('images');
         });
@@ -117,6 +126,11 @@ class UserPostService
                 'reviewed_by' => null,
             ]);
 
+            $author = User::query()->find($lockedPost->author_id);
+            if ($author !== null) {
+                $this->notifyAdminsForReview($lockedPost, $author);
+            }
+
             return $lockedPost->refresh()->load('images');
         });
     }
@@ -166,6 +180,22 @@ class UserPostService
     {
         $this->imageService->purge($post);
         $post->delete();
+    }
+
+    private function notifyAdminsForReview(Post $post, User $author): void
+    {
+        $title = filled($post->title) ? (string) $post->title : 'منشور بدون عنوان';
+
+        $this->notifications->notifyAdmins(
+            NotificationEventType::PostSubmitted,
+            'منشور جديد بانتظار المراجعة',
+            "أرسل {$author->name} المنشور «{$title}» للمراجعة.",
+            'post',
+            'normal',
+            $title,
+            '/admin/review/posts/'.$post->id,
+            (string) $author->id,
+        );
     }
 
     /** @return array{0: string, 1: string} */
