@@ -82,6 +82,7 @@ class NotificationDistributionService
                             'mailbox' => 'inbox',
                             'status' => 'unread',
                             'category' => $source->category,
+                            'event_type' => $source->event_type,
                             'recipient_scope' => $source->recipient_scope,
                             'recipient_label' => $source->recipient_label,
                             'priority' => $source->priority,
