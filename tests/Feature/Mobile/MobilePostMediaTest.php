@@ -1,18 +1,21 @@
 <?php
 
 declare(strict_types=1);
+
+use App\Models\Media;
 use App\Models\Post;
-use App\Models\PostImage;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
     Storage::fake('public');
 });
+
 test('user can create post with images and receives ordered urls', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
@@ -31,7 +34,7 @@ test('user can create post with images and receives ordered urls', function () {
         ->assertJsonCount(2, 'data.images');
 
     $postId = (string) $response->json('data.id');
-    $images = PostImage::query()->where('post_id', $postId)->orderBy('position')->get();
+    $images = mobile_post_media($postId);
 
     expect($images)->toHaveCount(2);
     expect($images->pluck('position')->map(fn ($value) => (int) $value)->all())->toBe([0, 1]);
@@ -41,6 +44,7 @@ test('user can create post with images and receives ordered urls', function () {
         expect($response->json("data.images.{$index}"))->toBe(Storage::disk('public')->url($image->path));
     }
 });
+
 test('user can add reorder and delete images on editable post', function () {
     $user = User::factory()->create();
     $post = mobile_post_media_test_createPost($user);
@@ -56,7 +60,7 @@ test('user can add reorder and delete images on editable post', function () {
         ->assertOk()
         ->assertJsonCount(3, 'data.images');
 
-    $images = PostImage::query()->where('post_id', $post->id)->orderBy('position')->get();
+    $images = mobile_post_media((string) $post->id);
     $reversedIds = $images->pluck('id')->map(fn ($id): string => (string) $id)->reverse()->values()->all();
 
     $response = $this->patchJson("/api/mobile/posts/{$post->id}/images/order", [
@@ -65,7 +69,7 @@ test('user can add reorder and delete images on editable post', function () {
 
     $response->assertOk()->assertJsonCount(3, 'data.images');
 
-    $reordered = PostImage::query()->where('post_id', $post->id)->orderBy('position')->get();
+    $reordered = mobile_post_media((string) $post->id);
     expect($reordered->pluck('id')->map(fn ($id): string => (string) $id)->all())->toBe($reversedIds);
 
     $imageToDelete = $reordered->first();
@@ -76,9 +80,10 @@ test('user can add reorder and delete images on editable post', function () {
         ->assertJsonCount(2, 'data.images');
 
     Storage::disk('public')->assertMissing($pathToDelete);
-    $this->assertDatabaseMissing('post_images', ['id' => $imageToDelete->id]);
-    expect(PostImage::query()->where('post_id', $post->id)->orderBy('position')->pluck('position')->map(fn ($value) => (int) $value)->all())->toBe([0, 1]);
+    $this->assertDatabaseMissing('media', ['id' => $imageToDelete->id]);
+    expect(mobile_post_media((string) $post->id)->pluck('position')->map(fn ($value) => (int) $value)->all())->toBe([0, 1]);
 });
+
 test('image limits types and complete reorder set are validated', function () {
     $user = User::factory()->create();
     $post = mobile_post_media_test_createPost($user);
@@ -106,13 +111,14 @@ test('image limits types and complete reorder set are validated', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['images'], 'error.details');
 
-    $firstImageId = (string) PostImage::query()->where('post_id', $post->id)->value('id');
+    $firstImageId = (string) mobile_post_media((string) $post->id)->firstOrFail()->id;
 
     $this->patchJson("/api/mobile/posts/{$post->id}/images/order", [
         'imageIds' => [$firstImageId],
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['imageIds'], 'error.details');
 });
+
 test('media management requires ownership and editable status', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
@@ -128,6 +134,7 @@ test('media management requires ownership and editable status', function () {
         'images' => [UploadedFile::fake()->image('published.jpg')],
     ], ['Accept' => 'application/json'])->assertForbidden();
 });
+
 test('cross post image ids cannot be deleted or used for reorder', function () {
     $user = User::factory()->create();
     $firstPost = mobile_post_media_test_createPost($user);
@@ -141,27 +148,35 @@ test('cross post image ids cannot be deleted or used for reorder', function () {
         'images' => [UploadedFile::fake()->image('second.jpg')],
     ], ['Accept' => 'application/json'])->assertOk();
 
-    $firstImage = PostImage::query()->where('post_id', $firstPost->id)->firstOrFail();
-    $secondImage = PostImage::query()->where('post_id', $secondPost->id)->firstOrFail();
+    $firstImage = mobile_post_media((string) $firstPost->id)->firstOrFail();
+    $secondImage = mobile_post_media((string) $secondPost->id)->firstOrFail();
 
     $this->deleteJson("/api/mobile/posts/{$firstPost->id}/images/{$secondImage->id}")
         ->assertNotFound();
-    $this->assertDatabaseHas('post_images', ['id' => $secondImage->id]);
+    $this->assertDatabaseHas('media', ['id' => $secondImage->id]);
 
     $this->patchJson("/api/mobile/posts/{$firstPost->id}/images/order", [
         'imageIds' => [(string) $secondImage->id],
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['imageIds'], 'error.details');
 
-    $this->assertDatabaseHas('post_images', ['id' => $firstImage->id, 'post_id' => $firstPost->id]);
+    $this->assertDatabaseHas('media', [
+        'id' => $firstImage->id,
+        'model_type' => 'post',
+        'model_id' => $firstPost->id,
+        'prop' => 'images',
+    ]);
 });
+
 test('discovery returns images and deleting post purges files', function () {
     $user = User::factory()->create();
     $post = mobile_post_media_test_createPost($user, ['status' => 'published', 'published_at' => now()]);
-    $path = "mobile/posts/{$post->id}/existing.jpg";
+    $path = "media/post/{$post->id}/images/existing.jpg";
     Storage::disk('public')->put($path, 'image-content');
-    PostImage::query()->create([
-        'post_id' => $post->id,
+    Media::query()->create([
+        'model_type' => 'post',
+        'model_id' => $post->id,
+        'prop' => 'images',
         'disk' => 'public',
         'path' => $path,
         'original_name' => 'existing.jpg',
@@ -180,11 +195,25 @@ test('discovery returns images and deleting post purges files', function () {
     $this->deleteJson("/api/mobile/posts/{$post->id}")->assertOk();
 
     Storage::disk('public')->assertMissing($path);
-    $this->assertDatabaseMissing('post_images', ['post_id' => $post->id]);
+    $this->assertDatabaseMissing('media', [
+        'model_type' => 'post',
+        'model_id' => $post->id,
+        'prop' => 'images',
+    ]);
 });
-/**
- * @param  array{status?: string, published_at?: mixed, title?: string|null, content?: string|null, location?: string|null}  $overrides
- */
+
+function mobile_post_media(string $postId)
+{
+    return Media::query()
+        ->where('model_type', 'post')
+        ->where('model_id', $postId)
+        ->where('prop', 'images')
+        ->orderBy('position')
+        ->orderBy('id')
+        ->get();
+}
+
+/** @param array{status?: string, published_at?: mixed, title?: string|null, content?: string|null, location?: string|null} $overrides */
 function mobile_post_media_test_createPost(User $user, array $overrides = []): Post
 {
     return Post::query()->create(array_merge([
