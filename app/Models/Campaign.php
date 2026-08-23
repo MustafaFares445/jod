@@ -67,6 +67,24 @@ class Campaign extends Model
         return $this->hasMany(Post::class);
     }
 
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class, 'model_id')
+            ->where('model_type', 'campaign')
+            ->orderBy('prop')
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
+    public function imageMedia(): HasMany
+    {
+        return $this->hasMany(Media::class, 'model_id')
+            ->where('model_type', 'campaign')
+            ->where('prop', 'images')
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
     public function reviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');

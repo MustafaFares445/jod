@@ -39,8 +39,6 @@ class CampaignRequest extends FormRequest
                 'date',
                 Rule::when($this->filled('startDate'), ['after_or_equal:startDate']),
             ],
-            'images' => ['sometimes', 'array', 'max:10'],
-            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 }

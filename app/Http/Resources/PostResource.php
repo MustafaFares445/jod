@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\PostImage;
+use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -12,6 +12,8 @@ class PostResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $images = $this->relationLoaded('images') ? $this->images : $this->resource->images()->get();
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -22,9 +24,8 @@ class PostResource extends JsonResource
             'authorName' => $this->whenLoaded('author', fn () => $this->author?->name),
             'location' => $this->location,
             'campaignTitle' => $this->whenLoaded('campaign', fn () => $this->campaign?->title, $this->campaign?->title),
-            'images' => $this->relationLoaded('images')
-                ? $this->images->map(static fn (PostImage $image): string => $image->publicUrl())->values()->all()
-                : [],
+            'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
+            'media' => $images->map(fn (Media $image): array => MediaResource::make($image)->resolve($request))->values()->all(),
             'submittedAt' => $this->submitted_at?->toIso8601String() ?? $this->created_at?->toIso8601String(),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),

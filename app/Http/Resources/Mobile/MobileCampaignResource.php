@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Mobile;
 
+use App\Models\Media;
 use App\Models\Post;
-use App\Models\PostImage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MobileCampaignResource extends JsonResource
@@ -34,11 +33,7 @@ class MobileCampaignResource extends JsonResource
             'beneficiariesCount' => (int) $this->beneficiaries_count,
             'donorsCount' => (int) $this->donors_count,
             'applicantsCount' => (int) $this->applicants_count,
-            'stats' => [
-                'likes' => 0,
-                'comments' => 0,
-                'shares' => 0,
-            ],
+            'stats' => ['likes' => 0, 'comments' => 0, 'shares' => 0],
             'viewsCount' => 0,
             'reactionsCount' => 0,
             'commentsCount' => 0,
@@ -56,13 +51,8 @@ class MobileCampaignResource extends JsonResource
             'managerName' => $this->creator?->name,
         ];
 
-        if (isset($publisher['phoneNumber'])) {
-            $data['phoneNumber'] = $publisher['phoneNumber'];
-        }
-
-        if (isset($publisher['whatsappNumber'])) {
-            $data['whatsappNumber'] = $publisher['whatsappNumber'];
-        }
+        if (isset($publisher['phoneNumber'])) $data['phoneNumber'] = $publisher['phoneNumber'];
+        if (isset($publisher['whatsappNumber'])) $data['whatsappNumber'] = $publisher['whatsappNumber'];
 
         return $data;
     }
@@ -72,7 +62,6 @@ class MobileCampaignResource extends JsonResource
     {
         $organization = $this->relationLoaded('organization') ? $this->organization : null;
         $manager = $this->relationLoaded('creator') ? $this->creator : null;
-
         $publisherId = $organization?->id ?? $manager?->id ?? $this->creator_id ?? 'campaign-'.$this->id;
         $name = $organization?->name ?? $manager?->name ?? 'JOD';
         $email = $organization?->email ?? $manager?->email;
@@ -90,14 +79,8 @@ class MobileCampaignResource extends JsonResource
                 : $manager?->email_verified_at !== null,
         ];
 
-        if (filled($bio)) {
-            $publisher['bio'] = $bio;
-        }
-
-        if (filled($city)) {
-            $publisher['city'] = $city;
-        }
-
+        if (filled($bio)) $publisher['bio'] = $bio;
+        if (filled($city)) $publisher['city'] = $city;
         if (filled($phone)) {
             $publisher['phoneNumber'] = $phone;
             $publisher['whatsappNumber'] = $phone;
@@ -109,8 +92,8 @@ class MobileCampaignResource extends JsonResource
     /** @return list<string> */
     private function images(): array
     {
-        $campaignImages = collect($this->images ?? [])
-            ->map(static fn (string $path): string => Storage::disk('public')->url($path));
+        $campaignImages = ($this->relationLoaded('imageMedia') ? $this->imageMedia : $this->resource->imageMedia()->get())
+            ->map(static fn (Media $media): string => $media->publicUrl());
 
         if (! $this->relationLoaded('posts')) {
             return $campaignImages->take(10)->values()->all();
@@ -118,26 +101,17 @@ class MobileCampaignResource extends JsonResource
 
         $postImages = $this->posts
             ->flatMap(static function (Post $post) {
-                return $post->relationLoaded('images') ? $post->images : [];
+                return $post->relationLoaded('images') ? $post->images : $post->images()->get();
             })
-            ->map(static fn (PostImage $image): string => $image->publicUrl());
+            ->map(static fn (Media $media): string => $media->publicUrl());
 
-        return $campaignImages
-            ->concat($postImages)
-            ->unique()
-            ->take(10)
-            ->values()
-            ->all();
+        return $campaignImages->concat($postImages)->unique()->take(10)->values()->all();
     }
 
     private function username(?string $email, string $name): string
     {
-        if (filled($email)) {
-            return Str::before((string) $email, '@');
-        }
-
+        if (filled($email)) return Str::before((string) $email, '@');
         $slug = Str::slug($name, '.');
-
         return $slug !== '' ? $slug : 'jod';
     }
 }

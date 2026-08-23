@@ -28,7 +28,6 @@ class OrganizationProfileRequest extends FormRequest
             'companyPhone' => ['sometimes', 'required', 'string', 'max:30'],
             'location' => ['sometimes', 'required', 'string', 'max:255'],
             'website' => ['sometimes', 'nullable', 'url', 'max:255'],
-            'image' => ['sometimes', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }
 }

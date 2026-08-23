@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -58,6 +59,22 @@ class Organization extends Model
             'accepted_at' => 'datetime',
             'last_active_at' => 'datetime',
         ];
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class, 'model_id')
+            ->where('model_type', 'organization')
+            ->orderBy('prop')
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
+    public function logoMedia(): HasOne
+    {
+        return $this->hasOne(Media::class, 'model_id')
+            ->where('model_type', 'organization')
+            ->where('prop', 'logo');
     }
 
     public function posts(): HasMany

@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Mobile;
 
-use App\Models\PostImage;
+use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class UserPostResource extends JsonResource
 {
-    /**
-     * @return array{id: string, ownerId: string|null, title: string|null, details: string|null, city: string|null, type: string, categoryId: string|null, images: list<string>, imageMedia: list<array{id: string, url: string, position: int}>, viewsCount: int, reactionsCount: int, commentsCount: int, sharesCount: int, stats: array{likes: int, comments: int, shares: int}, status: string, rejectionReason: string|null, createdAt: string|null, updatedAt: string|null, publishedAt: string|null}
-     */
+    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $imageMedia = $this->relationLoaded('images')
-            ? $this->images->map(static fn (PostImage $image): array => [
+            ? $this->images->map(static fn (Media $image): array => [
                 'id' => (string) $image->id,
                 'url' => $image->publicUrl(),
                 'position' => (int) $image->position,
