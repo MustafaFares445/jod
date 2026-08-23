@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class CampaignResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $images = $this->relationLoaded('imageMedia') ? $this->imageMedia : $this->resource->imageMedia()->get();
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -21,7 +23,8 @@ class CampaignResource extends JsonResource
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,
             'location' => $this->location,
-            'images' => collect($this->images ?? [])->map(fn (string $path): string => Storage::disk('public')->url($path))->values()->all(),
+            'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
+            'media' => $images->map(fn (Media $image): array => MediaResource::make($image)->resolve($request))->values()->all(),
             'goalAmount' => (float) $this->goal_amount,
             'raisedAmount' => (float) $this->raised_amount,
             'beneficiariesCount' => (int) $this->beneficiaries_count,
