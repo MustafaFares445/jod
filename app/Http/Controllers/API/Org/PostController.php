@@ -10,7 +10,6 @@ use App\Http\Requests\Org\PostRequest;
 use App\Http\Requests\Org\PostStatusRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
-use App\Models\PostImage;
 use App\Services\PostService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -24,7 +23,6 @@ class PostController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAnyOrganization', Post::class);
-
         $posts = $this->service->paginate(request()->all(), $this->organizationId());
 
         return PostResource::collection($posts);
@@ -34,16 +32,11 @@ class PostController extends Controller
     {
         $this->authorize('createOrganization', Post::class);
 
-        $data = collect($request->validated())->except('images')->merge([
+        $data = collect($request->validated())->merge([
             'status' => $request->validated('status', 'published'),
         ])->all();
 
-        $post = $this->service->create(
-            PostData::from($data),
-            $this->organizationId(),
-        );
-
-        $this->storeImages($post, $request->file('images', []));
+        $post = $this->service->create(PostData::from($data), $this->organizationId());
 
         return PostResource::make($post->refresh()->load(['campaign', 'images']));
     }
@@ -59,9 +52,8 @@ class PostController extends Controller
     {
         $this->authorize('updateOrganization', $post);
         $validated = $request->validated();
-        $postFields = collect($validated)->except('images')->all();
 
-        if ($postFields !== []) {
+        if ($validated !== []) {
             $post = $this->service->update(
                 $post,
                 PostData::from([
@@ -78,17 +70,12 @@ class PostController extends Controller
             );
         }
 
-        if ($request->hasFile('images')) {
-            $this->replaceImages($post, $request->file('images', []));
-        }
-
         return PostResource::make($post->refresh()->load(['campaign', 'images']));
     }
 
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
     {
         $status = (string) $request->validated('status');
-
         $ability = match ($status) {
             'published' => 'publishOrganization',
             'archived' => 'archiveOrganization',
@@ -96,7 +83,6 @@ class PostController extends Controller
         };
 
         $this->authorize($ability, $post);
-
         $post = $this->service->updateStatus($post, $status);
 
         return PostResource::make($post->refresh()->loadMissing('images'));
@@ -106,36 +92,31 @@ class PostController extends Controller
     {
         $this->authorize('publishOrganization', $post);
 
-        $post = $this->service->publish($post);
-
-        return PostResource::make($post->loadMissing('images'));
+        return PostResource::make($this->service->publish($post)->loadMissing('images'));
     }
 
     public function archive(Post $post): PostResource
     {
         $this->authorize('archiveOrganization', $post);
 
-        $post = $this->service->archive($post);
-
-        return PostResource::make($post->loadMissing('images'));
+        return PostResource::make($this->service->archive($post)->loadMissing('images'));
     }
 
     public function restore(Post $post): PostResource
     {
         $this->authorize('restoreOrganization', $post);
 
-        $post = $this->service->restore($post);
-
-        return PostResource::make($post->loadMissing('images'));
+        return PostResource::make($this->service->restore($post)->loadMissing('images'));
     }
 
     public function destroy(Post $post): Response
     {
         $this->authorize('deleteOrganization', $post);
-
         $post->loadMissing('images');
-        foreach ($post->images as $image) {
-            Storage::disk($image->disk)->delete($image->path);
+
+        foreach ($post->images as $media) {
+            Storage::disk($media->disk)->delete($media->path);
+            $media->delete();
         }
 
         $this->service->delete($post);
@@ -153,36 +134,5 @@ class PostController extends Controller
         }
 
         return $organizationId;
-    }
-
-    /** @param array<int, \Illuminate\Http\UploadedFile> $images */
-    private function storeImages(Post $post, array $images): void
-    {
-        foreach ($images as $position => $image) {
-            $path = $image->store("posts/{$post->id}", 'public');
-
-            $post->images()->create([
-                'disk' => 'public',
-                'path' => $path,
-                'original_name' => $image->getClientOriginalName(),
-                'mime_type' => $image->getMimeType(),
-                'size' => $image->getSize() ?: 0,
-                'position' => $position,
-            ]);
-        }
-    }
-
-    /** @param array<int, \Illuminate\Http\UploadedFile> $images */
-    private function replaceImages(Post $post, array $images): void
-    {
-        $post->loadMissing('images');
-
-        /** @var PostImage $image */
-        foreach ($post->images as $image) {
-            Storage::disk($image->disk)->delete($image->path);
-            $image->delete();
-        }
-
-        $this->storeImages($post, $images);
     }
 }
