@@ -6,6 +6,8 @@ namespace App\Services;
 
 use App\Enums\NotificationEventType;
 use App\Models\Campaign;
+use App\Models\CampaignApplication;
+use App\Models\Donation;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -72,7 +74,7 @@ class NotificationEventService
             ->where('organization_id', $organizationId);
 
         if (filled($excludeUserId)) {
-            $query->whereKeyNot($excludeUserId);
+            $query->where('id', '!=', $excludeUserId);
         }
 
         return $this->notifyQuery(
@@ -125,8 +127,8 @@ class NotificationEventService
         ?string $creatorId = null,
     ): int {
         $userIds = collect()
-            ->merge($campaign->donations()->whereNotNull('created_by')->pluck('created_by'))
-            ->merge($campaign->applications()->whereNotNull('created_by')->pluck('created_by'))
+            ->merge(Donation::query()->where('campaign_id', $campaign->id)->whereNotNull('created_by')->pluck('created_by'))
+            ->merge(CampaignApplication::query()->where('campaign_id', $campaign->id)->whereNotNull('created_by')->pluck('created_by'))
             ->filter()
             ->unique()
             ->values();
