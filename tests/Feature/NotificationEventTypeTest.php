@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\NotificationDistributionService;
 use App\Services\NotificationEventService;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
+use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -31,6 +33,33 @@ test('event dispatcher creates a personal unread inbox notification', function (
     expect($notification?->mailbox)->toBe('inbox');
     expect($notification?->status)->toBe('unread');
     expect((string) $notification?->recipient_id)->toBe((string) $user->id);
+});
+
+test('notification event type is exposed by the mobile contract', function () {
+    $user = User::factory()->create();
+    $notification = Notification::factory()->create([
+        'recipient_id' => $user->id,
+        'category' => 'applicant',
+        'event_type' => NotificationEventType::ApplicationAccepted->value,
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->getJson("/api/mobile/me/notifications/{$notification->id}")
+        ->assertOk()
+        ->assertJsonPath('data.category', 'applicant')
+        ->assertJsonPath('data.eventType', 'application.accepted');
+});
+
+test('dispatcher rejects event and category mismatches', function () {
+    $user = User::factory()->create();
+
+    expect(fn () => app(NotificationEventService::class)->notifyUser(
+        $user,
+        NotificationEventType::DonationCompleted,
+        'Donation completed',
+        'Your donation was recorded.',
+        'post',
+    ))->toThrow(InvalidArgumentException::class);
 });
 
 test('organization event routing only notifies active users in that organization', function () {
