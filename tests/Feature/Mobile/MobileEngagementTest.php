@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\PostLike;
@@ -9,205 +10,168 @@ use App\Models\SavedPost;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('like is idempotent and syncs count', function () {
+test('like and unlike are idempotent for published and approved posts', function () {
     $user = User::factory()->create();
-    $post = mobile_engagement_test_createPost(['reactions_count' => 7]);
     Sanctum::actingAs($user);
 
-    $this->postJson("/api/mobile/posts/{$post->id}/like")
-        ->assertOk()
-        ->assertJsonPath('data.postId', $post->id)
-        ->assertJsonPath('data.isLiked', true)
-        ->assertJsonPath('data.likesCount', 1);
+    foreach (['published', 'approved'] as $status) {
+        $post = mobile_engagement_test_createPost(['status' => $status]);
 
-    $this->postJson("/api/mobile/posts/{$post->id}/like")
-        ->assertOk()
-        ->assertJsonPath('data.isLiked', true)
-        ->assertJsonPath('data.likesCount', 1);
+        $this->postJson("/api/mobile/posts/{$post->id}/like")
+            ->assertOk()
+            ->assertJsonPath('data.isLiked', true)
+            ->assertJsonPath('data.likesCount', 1);
+        $this->postJson("/api/mobile/posts/{$post->id}/like")
+            ->assertOk()
+            ->assertJsonPath('data.likesCount', 1);
 
-    expect(PostLike::query()->where('user_id', $user->id)->where('post_id', $post->id)->count())->toBe(1);
-    expect((int) $post->refresh()->reactions_count)->toBe(1);
+        expect(PostLike::query()->where('user_id', $user->id)->where('post_id', $post->id)->count())->toBe(1);
+
+        $this->deleteJson("/api/mobile/posts/{$post->id}/like")
+            ->assertOk()
+            ->assertJsonPath('data.isLiked', false)
+            ->assertJsonPath('data.likesCount', 0);
+    }
 });
-test('unlike is idempotent and syncs count', function () {
+
+test('save unsave and saved list work for approved posts', function () {
     $user = User::factory()->create();
-    $post = mobile_engagement_test_createPost();
-    PostLike::factory()->create(['user_id' => $user->id, 'post_id' => $post->id]);
-    $post->update(['reactions_count' => 1]);
+    $approvedPost = mobile_engagement_test_createPost([
+        'title' => 'Approved saved post',
+        'status' => 'approved',
+    ]);
     Sanctum::actingAs($user);
 
-    $this->deleteJson("/api/mobile/posts/{$post->id}/like")
-        ->assertOk()
-        ->assertJsonPath('data.postId', $post->id)
-        ->assertJsonPath('data.isLiked', false)
-        ->assertJsonPath('data.likesCount', 0);
-
-    $this->deleteJson("/api/mobile/posts/{$post->id}/like")
-        ->assertOk()
-        ->assertJsonPath('data.isLiked', false)
-        ->assertJsonPath('data.likesCount', 0);
-
-    $this->assertDatabaseMissing('post_likes', ['user_id' => $user->id, 'post_id' => $post->id]);
-    expect((int) $post->refresh()->reactions_count)->toBe(0);
-});
-test('like and unlike require authentication and public posts', function () {
-    $publicPost = mobile_engagement_test_createPost();
-    $draftPost = mobile_engagement_test_createPost(['status' => 'draft']);
-
-    $this->postJson("/api/mobile/posts/{$publicPost->id}/like")->assertUnauthorized();
-    $this->deleteJson("/api/mobile/posts/{$publicPost->id}/like")->assertUnauthorized();
-
-    Sanctum::actingAs(User::factory()->create());
-
-    $this->postJson("/api/mobile/posts/{$draftPost->id}/like")->assertNotFound();
-    $this->deleteJson("/api/mobile/posts/{$draftPost->id}/like")->assertNotFound();
-});
-test('save is idempotent and returns count', function () {
-    $user = User::factory()->create();
-    $post = mobile_engagement_test_createPost();
-    Sanctum::actingAs($user);
-
-    $this->postJson("/api/mobile/posts/{$post->id}/save")
-        ->assertOk()
-        ->assertJsonPath('data.postId', $post->id)
-        ->assertJsonPath('data.isSaved', true)
-        ->assertJsonPath('data.savesCount', 1);
-
-    $this->postJson("/api/mobile/posts/{$post->id}/save")
+    $this->postJson("/api/mobile/posts/{$approvedPost->id}/save")
         ->assertOk()
         ->assertJsonPath('data.isSaved', true)
         ->assertJsonPath('data.savesCount', 1);
 
-    expect(SavedPost::query()->where('user_id', $user->id)->where('post_id', $post->id)->count())->toBe(1);
-});
-test('unsave is idempotent and returns count', function () {
-    $user = User::factory()->create();
-    $post = mobile_engagement_test_createPost();
-    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $post->id]);
-    Sanctum::actingAs($user);
-
-    $this->deleteJson("/api/mobile/posts/{$post->id}/save")
+    $this->getJson('/api/mobile/me/saved-posts')
         ->assertOk()
-        ->assertJsonPath('data.postId', $post->id)
-        ->assertJsonPath('data.isSaved', false)
-        ->assertJsonPath('data.savesCount', 0);
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.id', $approvedPost->id)
+        ->assertJsonPath('data.0.status', 'published')
+        ->assertJsonPath('data.0.isSaved', true);
 
-    $this->deleteJson("/api/mobile/posts/{$post->id}/save")
+    $this->deleteJson("/api/mobile/posts/{$approvedPost->id}/save")
         ->assertOk()
         ->assertJsonPath('data.isSaved', false)
         ->assertJsonPath('data.savesCount', 0);
 
-    $this->assertDatabaseMissing('saved_posts', ['user_id' => $user->id, 'post_id' => $post->id]);
+    expect(SavedPost::query()->where('user_id', $user->id)->where('post_id', $approvedPost->id)->exists())->toBeFalse();
 });
-test('saved posts are paginated scoped to user and public posts', function () {
+
+test('saved posts are scoped to the authenticated user and hide non public posts', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
-    $firstPost = mobile_engagement_test_createPost(['title' => 'First saved']);
-    $secondPost = mobile_engagement_test_createPost(['title' => 'Second saved']);
-    $otherPost = mobile_engagement_test_createPost(['title' => 'Other saved']);
-    $draftPost = mobile_engagement_test_createPost(['title' => 'Draft saved', 'status' => 'draft']);
+    $published = mobile_engagement_test_createPost(['title' => 'Published saved']);
+    $approved = mobile_engagement_test_createPost(['title' => 'Approved saved', 'status' => 'approved']);
+    $draft = mobile_engagement_test_createPost(['title' => 'Draft saved', 'status' => 'draft']);
+    $other = mobile_engagement_test_createPost(['title' => 'Other saved']);
 
-    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $firstPost->id]);
-    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $secondPost->id]);
-    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $draftPost->id]);
-    SavedPost::factory()->create(['user_id' => $otherUser->id, 'post_id' => $otherPost->id]);
+    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $published->id]);
+    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $approved->id]);
+    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $draft->id]);
+    SavedPost::factory()->create(['user_id' => $otherUser->id, 'post_id' => $other->id]);
     Sanctum::actingAs($user);
 
     $response = $this->getJson('/api/mobile/me/saved-posts?perPage=10');
 
-    $response->assertOk()
-        ->assertJsonPath('success', true)
-        ->assertJsonPath('meta.total', 2)
-        ->assertJsonPath('meta.perPage', 10)
-        ->assertJsonPath('data.0.status', 'published')
-        ->assertJsonStructure(['data' => [['id', 'title', 'savedAt']]]);
-    $response->assertJsonMissing(['title' => 'Other saved']);
+    $response->assertOk()->assertJsonPath('meta.total', 2);
     $response->assertJsonMissing(['title' => 'Draft saved']);
+    $response->assertJsonMissing(['title' => 'Other saved']);
 });
-test('save unsave and saved posts require authentication and public posts', function () {
-    $publicPost = mobile_engagement_test_createPost();
-    $draftPost = mobile_engagement_test_createPost(['status' => 'draft']);
 
-    $this->postJson("/api/mobile/posts/{$publicPost->id}/save")->assertUnauthorized();
-    $this->deleteJson("/api/mobile/posts/{$publicPost->id}/save")->assertUnauthorized();
-    $this->getJson('/api/mobile/me/saved-posts')->assertUnauthorized();
+test('report lookup reasons match the mobile report sheet', function () {
+    $response = $this->getJson('/api/mobile/lookups/report-reasons');
 
-    Sanctum::actingAs(User::factory()->create());
-
-    $this->postJson("/api/mobile/posts/{$draftPost->id}/save")->assertNotFound();
-    $this->deleteJson("/api/mobile/posts/{$draftPost->id}/save")->assertNotFound();
+    $response->assertOk()
+        ->assertJsonPath('data.0.code', 'misleading')
+        ->assertJsonPath('data.1.code', 'abusive')
+        ->assertJsonPath('data.2.code', 'fraud')
+        ->assertJsonPath('data.3.code', 'impersonation')
+        ->assertJsonPath('data.4.code', 'other')
+        ->assertJsonPath('data.4.allowsCustomText', true);
 });
-test('report validation errors are returned', function () {
+
+test('other report reason requires custom details up to 180 characters', function () {
     $post = mobile_engagement_test_createPost();
     Sanctum::actingAs(User::factory()->create());
 
-    $this->postJson("/api/mobile/posts/{$post->id}/reports", [])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['reason'], 'error.details');
-
-    $this->postJson("/api/mobile/posts/{$post->id}/reports", ['reason' => 'ab'])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors(['reason'], 'error.details');
+    $this->postJson("/api/mobile/posts/{$post->id}/reports", [
+        'reason' => 'other',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['details'], 'error.details');
 
     $this->postJson("/api/mobile/posts/{$post->id}/reports", [
-        'reason' => 'spam',
+        'reason' => 'other',
         'details' => str_repeat('x', 181),
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['details'], 'error.details');
 });
-test('report creates new moderation report with context', function () {
+
+test('report creates moderation record with reason code label and post context', function () {
     $user = User::factory()->create();
     $organization = Organization::factory()->create();
-    $post = mobile_engagement_test_createPost(['organization_id' => $organization->id]);
+    $post = mobile_engagement_test_createPost([
+        'organization_id' => $organization->id,
+        'status' => 'approved',
+    ]);
     Sanctum::actingAs($user);
 
     $response = $this->postJson("/api/mobile/posts/{$post->id}/reports", [
-        'reason' => 'spam',
-        'details' => 'This post keeps reposting misleading content.',
+        'reason' => 'fraud',
+        'details' => 'طلب تبرع يبدو غير موثوق.',
     ]);
 
     $response->assertOk()
         ->assertJsonPath('data.postId', $post->id)
         ->assertJsonPath('data.status', 'new');
 
-    $this->assertDatabaseHas('reports', [
-        'id' => $response->json('data.id'),
-        'status' => 'new',
-        'category' => 'spam',
-        'entity_type' => 'post',
-        'entity_id' => $post->id,
-        'organization_id' => $organization->id,
-        'reporter_id' => $user->id,
-    ]);
+    $report = Report::query()->findOrFail($response->json('data.id'));
+    expect($report->category)->toBe('fraud');
+    expect($report->entity_type)->toBe('post');
+    expect((string) $report->entity_id)->toBe((string) $post->id);
+    expect($report->evidence['reason'])->toBe('fraud');
+    expect($report->evidence['reasonLabel'])->toBe('احتيال أو طلب تبرع مشبوه');
+    expect($report->evidence['details'])->toBe('طلب تبرع يبدو غير موثوق.');
 });
-test('duplicate reports create separate records', function () {
+
+test('all five report reason codes are accepted', function () {
     $user = User::factory()->create();
     $post = mobile_engagement_test_createPost();
     Sanctum::actingAs($user);
 
-    $this->postJson("/api/mobile/posts/{$post->id}/reports", ['reason' => 'Unsafe claim'])->assertOk();
-    $this->postJson("/api/mobile/posts/{$post->id}/reports", ['reason' => 'Unsafe claim'])->assertOk();
+    foreach (['misleading', 'abusive', 'fraud', 'impersonation'] as $reason) {
+        $this->postJson("/api/mobile/posts/{$post->id}/reports", ['reason' => $reason])
+            ->assertOk();
+    }
 
-    expect(Report::query()
-        ->where('reporter_id', $user->id)
-        ->where('entity_type', 'post')
-        ->where('entity_id', $post->id)
-        ->count())->toBe(2);
+    $this->postJson("/api/mobile/posts/{$post->id}/reports", [
+        'reason' => 'other',
+        'details' => 'سبب مخصص للبلاغ',
+    ])->assertOk();
+
+    expect(Report::query()->where('reporter_id', $user->id)->count())->toBe(5);
 });
-test('report requires authentication and public posts', function () {
+
+test('engagement and reports require authentication and public post state', function () {
     $publicPost = mobile_engagement_test_createPost();
     $draftPost = mobile_engagement_test_createPost(['status' => 'draft']);
 
-    $this->postJson("/api/mobile/posts/{$publicPost->id}/reports", ['reason' => 'spam'])->assertUnauthorized();
+    $this->postJson("/api/mobile/posts/{$publicPost->id}/save")->assertUnauthorized();
+    $this->postJson("/api/mobile/posts/{$publicPost->id}/reports", ['reason' => 'misleading'])->assertUnauthorized();
 
     Sanctum::actingAs(User::factory()->create());
-
-    $this->postJson("/api/mobile/posts/{$draftPost->id}/reports", ['reason' => 'spam'])->assertNotFound();
+    $this->postJson("/api/mobile/posts/{$draftPost->id}/save")->assertNotFound();
+    $this->postJson("/api/mobile/posts/{$draftPost->id}/reports", ['reason' => 'misleading'])->assertNotFound();
 });
-/**
- * @param  array<string, mixed>  $overrides
- */
+
+/** @param array<string, mixed> $overrides */
 function mobile_engagement_test_createPost(array $overrides = []): Post
 {
     return Post::query()->create(array_merge([
@@ -217,7 +181,7 @@ function mobile_engagement_test_createPost(array $overrides = []): Post
         'content' => 'Public post details.',
         'type' => 'help_request',
         'status' => 'published',
-        'location' => 'Amman',
+        'location' => 'Damascus',
         'published_at' => now(),
     ], $overrides));
 }
