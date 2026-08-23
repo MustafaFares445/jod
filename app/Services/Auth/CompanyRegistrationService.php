@@ -21,9 +21,6 @@ class CompanyRegistrationService
     public function register(array $data): User
     {
         return DB::transaction(function () use ($data): User {
-            $image = $data['image'] ?? $data['logo'] ?? null;
-            $logoPath = $image?->store('organizations/logos', 'public');
-
             $organization = Organization::query()->create([
                 'name' => $data['companyName'],
                 'email' => $data['companyEmail'],
@@ -31,7 +28,6 @@ class CompanyRegistrationService
                 'organization_number' => $data['organizationNumber'],
                 'registration_number' => $data['registrationNumber'],
                 'bank_account_number' => $data['bankAccountNumber'],
-                'logo_path' => $logoPath,
                 'location' => $data['location'],
                 'website' => $data['website'] ?? null,
                 'owner_full_name' => $data['ownerName'],
