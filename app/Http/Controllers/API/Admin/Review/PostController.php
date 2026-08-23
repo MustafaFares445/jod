@@ -14,6 +14,17 @@ use Illuminate\Validation\ValidationException;
 
 class PostController extends Controller
 {
+    private const RELATIONS = [
+        'campaign',
+        'organization',
+        'images',
+        'author',
+        'updatedBy',
+        'reviewedBy',
+        'approvedBy',
+        'rejectedBy',
+    ];
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Post::class);
@@ -23,7 +34,7 @@ class PostController extends Controller
         $sortBy = (string) ($this->queryParam($request, 'sortBy') ?? '');
 
         $query = Post::query()
-            ->with(['campaign', 'reviewedBy', 'author'])
+            ->with(self::RELATIONS)
             ->whereNull('organization_id')
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->queryParam($request, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type));
@@ -39,9 +50,9 @@ class PostController extends Controller
         match ($normalizedSort) {
             'title' => $query->orderBy('title'),
             '-title' => $query->orderByDesc('title'),
-            'submittedAt' => $query->orderBy('created_at'),
-            '-submittedAt' => $query->orderByDesc('created_at'),
-            default => $query->orderByDesc('created_at'),
+            'submittedAt' => $query->orderByRaw('COALESCE(submitted_at, created_at) ASC'),
+            '-submittedAt' => $query->orderByRaw('COALESCE(submitted_at, created_at) DESC'),
+            default => $query->orderByRaw('COALESCE(submitted_at, created_at) DESC'),
         };
 
         return PostResource::collection($query->paginate($perPage));
@@ -51,47 +62,52 @@ class PostController extends Controller
     {
         $this->authorize('view', $post);
 
-        return PostResource::make($post->loadMissing(['organization', 'campaign', 'reviewedBy', 'author']));
+        return PostResource::make($post->loadMissing(self::RELATIONS));
     }
 
     public function approve(Request $request, Post $post): PostResource
     {
         $this->authorize('approve', $post);
-
         $this->assertPending($post);
 
         $request->validate([
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $now = now();
         $post->update([
-            'status' => 'approved',
-            'reviewed_at' => now(),
+            'status' => 'published',
+            'published_at' => $now,
+            'reviewed_at' => $now,
             'reviewed_by' => auth()->id(),
+            'approved_at' => $now,
+            'approved_by' => auth()->id(),
             'rejection_reason' => null,
         ]);
 
-        return PostResource::make($post->refresh()->loadMissing(['organization', 'campaign', 'reviewedBy', 'author']));
+        return PostResource::make($post->refresh()->loadMissing(self::RELATIONS));
     }
 
     public function reject(Request $request, Post $post): PostResource
     {
         $this->authorize('reject', $post);
-
         $this->assertPending($post);
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:8'],
         ]);
 
+        $now = now();
         $post->update([
             'status' => 'rejected',
-            'reviewed_at' => now(),
+            'reviewed_at' => $now,
             'reviewed_by' => auth()->id(),
+            'rejected_at' => $now,
+            'rejected_by' => auth()->id(),
             'rejection_reason' => $data['reason'],
         ]);
 
-        return PostResource::make($post->refresh()->loadMissing(['organization', 'campaign', 'reviewedBy', 'author']));
+        return PostResource::make($post->refresh()->loadMissing(self::RELATIONS));
     }
 
     private function assertPending(Post $post): void
