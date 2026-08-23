@@ -61,6 +61,7 @@ class CampaignService
         $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
 
         $query = Campaign::query()
+            ->with('imageMedia')
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
@@ -201,6 +202,7 @@ class CampaignService
         return [
             'organization',
             'creator',
+            'imageMedia',
             'posts' => static fn ($relation) => $relation
                 ->where('status', 'published')
                 ->orderByDesc('published_at')
