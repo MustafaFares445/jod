@@ -59,12 +59,21 @@ class PostController extends Controller
     {
         $this->authorize('updateOrganization', $post);
         $validated = $request->validated();
-        $postData = collect($validated)->except('images')->all();
+        $postFields = collect($validated)->except('images')->all();
 
-        if ($postData !== []) {
+        if ($postFields !== []) {
             $post = $this->service->update(
                 $post,
-                PostData::from($postData),
+                PostData::from([
+                    'title' => $validated['title'] ?? $post->title,
+                    'summary' => $validated['summary'] ?? $post->summary,
+                    'type' => $validated['type'] ?? $post->type,
+                    'location' => $validated['location'] ?? $post->location,
+                    'campaignTitle' => array_key_exists('campaignTitle', $validated)
+                        ? $validated['campaignTitle']
+                        : $post->campaign?->title,
+                    'status' => $post->status,
+                ]),
                 $this->organizationId(),
             );
         }
