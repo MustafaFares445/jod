@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class NotificationEventService
 {
@@ -28,6 +29,8 @@ class NotificationEventService
         ?string $organizationId = null,
         ?string $creatorId = null,
     ): ?Notification {
+        $this->ensureCategory($eventType, $category);
+
         $model = $user instanceof User
             ? $user
             : (filled($user) ? User::query()->find((string) $user) : null);
@@ -69,6 +72,8 @@ class NotificationEventService
         ?string $creatorId = null,
         ?string $excludeUserId = null,
     ): int {
+        $this->ensureCategory($eventType, $category);
+
         $query = User::query()
             ->where('status', 'active')
             ->where('organization_id', $organizationId);
@@ -101,6 +106,8 @@ class NotificationEventService
         ?string $referencePath = null,
         ?string $creatorId = null,
     ): int {
+        $this->ensureCategory($eventType, $category);
+
         return $this->notifyQuery(
             User::query()->where('status', 'active')->where('user_type', 'admin'),
             $eventType,
@@ -126,6 +133,8 @@ class NotificationEventService
         ?string $referencePath = null,
         ?string $creatorId = null,
     ): int {
+        $this->ensureCategory($eventType, $category);
+
         $userIds = collect()
             ->merge(Donation::query()->where('campaign_id', $campaign->id)->whereNotNull('created_by')->pluck('created_by'))
             ->merge(CampaignApplication::query()->where('campaign_id', $campaign->id)->whereNotNull('created_by')->pluck('created_by'))
@@ -160,6 +169,8 @@ class NotificationEventService
         ?string $organizationId = null,
         ?string $creatorId = null,
     ): int {
+        $this->ensureCategory($eventType, $category);
+
         if ($userIds->isEmpty()) {
             return 0;
         }
@@ -224,5 +235,14 @@ class NotificationEventService
             });
 
         return $created;
+    }
+
+    private function ensureCategory(NotificationEventType $eventType, string $category): void
+    {
+        if ($eventType->category() !== $category) {
+            throw new InvalidArgumentException(
+                "Notification event {$eventType->value} must use category {$eventType->category()}.",
+            );
+        }
     }
 }
