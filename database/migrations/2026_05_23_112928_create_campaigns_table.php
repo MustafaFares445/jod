@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         if (! Schema::hasTable('campaigns')) {
@@ -18,8 +15,9 @@ return new class extends Migration
                 $table->string('summary')->nullable();
                 $table->text('content')->nullable();
                 $table->enum('category', ['health', 'education', 'shelter', 'food', 'emergency', 'employment', 'donation', 'volunteer', 'community'])->default('health');
-                $table->enum('status', ['draft', 'pending', 'approved', 'rejected', 'active', 'closed'])->default('draft');
+                $table->enum('status', ['draft', 'pending', 'approved', 'rejected', 'active', 'closed'])->default('active');
                 $table->string('location')->nullable();
+                $table->json('images')->nullable();
                 $table->string('organization_id');
                 $table->string('creator_id')->nullable();
                 $table->decimal('goal_amount', 15, 2)->default(0);
@@ -43,9 +41,6 @@ return new class extends Migration
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('campaigns');
