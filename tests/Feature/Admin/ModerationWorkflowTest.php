@@ -65,12 +65,12 @@ test('reviews posts and returns audit actors and timestamps', function () {
 
     $this->postJson("/api/v1/admin/review/posts/{$post->id}/approve")
         ->assertOk()
-        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.status', 'approved')
         ->assertJsonPath('data.approvedBy.id', $this->user->id)
         ->assertJsonStructure(['data' => ['approvedAt', 'publishedAt']]);
 
     $post->refresh();
-    expect($post->status)->toEqual('published');
+    expect($post->status)->toEqual('approved');
     expect($post->approved_by)->toEqual($this->user->id);
 
     $rejected = Post::query()->create([
