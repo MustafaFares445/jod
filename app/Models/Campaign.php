@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'title',
     'summary',
     'content',
-    'category',
+    'category_id',
     'status',
     'location',
     'images',
@@ -60,6 +60,11 @@ class Campaign extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function posts(): HasMany
