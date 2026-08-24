@@ -13,6 +13,7 @@ use App\Http\Controllers\API\Admin\ReportController;
 use App\Http\Controllers\API\Admin\SettingsController;
 use App\Http\Controllers\API\Admin\UserController;
 use App\Http\Controllers\API\Auth\AuthController;
+use App\Http\Controllers\API\FirebasePushTestController;
 use App\Http\Controllers\API\Me\DashboardContextController;
 use App\Http\Controllers\API\Me\PermissionsController;
 use App\Http\Controllers\API\Me\ProfileController;
@@ -28,6 +29,10 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('mobile')
     ->name('mobile.')
     ->group(base_path('routes/mobile.php'));
+
+Route::post('v1/firebase/test-push', FirebasePushTestController::class)
+    ->middleware('throttle:5,1')
+    ->name('firebase.test-push');
 
 Route::prefix('v1/auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
