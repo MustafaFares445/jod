@@ -23,15 +23,16 @@ class CampaignService
             ->with($this->mobileDiscoveryRelations())
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
-            ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->where('category', $params['category']))
+            ->when(filled($params['categoryId'] ?? null), fn (Builder $builder) => $builder->where('category_id', $params['categoryId']))
+            ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->whereHas('category', fn (Builder $category) => $category->where('name', 'like', '%'.$params['category'].'%')))
             ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
             ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('category', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('organization', function (Builder $organization) use ($search): void {
                             $organization->where('name', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%")
@@ -70,17 +71,18 @@ class CampaignService
         $search = SearchFilter::fromArray($params);
 
         $query = Campaign::query()
-            ->with('imageMedia')
+            ->with(['imageMedia', 'category'])
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
-            ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
+            ->when(($categoryId = $this->param($params, 'filter.categoryId')) && $categoryId !== 'all', fn (Builder $builder) => $builder->where('category_id', $categoryId))
+            ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->whereHas('category', fn (Builder $categoryQuery) => $categoryQuery->where('name', 'like', '%'.$category.'%')))
             ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', 'like', '%'.$location.'%'))
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('category', 'like', "%{$search}%")
-                        ->orWhere('location', 'like', "%{$search}%");
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', "%{$search}%"));
                 });
             });
 
@@ -100,7 +102,7 @@ class CampaignService
         return Campaign::create([
             'title' => $data->title,
             'summary' => $data->summary,
-            'category' => $data->category,
+            'category_id' => $data->categoryId,
             'status' => $data->status,
             'location' => $data->location,
             'organization_id' => $organizationId,
@@ -116,7 +118,7 @@ class CampaignService
         $campaign->update([
             'title' => $data->title,
             'summary' => $data->summary,
-            'category' => $data->category,
+            'category_id' => $data->categoryId,
             'status' => $data->status,
             'location' => $data->location,
             'goal_amount' => $data->goalAmount,
@@ -212,6 +214,7 @@ class CampaignService
         return [
             'organization',
             'creator',
+            'category',
             'imageMedia',
             'posts' => static fn ($relation) => $relation
                 ->whereIn('status', ['published', 'approved'])
