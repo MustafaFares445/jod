@@ -19,9 +19,6 @@ use Illuminate\Validation\ValidationException;
 
 class HelpOfferService
 {
-    /** @var list<string> */
-    private const TYPES = ['financial', 'supplies', 'service', 'transportation', 'medicine', 'food', 'other'];
-
     public function __construct(
         private readonly HelpRequestStatusService $helpStatus,
         private readonly NotificationEventService $notifications,
@@ -33,9 +30,9 @@ class HelpOfferService
         $offer = DB::transaction(function () use ($helper, $postId, $attributes): HelpOffer {
             $post = Post::query()->whereKey($postId)->lockForUpdate()->first();
 
-            if ($post === null || $post->type !== 'help_request' || $post->status !== 'published') {
+            if ($post === null || $post->type !== 'help_request' || ! in_array($post->status, ['published', 'approved'], true)) {
                 throw ValidationException::withMessages([
-                    'post' => ['Help offers can only be created for published help requests.'],
+                    'post' => ['Help offers can only be created for public help requests.'],
                 ]);
             }
 
