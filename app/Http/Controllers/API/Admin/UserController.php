@@ -8,6 +8,8 @@ use App\Data\UserData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\UserFilterRequest;
 use App\Http\Requests\Users\UserRequest;
+use App\Http\Resources\Admin\UserDonationResource;
+use App\Http\Resources\PostResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\UserService;
@@ -71,6 +73,44 @@ class UserController extends Controller
         $this->authorize('view', $user);
 
         return UserResource::make($user);
+    }
+
+    public function posts(Request $request, User $user): AnonymousResourceCollection
+    {
+        $this->authorize('view', $user);
+
+        $perPage = min(max((int) $request->integer('perPage', 20), 1), 100);
+
+        $posts = $user->posts()
+            ->with([
+                'organization',
+                'campaign',
+                'images',
+                'author',
+                'updatedBy',
+                'reviewedBy',
+                'approvedBy',
+                'rejectedBy',
+            ])
+            ->latest('created_at')
+            ->paginate($perPage);
+
+        return PostResource::collection($posts);
+    }
+
+    public function donations(Request $request, User $user): AnonymousResourceCollection
+    {
+        $this->authorize('view', $user);
+
+        $perPage = min(max((int) $request->integer('perPage', 20), 1), 100);
+
+        $donations = $user->donations()
+            ->with(['organization', 'campaign'])
+            ->latest('donated_at')
+            ->latest('created_at')
+            ->paginate($perPage);
+
+        return UserDonationResource::collection($donations);
     }
 
     public function update(UserRequest $request, User $user): UserResource
