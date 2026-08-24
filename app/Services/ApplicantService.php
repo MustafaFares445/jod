@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
+use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
@@ -16,13 +17,13 @@ class ApplicantService
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeSort($params);
-        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
+        $search = SearchFilter::fromArray($params);
 
         $query = CampaignApplication::query()
             ->where('organization_id', $organizationId)
             ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', $campaignId))
             ->when(($status = $this->param($params, 'filter.applicantStatus')) && $status !== 'all', fn (Builder $builder) => $builder->where('applicant_status', $status))
-            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%")
