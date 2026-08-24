@@ -19,7 +19,7 @@ class MediaUploadRequest extends FormRequest
 
         if ($prop === 'videos') {
             return [
-                'file' => ['prohibited'],
+                'file' => ['required', 'prohibited'],
             ];
         }
 
@@ -31,6 +31,9 @@ class MediaUploadRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'file.required' => (string) $this->route('prop') === 'videos'
+                ? 'Organization videos must be uploaded through the resumable video upload API.'
+                : 'The file field is required.',
             'file.prohibited' => 'Organization videos must be uploaded through the resumable video upload API.',
         ];
     }
