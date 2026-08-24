@@ -175,3 +175,16 @@ test('Firebase test endpoint validates the FCM token', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['fcmToken']);
 });
+
+test('Firebase browser test page is visible only when test sending is enabled', function () {
+    config(['mobile_push.test_endpoint_enabled' => true]);
+
+    $this->get('/firebase/push-test')
+        ->assertOk()
+        ->assertSee('JOD Firebase Push Test')
+        ->assertSee('/api/v1/firebase/test-push', false);
+
+    config(['mobile_push.test_endpoint_enabled' => false]);
+
+    $this->get('/firebase/push-test')->assertNotFound();
+});
