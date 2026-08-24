@@ -52,6 +52,8 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
 
     Route::prefix('v1/admin')->group(function () {
         Route::apiResource('users', UserController::class);
+        Route::get('users/{user}/posts', [UserController::class, 'posts']);
+        Route::get('users/{user}/donations', [UserController::class, 'donations']);
         Route::patch('users/{user}/status', UserController::class.'@updateStatus');
         Route::patch('users/{user}/password', UserController::class.'@updatePassword');
 
