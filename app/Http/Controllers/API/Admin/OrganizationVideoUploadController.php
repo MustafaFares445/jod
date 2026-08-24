@@ -31,8 +31,9 @@ class OrganizationVideoUploadController extends Controller
             $user instanceof User ? $user : null,
             $data,
         );
+        $upload->update(['description' => $data['description'] ?? null]);
 
-        return MediaUploadResource::make($upload)
+        return MediaUploadResource::make($upload->refresh())
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
@@ -79,11 +80,12 @@ class OrganizationVideoUploadController extends Controller
     {
         $this->authorize('update', $organization);
         $result = $this->uploads->complete($this->upload($organization, $upload));
+        $result['video']->update(['description' => $result['upload']->description]);
 
         return response()->json([
             'data' => [
                 'upload' => MediaUploadResource::make($result['upload'])->resolve(),
-                'video' => MediaResource::make($result['video'])->resolve(),
+                'video' => MediaResource::make($result['video']->refresh())->resolve(),
             ],
         ]);
     }
@@ -106,6 +108,7 @@ class OrganizationVideoUploadController extends Controller
     {
         return [
             'originalName' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:5000'],
             'mimeType' => ['required', 'string', Rule::in(['video/mp4', 'video/quicktime', 'video/webm'])],
             'totalSize' => ['required', 'integer', 'min:1', 'max:'.OrganizationVideoUploadService::MAX_FILE_SIZE],
             'replaceVideoId' => ['nullable', 'uuid'],
