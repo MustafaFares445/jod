@@ -24,6 +24,8 @@ class OrganizationVideoUploadService
 
     public const SESSION_TTL_HOURS = 24;
 
+    public const ALLOWED_MIME_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
+
     public function __construct(private readonly MediaService $mediaService) {}
 
     /**
@@ -209,11 +211,22 @@ class OrganizationVideoUploadService
             throw ValidationException::withMessages(['upload' => ['Assembled video size does not match the initiated upload.']]);
         }
 
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $actualMimeType = $finfo->file($assembledPath) ?: '';
+
+        if (! in_array($actualMimeType, self::ALLOWED_MIME_TYPES, true)) {
+            $disk->delete($assembledRelativePath);
+            $this->returnToUploading($locked);
+            throw ValidationException::withMessages([
+                'upload' => ['The assembled file is not a supported MP4, MOV, or WebM video.'],
+            ]);
+        }
+
         try {
             $file = new UploadedFile(
                 $assembledPath,
                 $locked->original_name,
-                $locked->mime_type,
+                $actualMimeType,
                 null,
                 true,
             );
@@ -258,6 +271,10 @@ class OrganizationVideoUploadService
     {
         if ($upload->status === 'completed') {
             throw ValidationException::withMessages(['upload' => ['A completed upload cannot be cancelled.']]);
+        }
+
+        if ($upload->status === 'assembling') {
+            throw ValidationException::withMessages(['upload' => ['An upload cannot be cancelled while it is being assembled.']]);
         }
 
         Storage::disk('local')->deleteDirectory("media-uploads/{$upload->id}");
