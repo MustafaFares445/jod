@@ -87,6 +87,7 @@ class MobileHomePostResource extends JsonResource
 
         $publisher = [
             'id' => (string) $publisherId,
+            'publisherType' => $organization !== null ? 'organization' : 'user',
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
             'avatarUrl' => null,

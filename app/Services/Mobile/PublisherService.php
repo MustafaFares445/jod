@@ -18,7 +18,6 @@ class PublisherService
         $organization = Organization::query()
             ->whereKey($id)
             ->where('status', 'active')
-            ->whereHas('posts', fn (Builder $post) => $post->whereIn('status', ['published', 'approved']))
             ->first();
 
         if ($organization !== null) {

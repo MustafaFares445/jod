@@ -71,14 +71,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::post('organizations/{organization}/videos/uploads/{upload}/complete', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'complete']);
         Route::delete('organizations/{organization}/videos/uploads/{upload}', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'cancel']);
 
-        Route::apiResource('posts', AdminPostController::class);
-
-        Route::prefix('review')->group(function () {
-            Route::get('posts', App\Http\Controllers\API\Admin\Review\PostController::class.'@index');
-            Route::get('posts/{post}', App\Http\Controllers\API\Admin\Review\PostController::class.'@show');
-            Route::post('posts/{post}/approve', App\Http\Controllers\API\Admin\Review\PostController::class.'@approve');
-            Route::post('posts/{post}/reject', App\Http\Controllers\API\Admin\Review\PostController::class.'@reject');
-        });
 
         Route::prefix('reports')->group(function () {
             Route::get('/', ReportController::class.'@index');

@@ -34,6 +34,7 @@ class MobilePublisherResource extends JsonResource
     {
         $data = [
             'id' => (string) $organization->id,
+            'publisherType' => 'organization',
             'name' => (string) $organization->name,
             'username' => $this->username($organization->email, (string) $organization->name),
             'avatarUrl' => null,
@@ -63,6 +64,7 @@ class MobilePublisherResource extends JsonResource
     {
         $data = [
             'id' => (string) $user->id,
+            'publisherType' => 'user',
             'name' => (string) $user->name,
             'username' => $this->username($user->email, (string) $user->name),
             'avatarUrl' => null,
