@@ -32,7 +32,10 @@ enum MediaModel: string
     public function props(): array
     {
         return match ($this) {
-            self::ORGANIZATION => ['logo' => 1],
+            self::ORGANIZATION => [
+                'logo' => 1,
+                'videos' => 10,
+            ],
             self::CAMPAIGN, self::POST => ['images' => 10],
         };
     }
