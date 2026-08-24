@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Mobile;
 
+use App\Support\SearchFilter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -12,6 +13,15 @@ class GlobalSearchRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $search = SearchFilter::fromArray($this->query());
+
+        if ($search !== '') {
+            $this->merge(['search' => $search]);
+        }
     }
 
     /** @return array<string, list<mixed>> */
