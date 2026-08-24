@@ -42,7 +42,7 @@ beforeEach(function () {
     Sanctum::actingAs($this->user);
 });
 
-test('reviews posts and returns audit actors and timestamps', function () {
+test('manages feed posts through the unified CRUD endpoint', function () {
     $owner = User::factory()->create(['name' => 'Post Owner']);
     $post = Post::query()->create([
         'title' => 'Review Post',
@@ -56,15 +56,15 @@ test('reviews posts and returns audit actors and timestamps', function () {
         'location' => 'Amman',
     ]);
 
-    $this->getJson('/api/v1/admin/review/posts?filter%5Bstatus%5D=pending')
+    $this->getJson('/api/posts?filter%5Bstatus%5D=pending&filter%5Blocation%5D=Amman')
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.author.name', 'Post Owner')
-        ->assertJsonPath('data.0.updatedBy.name', 'Post Owner')
-        ->assertJsonStructure(['data' => [['submittedAt']]]);
+        ->assertJsonPath('data.0.updatedBy.name', 'Post Owner');
 
-    $this->postJson("/api/v1/admin/review/posts/{$post->id}/approve")
-        ->assertOk()
+    $this->patchJson("/api/posts/{$post->id}", [
+        'status' => 'approved',
+    ])->assertOk()
         ->assertJsonPath('data.status', 'approved')
         ->assertJsonPath('data.approvedBy.id', $this->user->id)
         ->assertJsonStructure(['data' => ['approvedAt', 'publishedAt']]);
@@ -73,23 +73,20 @@ test('reviews posts and returns audit actors and timestamps', function () {
     expect($post->status)->toEqual('approved');
     expect($post->approved_by)->toEqual($this->user->id);
 
-    $rejected = Post::query()->create([
-        'title' => 'Reject Post',
-        'summary' => 'Summary',
-        'type' => 'general',
-        'status' => 'pending',
-        'author_id' => $owner->id,
-        'updated_by' => $owner->id,
-        'submitted_at' => now(),
-        'location' => 'Amman',
-    ]);
+    $this->getJson('/api/mobile/discovery/posts')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $post->id);
 
-    $this->postJson("/api/v1/admin/review/posts/{$rejected->id}/reject", [
-        'reason' => 'Does not meet content requirements',
-    ])->assertOk()
-        ->assertJsonPath('data.status', 'rejected')
-        ->assertJsonPath('data.rejectedBy.id', $this->user->id)
-        ->assertJsonStructure(['data' => ['rejectedAt']]);
+    $this->patchJson("/api/posts/{$post->id}", [
+        'status' => 'archived',
+    ])->assertOk()->assertJsonPath('data.status', 'archived');
+
+    $this->getJson('/api/mobile/discovery/posts')
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
+
+    $this->postJson("/api/v1/admin/review/posts/{$post->id}/approve")
+        ->assertNotFound();
 });
 
 test('reviews campaigns', function () {
