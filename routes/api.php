@@ -39,6 +39,9 @@ Route::prefix('v1/auth')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
+    // Single admin CRUD surface for every post that can feed mobile discovery.
+    Route::apiResource('posts', AdminPostController::class);
+
     Route::prefix('v1/me')->group(function () {
         Route::get('/', ProfileController::class);
         Route::patch('/profile', [ProfileController::class, 'update']);
