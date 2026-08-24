@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API\Admin;
 
+use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminPostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Services\NotificationEventService;
 use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -28,6 +30,8 @@ class PostController extends Controller
         'approvedBy',
         'rejectedBy',
     ];
+
+    public function __construct(private readonly NotificationEventService $notifications) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -93,6 +97,7 @@ class PostController extends Controller
         $content = (string) ($data['content'] ?? $data['description'] ?? '');
         $status = (string) ($data['status'] ?? 'published');
         $actorId = (string) $request->user()->id;
+        $now = now();
 
         $post = Post::query()->create([
             'title' => $data['title'],
@@ -106,7 +111,11 @@ class PostController extends Controller
             'organization_id' => $data['organization_id'] ?? null,
             'author_id' => $data['author_id'] ?? $actorId,
             'updated_by' => $actorId,
-            'published_at' => in_array($status, ['published', 'approved'], true) ? now() : null,
+            'published_at' => in_array($status, ['published', 'approved'], true) ? $now : null,
+            'reviewed_at' => $status === 'approved' ? $now : null,
+            'reviewed_by' => $status === 'approved' ? $actorId : null,
+            'approved_at' => $status === 'approved' ? $now : null,
+            'approved_by' => $status === 'approved' ? $actorId : null,
         ]);
 
         return PostResource::make($post->load(self::RELATIONS));
@@ -124,7 +133,8 @@ class PostController extends Controller
         $this->authorize('updateAdmin', $post);
 
         $data = $request->validated();
-        $updates = ['updated_by' => (string) $request->user()->id];
+        $actorId = (string) $request->user()->id;
+        $updates = ['updated_by' => $actorId];
 
         foreach (['title', 'summary', 'type', 'location', 'category_id', 'campaign_id', 'organization_id', 'author_id'] as $field) {
             if (array_key_exists($field, $data)) {
@@ -142,15 +152,40 @@ class PostController extends Controller
         }
 
         if (array_key_exists('status', $data)) {
-            $updates['status'] = $data['status'];
-            $updates['published_at'] = in_array($data['status'], ['published', 'approved'], true)
-                ? ($post->published_at ?? now())
+            $status = (string) $data['status'];
+            $now = now();
+            $updates['status'] = $status;
+            $updates['published_at'] = in_array($status, ['published', 'approved'], true)
+                ? ($post->published_at ?? $now)
                 : null;
+
+            if ($status === 'approved') {
+                $updates['reviewed_at'] = $now;
+                $updates['reviewed_by'] = $actorId;
+                $updates['approved_at'] = $now;
+                $updates['approved_by'] = $actorId;
+                $updates['rejected_at'] = null;
+                $updates['rejected_by'] = null;
+                $updates['rejection_reason'] = null;
+            } elseif ($status === 'rejected') {
+                $updates['reviewed_at'] = $now;
+                $updates['reviewed_by'] = $actorId;
+                $updates['rejected_at'] = $now;
+                $updates['rejected_by'] = $actorId;
+                $updates['approved_at'] = null;
+                $updates['approved_by'] = null;
+            }
         }
 
+        $previousStatus = (string) $post->status;
         $post->update($updates);
+        $post->refresh();
 
-        return PostResource::make($post->refresh()->load(self::RELATIONS));
+        if (array_key_exists('status', $data) && $previousStatus !== $post->status) {
+            $this->notifyStatusChange($post, $actorId);
+        }
+
+        return PostResource::make($post->load(self::RELATIONS));
     }
 
     public function destroy(Post $post): Response
@@ -179,5 +214,44 @@ class PostController extends Controller
         $flatKey = str_replace('.', '_', $key);
 
         return $query[$flatKey] ?? data_get($query, $key);
+    }
+
+    private function notifyStatusChange(Post $post, string $actorId): void
+    {
+        if (! filled($post->author_id) || ! in_array($post->status, ['approved', 'rejected'], true)) {
+            return;
+        }
+
+        $title = filled($post->title) ? (string) $post->title : 'منشورك';
+
+        if ($post->status === 'approved') {
+            $this->notifications->notifyUser(
+                (string) $post->author_id,
+                NotificationEventType::PostApproved,
+                'تمت الموافقة على منشورك',
+                "تمت الموافقة على «{$title}» ونشره على المنصة.",
+                'post',
+                'high',
+                $title,
+                '/posts/'.$post->id,
+                null,
+                $actorId,
+            );
+
+            return;
+        }
+
+        $this->notifications->notifyUser(
+            (string) $post->author_id,
+            NotificationEventType::PostRejected,
+            'تم رفض منشورك',
+            "تم رفض «{$title}» من إدارة المنصة.",
+            'post',
+            'high',
+            $title,
+            '/my-posts/'.$post->id,
+            null,
+            $actorId,
+        );
     }
 }
