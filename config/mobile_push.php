@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'enabled' => (bool) env('MOBILE_PUSH_ENABLED', false),
     'provider' => env('MOBILE_PUSH_PROVIDER', 'fcm'),
+    'test_endpoint_enabled' => (bool) env('FIREBASE_TEST_ENDPOINT_ENABLED', false),
 
     'fcm' => [
         'project_id' => env('FIREBASE_PROJECT_ID'),
