@@ -11,7 +11,7 @@ class CampaignData extends Data
     public function __construct(
         public string $title,
         public string $summary,
-        public string $category,
+        public string $categoryId,
         public string $location,
         public float $goalAmount,
         public int $beneficiariesCount,
