@@ -13,12 +13,14 @@ class CampaignResource extends JsonResource
     public function toArray(Request $request): array
     {
         $images = $this->relationLoaded('imageMedia') ? $this->imageMedia : $this->resource->imageMedia()->get();
+        $category = $this->relationLoaded('category') ? $this->category : $this->resource->category()->first();
 
         return [
             'id' => $this->id,
             'title' => $this->title,
             'summary' => $this->summary,
-            'category' => $this->category,
+            'categoryId' => $this->category_id,
+            'category' => $category?->name,
             'status' => $this->status,
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,
