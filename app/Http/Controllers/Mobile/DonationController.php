@@ -29,7 +29,6 @@ class DonationController extends Controller
         return MobileApiResponse::success(
             DonationResource::make($donation)->resolve($request),
             'Donation intent created successfully. The campaign amount is not updated until the organization confirms receipt.',
-            201,
         );
     }
 
