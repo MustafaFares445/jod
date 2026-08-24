@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\HelpOfferStatus;
+use App\Enums\HelpRequestStatus;
 use App\Models\Concerns\HasStringPrimaryKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,42 +16,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id',
-    'title',
-    'summary',
-    'content',
-    'type',
-    'status',
-    'location',
-    'organization_id',
-    'campaign_id',
-    'category_id',
-    'author_id',
-    'updated_by',
-    'rejection_reason',
-    'views_count',
-    'reactions_count',
-    'applications_count',
-    'published_at',
-    'submitted_at',
-    'reviewed_at',
-    'reviewed_by',
-    'approved_at',
-    'approved_by',
-    'rejected_at',
-    'rejected_by',
+    'id', 'title', 'summary', 'content', 'type', 'status', 'help_status', 'location',
+    'organization_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
+    'rejection_reason', 'views_count', 'reactions_count', 'applications_count',
+    'published_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'approved_at',
+    'approved_by', 'rejected_at', 'rejected_by',
 ])]
 class Post extends Model
 {
     use HasFactory, HasStringPrimaryKey, SoftDeletes;
 
     public $incrementing = false;
-
     protected $keyType = 'string';
 
     protected function casts(): array
     {
         return [
+            'help_status' => HelpRequestStatus::class,
             'published_at' => 'datetime',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
@@ -58,72 +41,44 @@ class Post extends Model
         ];
     }
 
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
-
-    public function campaign(): BelongsTo
-    {
-        return $this->belongsTo(Campaign::class);
-    }
-
-    public function category(): BelongsTo
-    {
-        return $this->belongsTo(Category::class);
-    }
-
-    public function author(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'author_id');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    public function reviewedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'reviewed_by');
-    }
-
-    public function approvedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    public function rejectedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'rejected_by');
-    }
+    public function organization(): BelongsTo { return $this->belongsTo(Organization::class); }
+    public function campaign(): BelongsTo { return $this->belongsTo(Campaign::class); }
+    public function category(): BelongsTo { return $this->belongsTo(Category::class); }
+    public function author(): BelongsTo { return $this->belongsTo(User::class, 'author_id'); }
+    public function updatedBy(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
+    public function reviewedBy(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
+    public function approvedBy(): BelongsTo { return $this->belongsTo(User::class, 'approved_by'); }
+    public function rejectedBy(): BelongsTo { return $this->belongsTo(User::class, 'rejected_by'); }
 
     public function media(): HasMany
     {
-        return $this->hasMany(Media::class, 'model_id')
-            ->where('model_type', 'post')
-            ->orderBy('prop')
-            ->orderBy('position')
-            ->orderBy('id');
+        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->orderBy('prop')->orderBy('position')->orderBy('id');
     }
 
     public function images(): HasMany
     {
-        return $this->hasMany(Media::class, 'model_id')
-            ->where('model_type', 'post')
-            ->where('prop', 'images')
-            ->orderBy('position')
-            ->orderBy('id');
+        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'images')->orderBy('position')->orderBy('id');
     }
 
-    public function likes(): HasMany
+    public function likes(): HasMany { return $this->hasMany(PostLike::class); }
+    public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
+
+    public function helpOffers(): HasMany
     {
-        return $this->hasMany(PostLike::class);
+        return $this->hasMany(HelpOffer::class);
     }
 
-    public function saves(): HasMany
+    public function activeHelpOffers(): HasMany
     {
-        return $this->hasMany(SavedPost::class);
+        return $this->helpOffers()->whereIn('status', array_map(
+            static fn (HelpOfferStatus $status) => $status->value,
+            [HelpOfferStatus::Pending, HelpOfferStatus::Accepted, HelpOfferStatus::Contacting, HelpOfferStatus::Agreed],
+        ));
+    }
+
+    public function completedHelpOffers(): HasMany
+    {
+        return $this->helpOffers()->where('status', HelpOfferStatus::Completed->value);
     }
 
     public function campaignApplications(): HasMany
@@ -132,13 +87,6 @@ class Post extends Model
             ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
     }
 
-    public function likedByUsers(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'post_likes')->withTimestamps();
-    }
-
-    public function savedByUsers(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'saved_posts')->withTimestamps();
-    }
+    public function likedByUsers(): BelongsToMany { return $this->belongsToMany(User::class, 'post_likes')->withTimestamps(); }
+    public function savedByUsers(): BelongsToMany { return $this->belongsToMany(User::class, 'saved_posts')->withTimestamps(); }
 }
