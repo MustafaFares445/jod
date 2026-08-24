@@ -19,12 +19,19 @@ class MediaUploadRequest extends FormRequest
 
         if ($prop === 'videos') {
             return [
-                'file' => ['required', 'file', 'mimes:mp4,mov,webm', 'max:102400'],
+                'file' => ['prohibited'],
             ];
         }
 
         return [
             'file' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'file.prohibited' => 'Organization videos must be uploaded through the resumable video upload API.',
         ];
     }
 }
