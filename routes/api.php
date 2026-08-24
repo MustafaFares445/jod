@@ -111,6 +111,8 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::post('posts/{post}/archive', PostController::class.'@archive');
         Route::post('posts/{post}/restore', PostController::class.'@restore');
 
+        Route::apiResource('videos', App\Http\Controllers\API\Org\OrganizationVideoController::class);
+
         Route::apiResource('donors', DonorController::class);
         Route::apiResource('applicants', ApplicantController::class);
 
