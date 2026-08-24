@@ -22,6 +22,7 @@ class MediaUploadResource extends JsonResource
         $missing = array_values(array_diff($all, $received));
         $totalSize = (int) $this->total_size;
         $uploadedBytes = min((int) $this->uploaded_bytes, $totalSize);
+        $isExpired = $this->expires_at !== null && $this->expires_at->isPast() && $this->status !== 'completed';
 
         return [
             'id' => (string) $this->id,
@@ -39,9 +40,10 @@ class MediaUploadResource extends JsonResource
             'uploadedBytes' => $uploadedBytes,
             'progressPercent' => $totalSize > 0 ? round(($uploadedBytes / $totalSize) * 100, 2) : 0,
             'status' => $this->status,
-            'canPause' => in_array($this->status, ['initiated', 'uploading'], true),
-            'canResume' => $this->status === 'paused',
-            'canComplete' => count($missing) === 0 && in_array($this->status, ['initiated', 'uploading'], true),
+            'isExpired' => $isExpired,
+            'canPause' => ! $isExpired && in_array($this->status, ['initiated', 'uploading'], true),
+            'canResume' => ! $isExpired && $this->status === 'paused',
+            'canComplete' => ! $isExpired && count($missing) === 0 && in_array($this->status, ['initiated', 'uploading'], true),
             'expiresAt' => $this->expires_at?->toIso8601String(),
             'completedAt' => $this->completed_at?->toIso8601String(),
             'createdAt' => $this->created_at?->toIso8601String(),
