@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
     'replace_media_id',
     'media_id',
     'original_name',
+    'description',
     'mime_type',
     'total_size',
     'chunk_size',
