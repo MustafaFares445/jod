@@ -30,6 +30,7 @@ class MediaUploadResource extends JsonResource
             'replaceVideoId' => $this->replace_media_id,
             'videoId' => $this->media_id,
             'originalName' => $this->original_name,
+            'description' => $this->description,
             'mimeType' => $this->mime_type,
             'totalSize' => $totalSize,
             'chunkSize' => (int) $this->chunk_size,
