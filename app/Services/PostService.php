@@ -8,6 +8,7 @@ use App\Data\PostData;
 use App\Models\Campaign;
 use App\Models\Post;
 use App\Models\User;
+use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -17,12 +18,13 @@ use Illuminate\Validation\ValidationException;
 class PostService
 {
     /**
-     * @param  array{page?: int|string|null, perPage?: int|string|null, perPAge?: int|string|null, search?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, categoryId?: string|null, category?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
+     * @param  array{page?: int|string|null, perPage?: int|string|null, perPAge?: int|string|null, search?: string|null, searchQueries?: string|null, status?: string|null, actionState?: string|null, type?: string|null, location?: string|null, categoryId?: string|null, category?: string|null, organizationId?: string|null, sort?: string|null, sortBy?: string|null}  $params
      */
     public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? $params['perPAge'] ?? 20), 100));
         $sort = $this->normalizeDiscoverySort($params);
+        $search = SearchFilter::fromArray($params);
 
         $query = Post::query()
             ->with($this->mobileRelations($viewer))
@@ -41,8 +43,7 @@ class PostService
             ->when(filled($params['actionState'] ?? null), function (Builder $builder) use ($params, $viewer): void {
                 $this->applyActionStateFilter($builder, (string) $params['actionState'], $viewer);
             })
-            ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
-                $search = (string) $params['search'];
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
@@ -86,25 +87,27 @@ class PostService
     }
 
     /**
-     * @param  array{page?: int|string|null, perPage?: int|string|null, sort?: string|null, sortBy?: string|null, filter?: array{status?: string|null, type?: string|null, search?: string|null}, filter_status?: string|null, filter_type?: string|null, filter_search?: string|null, "filter.status"?: string|null, "filter.type"?: string|null, "filter.search"?: string|null}  $params
+     * @param  array{page?: int|string|null, perPage?: int|string|null, sort?: string|null, sortBy?: string|null, search?: string|null, searchQueries?: string|null, filter?: array{status?: string|null, type?: string|null, search?: string|null}, filter_status?: string|null, filter_type?: string|null, filter_search?: string|null, "filter.status"?: string|null, "filter.type"?: string|null, "filter.search"?: string|null}  $params
      */
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
         $sort = $this->normalizeSort($params);
         $status = $params['status'] ?? $this->param($params, 'filter.status');
-        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
+        $search = SearchFilter::fromArray($params);
 
         $query = Post::query()
             ->with(['campaign', 'images'])
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
-            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('location', 'like', "%{$search}%");
+                        ->orWhere('content', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('title', 'like', "%{$search}%"));
                 });
             });
 
