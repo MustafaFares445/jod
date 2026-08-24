@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\Mobile\MediaOrganizationResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,6 +25,13 @@ class MediaResource extends JsonResource
             'position' => (int) $this->position,
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
+            'organization' => $this->whenLoaded('organization', function () use ($request): ?array {
+                if ($this->organization === null) {
+                    return null;
+                }
+
+                return MediaOrganizationResource::make($this->organization)->resolve($request);
+            }),
         ];
     }
 }

@@ -45,7 +45,7 @@ Query parameters:
 - `perPage` optional integer, default `20`, maximum `100`
 - `search` optional string; performs a partial `LIKE` search against video `description` and `originalName`
 
-Each media item contains:
+Each media item contains the owning organization and that organization's logo media relationship:
 
 ```json
 {
@@ -60,13 +60,33 @@ Each media item contains:
   "size": 1234567,
   "position": 0,
   "createdAt": "2026-08-24T10:00:00+00:00",
-  "updatedAt": "2026-08-24T10:00:00+00:00"
+  "updatedAt": "2026-08-24T10:00:00+00:00",
+  "organization": {
+    "id": "organization-uuid",
+    "name": "Example Organization",
+    "logo": {
+      "id": "logo-media-uuid",
+      "model": "organization",
+      "modelId": "organization-uuid",
+      "prop": "logo",
+      "url": "https://.../logo.png",
+      "originalName": "logo.png",
+      "description": null,
+      "mimeType": "image/png",
+      "size": 12345,
+      "position": 0,
+      "createdAt": "2026-08-24T09:00:00+00:00",
+      "updatedAt": "2026-08-24T09:00:00+00:00"
+    }
+  }
 }
 ```
 
+`organization.logo` is `null` when the organization has no uploaded logo.
+
 ### GET `/api/mobile/discovery/media/{video}`
 
-Returns one public video media item. Returns `404` when the video does not exist or belongs to an inactive organization.
+Returns one public video media item with the same `organization` and `organization.logo` relationship. Returns `404` when the video does not exist or belongs to an inactive organization.
 
 ### Video description input
 

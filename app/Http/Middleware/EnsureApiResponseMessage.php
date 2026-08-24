@@ -27,7 +27,6 @@ class EnsureApiResponseMessage
             return response()->json([
                 'statusCode' => Response::HTTP_OK,
                 'message' => $message,
-                'item' => null,
             ], Response::HTTP_OK, [], self::JSON_OPTIONS);
         }
 
@@ -45,37 +44,18 @@ class EnsureApiResponseMessage
             $payload['message'] = $message;
         }
 
+        // `item` is no longer part of the API contract. Remove it even when
+        // an older controller/resource still includes it explicitly.
+        unset($payload['item']);
+
         if ($response->getStatusCode() < Response::HTTP_BAD_REQUEST) {
             $payload['statusCode'] ??= $response->getStatusCode();
-            $payload['item'] ??= $this->itemFrom($payload);
         }
 
         $response->setEncodingOptions($response->getEncodingOptions() | self::JSON_OPTIONS);
         $response->setData($payload);
 
         return $response;
-    }
-
-    /**
-     * Build the frontend contract's `item` value while retaining Laravel's
-     * existing `data`, `meta`, and `links` keys for backwards compatibility.
-     */
-    private function itemFrom(array $payload): mixed
-    {
-        if (! array_key_exists('data', $payload)) {
-            return null;
-        }
-
-        if (! isset($payload['meta']) || ! is_array($payload['meta'])) {
-            return $payload['data'];
-        }
-
-        return [
-            'data' => $payload['data'],
-            'total' => (int) ($payload['meta']['total'] ?? 0),
-            'page' => (int) ($payload['meta']['current_page'] ?? 1),
-            'perPage' => (int) ($payload['meta']['per_page'] ?? 10),
-        ];
     }
 
     private function messageFor(Request $request, Response $response): string
