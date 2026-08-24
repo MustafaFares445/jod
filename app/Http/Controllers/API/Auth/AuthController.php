@@ -10,6 +10,7 @@ use App\Http\Requests\Auth\RefreshTokenRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Auth\TokenService;
+use App\Services\Mobile\MobileDeviceService;
 use App\Services\Permissions\OrganizationPermissionSyncService;
 use App\Services\Permissions\PermissionCatalogService;
 use Illuminate\Http\JsonResponse;
@@ -23,6 +24,7 @@ class AuthController extends Controller
         private readonly PermissionCatalogService $permissionCatalogService,
         private readonly OrganizationPermissionSyncService $organizationPermissionSyncService,
         private readonly TokenService $tokenService,
+        private readonly MobileDeviceService $mobileDeviceService,
     ) {}
 
     public function login(LoginRequest $request): JsonResponse
@@ -48,6 +50,16 @@ class AuthController extends Controller
         $user->forceFill([
             'last_active_at' => now(),
         ])->save();
+
+        if (filled($validated['fcmToken'] ?? null)) {
+            $this->mobileDeviceService->register($user, [
+                'pushToken' => $validated['fcmToken'],
+                'pushTargetType' => 'token',
+                'platform' => 'web',
+                'deviceId' => $validated['deviceId'] ?? null,
+                'appVersion' => $validated['appVersion'] ?? null,
+            ]);
+        }
 
         $this->organizationPermissionSyncService->syncForUser($user);
         $user->refresh();
