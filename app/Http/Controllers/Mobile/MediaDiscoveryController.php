@@ -21,6 +21,7 @@ class MediaDiscoveryController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $paginator = Media::query()
+            ->with('organization.logoMedia')
             ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('prop', 'videos')
             ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
@@ -42,6 +43,7 @@ class MediaDiscoveryController extends Controller
     public function show(Request $request, string $video): JsonResponse
     {
         $media = Media::query()
+            ->with('organization.logoMedia')
             ->whereKey($video)
             ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('prop', 'videos')
