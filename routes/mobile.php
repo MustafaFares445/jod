@@ -10,6 +10,7 @@ use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\MobileDeviceController;
 use App\Http\Controllers\Mobile\NotificationController;
+use App\Http\Controllers\Mobile\OrganizationVideoController;
 use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostImageController;
 use App\Http\Controllers\Mobile\PostReportController;
@@ -47,6 +48,8 @@ Route::prefix('discovery')
         Route::get('posts/{post}', [DiscoveryController::class, 'showPost'])->name('posts.show');
         Route::get('publishers/{publisher}', [DiscoveryController::class, 'showPublisher'])->name('publishers.show');
         Route::get('publishers/{publisher}/posts', [DiscoveryController::class, 'publisherPosts'])->name('publishers.posts');
+        Route::get('organizations/{organization}/videos', [OrganizationVideoController::class, 'index'])->name('organizations.videos.index');
+        Route::get('organizations/{organization}/videos/{video}', [OrganizationVideoController::class, 'show'])->name('organizations.videos.show');
         Route::get('campaigns', [DiscoveryController::class, 'campaigns'])->name('campaigns');
         Route::get('campaigns/{campaign}', [DiscoveryController::class, 'showCampaign'])->name('campaigns.show');
         Route::get('articles', [DiscoveryController::class, 'articles'])->name('articles');

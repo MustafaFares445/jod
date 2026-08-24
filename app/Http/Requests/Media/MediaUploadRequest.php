@@ -15,8 +15,26 @@ class MediaUploadRequest extends FormRequest
 
     public function rules(): array
     {
+        $prop = (string) $this->route('prop');
+
+        if ($prop === 'videos') {
+            return [
+                'file' => ['required', 'prohibited'],
+            ];
+        }
+
         return [
             'file' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'file.required' => (string) $this->route('prop') === 'videos'
+                ? 'Organization videos must be uploaded through the resumable video upload API.'
+                : 'The file field is required.',
+            'file.prohibited' => 'Organization videos must be uploaded through the resumable video upload API.',
         ];
     }
 }

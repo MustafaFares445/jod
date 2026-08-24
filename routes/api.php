@@ -60,6 +60,26 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('organizations/{organization}/verification', OrganizationController::class.'@updateVerification');
         Route::post('organizations/{organization}/accept', OrganizationController::class.'@accept');
 
+        Route::get('organizations/{organization}/videos', [App\Http\Controllers\API\Admin\OrganizationVideoController::class, 'index']);
+        Route::get('organizations/{organization}/videos/{video}', [App\Http\Controllers\API\Admin\OrganizationVideoController::class, 'show']);
+        Route::delete('organizations/{organization}/videos/{video}', [App\Http\Controllers\API\Admin\OrganizationVideoController::class, 'destroy']);
+        Route::post('organizations/{organization}/videos/uploads', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'initiate']);
+        Route::get('organizations/{organization}/videos/uploads/{upload}', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'status']);
+        Route::put('organizations/{organization}/videos/uploads/{upload}/chunks/{chunk}', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'chunk'])->whereNumber('chunk');
+        Route::post('organizations/{organization}/videos/uploads/{upload}/pause', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'pause']);
+        Route::post('organizations/{organization}/videos/uploads/{upload}/resume', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'resume']);
+        Route::post('organizations/{organization}/videos/uploads/{upload}/complete', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'complete']);
+        Route::delete('organizations/{organization}/videos/uploads/{upload}', [App\Http\Controllers\API\Admin\OrganizationVideoUploadController::class, 'cancel']);
+
+        Route::apiResource('posts', AdminPostController::class);
+
+        Route::prefix('review')->group(function () {
+            Route::get('posts', App\Http\Controllers\API\Admin\Review\PostController::class.'@index');
+            Route::get('posts/{post}', App\Http\Controllers\API\Admin\Review\PostController::class.'@show');
+            Route::post('posts/{post}/approve', App\Http\Controllers\API\Admin\Review\PostController::class.'@approve');
+            Route::post('posts/{post}/reject', App\Http\Controllers\API\Admin\Review\PostController::class.'@reject');
+        });
+
         Route::prefix('reports')->group(function () {
             Route::get('/', ReportController::class.'@index');
             Route::get('{report}', ReportController::class.'@show');
@@ -104,6 +124,17 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::post('posts/{post}/publish', PostController::class.'@publish');
         Route::post('posts/{post}/archive', PostController::class.'@archive');
         Route::post('posts/{post}/restore', PostController::class.'@restore');
+
+        Route::get('videos', [App\Http\Controllers\API\Org\OrganizationVideoController::class, 'index']);
+        Route::get('videos/{video}', [App\Http\Controllers\API\Org\OrganizationVideoController::class, 'show']);
+        Route::delete('videos/{video}', [App\Http\Controllers\API\Org\OrganizationVideoController::class, 'destroy']);
+        Route::post('videos/uploads', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'initiate']);
+        Route::get('videos/uploads/{upload}', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'status']);
+        Route::put('videos/uploads/{upload}/chunks/{chunk}', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'chunk'])->whereNumber('chunk');
+        Route::post('videos/uploads/{upload}/pause', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'pause']);
+        Route::post('videos/uploads/{upload}/resume', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'resume']);
+        Route::post('videos/uploads/{upload}/complete', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'complete']);
+        Route::delete('videos/uploads/{upload}', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'cancel']);
 
         Route::apiResource('donors', DonorController::class);
         Route::apiResource('applicants', ApplicantController::class);

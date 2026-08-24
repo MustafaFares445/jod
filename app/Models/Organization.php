@@ -77,6 +77,15 @@ class Organization extends Model
             ->where('prop', 'logo');
     }
 
+    public function videos(): HasMany
+    {
+        return $this->hasMany(Media::class, 'model_id')
+            ->where('model_type', 'organization')
+            ->where('prop', 'videos')
+            ->orderBy('position')
+            ->orderBy('id');
+    }
+
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
