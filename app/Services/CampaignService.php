@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Data\CampaignData;
 use App\Models\Campaign;
+use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
@@ -16,21 +17,26 @@ class CampaignService
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeDiscoverySort($params);
+        $search = SearchFilter::fromArray($params);
 
         $query = Campaign::query()
             ->with($this->mobileDiscoveryRelations())
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['category'] ?? null), fn (Builder $builder) => $builder->where('category', $params['category']))
-            ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', $params['location']))
+            ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
             ->when(filled($params['organizationId'] ?? null), fn (Builder $builder) => $builder->where('organization_id', $params['organizationId']))
-            ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
-                $search = (string) $params['search'];
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%")
-                        ->orWhereHas('organization', fn (Builder $organization) => $organization->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('organization', function (Builder $organization) use ($search): void {
+                            $organization->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('location', 'like', "%{$search}%");
+                        });
                 });
             });
 
@@ -61,18 +67,19 @@ class CampaignService
         $perPage = max(1, min((int) ($params['perPage'] ?? 10), 100));
         $sort = $this->normalizeSort($params);
         $status = $params['status'] ?? $this->param($params, 'filter.status');
-        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
+        $search = SearchFilter::fromArray($params);
 
         $query = Campaign::query()
             ->with('imageMedia')
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
-            ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', $location))
-            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when(($location = $this->param($params, 'filter.location')) && $location !== 'all', fn (Builder $builder) => $builder->where('location', 'like', '%'.$location.'%'))
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%");
                 });
             });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Donation;
+use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -14,16 +15,17 @@ class DonorService
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeSort($params);
-        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
+        $search = SearchFilter::fromArray($params);
 
         $query = Donation::query()
             ->where('organization_id', $organizationId)
             ->when(($city = $this->param($params, 'filter.city')) && $city !== 'all', fn (Builder $builder) => $builder->where('city', $city))
-            ->when($search && $search !== 'all', function (Builder $builder) use ($search): void {
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%");
                 });
             });
 

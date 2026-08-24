@@ -11,6 +11,8 @@ use App\Http\Requests\Articles\ArticleRequest;
 use App\Http\Resources\ArticleResource;
 use App\Models\Article;
 use App\Services\ArticleService;
+use App\Support\SearchFilter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -24,12 +26,17 @@ class ArticleController extends Controller
 
         $queryParams = $request->query();
         $statusFilter = $this->queryParam($queryParams, 'filter.status');
-        $searchFilter = $this->queryParam($queryParams, 'filter.search') ?? $request->get('search');
+        $search = SearchFilter::fromArray($queryParams);
 
         $articles = Article::query()
-            ->when($statusFilter, fn ($q) => $q->where('status', $statusFilter))
-            ->when($searchFilter, fn ($q) => $q->where('title', 'LIKE', '%' . $searchFilter . '%')
-                ->orWhere('excerpt', 'LIKE', '%' . $searchFilter . '%'))
+            ->when($statusFilter, fn (Builder $query) => $query->where('status', $statusFilter))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $searchQuery) use ($search): void {
+                    $searchQuery->where('title', 'like', "%{$search}%")
+                        ->orWhere('excerpt', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%");
+                });
+            })
             ->orderByDesc('created_at')
             ->paginate($request->get('perPage', 20));
 

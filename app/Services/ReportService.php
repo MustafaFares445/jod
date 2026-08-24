@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Report;
+use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
@@ -46,17 +47,30 @@ class ReportService
             $query->where('organization_id', $organizationId);
         }
 
-        $search = $params['searchQueries'] ?? $this->param($params, 'filter.search');
+        $search = SearchFilter::fromArray($params);
 
         $query
             ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($severity = $this->param($params, 'filter.severity')) && $severity !== 'all', fn (Builder $builder) => $builder->where('severity', $severity))
             ->when(($entityType = $this->param($params, 'filter.entityType')) && $entityType !== 'all', fn (Builder $builder) => $builder->where('entity_type', $entityType))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
-            ->when($search, function (Builder $builder) use ($search): void {
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhereHas('reporter', function (Builder $reporter) use ($search): void {
+                            $reporter->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('reportedUser', function (Builder $user) use ($search): void {
+                            $user->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('reportedOrganization', function (Builder $organization) use ($search): void {
+                            $organization->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
                 });
             });
 

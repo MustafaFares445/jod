@@ -21,6 +21,8 @@ class PostDiscoveryRequest extends FormRequest
             'perPage' => ['nullable', 'integer', 'min:1', 'max:100'],
             'perPAge' => ['nullable', 'integer', 'min:1', 'max:100'],
             'search' => ['nullable', 'string', 'max:255'],
+            'searchQueries' => ['nullable', 'string', 'max:255'],
+            'filter.search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'in:published'],
             'actionState' => ['nullable', 'string', 'in:open,submitted,closed'],
             'type' => ['nullable', 'string', 'max:50'],

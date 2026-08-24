@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Data\CategoryData;
 use App\Models\Category;
+use App\Support\SearchFilter;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -16,15 +17,16 @@ class CategoryService
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = (string) ($params['sort'] ?? '-createdAt');
+        $search = SearchFilter::fromArray($params);
 
         $query = Category::query()
             ->where('status', 'active')
             ->when(filled($params['target'] ?? null), fn ($builder) => $builder->where('target', $params['target']))
-            ->when(filled($params['search'] ?? null), function ($builder) use ($params): void {
-                $search = (string) $params['search'];
+            ->when($search !== '', function ($builder) use ($search): void {
                 $builder->where(function ($inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('target', 'like', "%{$search}%");
                 });
             });
 
