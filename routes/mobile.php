@@ -8,6 +8,7 @@ use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
+use App\Http\Controllers\Mobile\MediaDiscoveryController;
 use App\Http\Controllers\Mobile\MobileDeviceController;
 use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\OrganizationVideoController;
@@ -46,6 +47,8 @@ Route::prefix('discovery')
     ->group(function (): void {
         Route::get('posts', [DiscoveryController::class, 'posts'])->name('posts');
         Route::get('posts/{post}', [DiscoveryController::class, 'showPost'])->name('posts.show');
+        Route::get('media', [MediaDiscoveryController::class, 'index'])->name('media');
+        Route::get('media/{video}', [MediaDiscoveryController::class, 'show'])->name('media.show');
         Route::get('publishers/{publisher}', [DiscoveryController::class, 'showPublisher'])->name('publishers.show');
         Route::get('publishers/{publisher}/posts', [DiscoveryController::class, 'publisherPosts'])->name('publishers.posts');
         Route::get('organizations/{organization}/videos', [OrganizationVideoController::class, 'index'])->name('organizations.videos.index');
