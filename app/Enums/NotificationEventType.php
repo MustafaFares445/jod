@@ -6,8 +6,24 @@ namespace App\Enums;
 
 enum NotificationEventType: string
 {
+    case DonationIntentCreated = 'donation.intent_created';
+    case DonationContactStarted = 'donation.contact_started';
+    case DonationAgreed = 'donation.agreed';
     case DonationCompleted = 'donation.completed';
+    case DonationCancelled = 'donation.cancelled';
     case DonationReceived = 'donation.received';
+
+    case HelpOfferCreated = 'help_offer.created';
+    case HelpOfferAccepted = 'help_offer.accepted';
+    case HelpOfferRejected = 'help_offer.rejected';
+    case HelpOfferContactStarted = 'help_offer.contact_started';
+    case HelpOfferAgreed = 'help_offer.agreed';
+    case HelpOfferHelperConfirmed = 'help_offer.helper_confirmed';
+    case HelpOfferReceiverConfirmed = 'help_offer.receiver_confirmed';
+    case HelpOfferCompleted = 'help_offer.completed';
+    case HelpOfferCancelled = 'help_offer.cancelled';
+    case HelpRequestFulfilled = 'help_request.fulfilled';
+    case HelpRequestReopened = 'help_request.reopened';
 
     case CampaignGoalReached = 'campaign.goal_reached';
     case CampaignClosingSoon = 'campaign.closing_soon';
@@ -41,7 +57,12 @@ enum NotificationEventType: string
     public function category(): string
     {
         return match ($this) {
-            self::DonationCompleted, self::DonationReceived => 'donation',
+            self::DonationIntentCreated, self::DonationContactStarted, self::DonationAgreed,
+            self::DonationCompleted, self::DonationCancelled, self::DonationReceived => 'donation',
+            self::HelpOfferCreated, self::HelpOfferAccepted, self::HelpOfferRejected,
+            self::HelpOfferContactStarted, self::HelpOfferAgreed, self::HelpOfferHelperConfirmed,
+            self::HelpOfferReceiverConfirmed, self::HelpOfferCompleted, self::HelpOfferCancelled,
+            self::HelpRequestFulfilled, self::HelpRequestReopened => 'help',
             self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed => 'campaign',
             self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
             self::PostSubmitted, self::PostApproved, self::PostRejected => 'post',
