@@ -13,7 +13,7 @@ class HelpOfferPolicy
 {
     public function view(User $user, HelpOffer $offer): bool
     {
-        return $this->isParticipant($user, $offer) || $user->isAdmin();
+        return $this->isParticipant($user, $offer) || $user->user_type === 'admin';
     }
 
     public function create(User $user, Post $post): bool
