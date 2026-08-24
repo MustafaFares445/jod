@@ -29,6 +29,19 @@ class Post extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected static function booted(): void
+    {
+        static::saving(function (Post $post): void {
+            if ($post->type === 'help_request' && $post->help_status === null) {
+                $post->help_status = HelpRequestStatus::Open;
+            }
+
+            if ($post->type !== 'help_request') {
+                $post->help_status = null;
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
@@ -62,11 +75,7 @@ class Post extends Model
 
     public function likes(): HasMany { return $this->hasMany(PostLike::class); }
     public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
-
-    public function helpOffers(): HasMany
-    {
-        return $this->hasMany(HelpOffer::class);
-    }
+    public function helpOffers(): HasMany { return $this->hasMany(HelpOffer::class); }
 
     public function activeHelpOffers(): HasMany
     {
@@ -88,5 +97,5 @@ class Post extends Model
     }
 
     public function likedByUsers(): BelongsToMany { return $this->belongsToMany(User::class, 'post_likes')->withTimestamps(); }
-    public function savedByUsers(): BelongsToMany { return $this->belongsToMany(User::class, 'saved_posts')->withTimestamps(); }
+    public function savedByUsers(): BelongsToMany { return $this->belongsToMany(Post::class, 'saved_posts')->withTimestamps(); }
 }
