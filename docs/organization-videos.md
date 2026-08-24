@@ -1,28 +1,99 @@
 # Organization Videos
 
-Organizations can own up to 10 public videos. Videos reuse the existing `media` table with:
+Organizations can own up to 10 public videos. Finalized videos reuse the existing `media` table with:
 
 - `model_type = organization`
 - `model_id = <organization id>`
 - `prop = videos`
 
-Supported upload formats are `mp4`, `mov`, and `webm`, with a maximum file size of 100 MB per video.
+Resumable uploads use the `media_uploads` table while chunks are still being transferred.
 
-## Organization dashboard API
+Supported formats:
 
-All endpoints require the normal organization authentication and `org-active` middleware. Access is scoped to the authenticated organization.
+- MP4 (`video/mp4`)
+- MOV (`video/quicktime`)
+- WebM (`video/webm`)
+
+Maximum file size: **100 MB**.
+
+The server currently returns a **5 MiB** chunk size, but frontend clients must always use the `chunkSize` returned when an upload session is initiated instead of hard-coding it.
+
+## Resumable upload behavior
+
+Video creation and replacement are intentionally resumable instead of one large multipart request.
+
+The flow is:
+
+1. initiate an upload session
+2. stream raw binary chunks with numbered chunk indexes
+3. read server progress at any time
+4. optionally pause
+5. resume from `missingChunks`
+6. complete/finalize the upload
+7. receive the normal `MediaResource` video
+
+A session persists:
+
+- total bytes
+- uploaded bytes
+- server progress percent
+- received chunk indexes
+- missing chunk indexes
+- current status
+- expiration time
+- replacement target, when replacing an existing video
+
+Sessions expire after 24 hours without successful continuation. Upload/chunk activity renews the expiration window.
+
+The generic `/api/v1/media/.../videos` upload path no longer accepts video files. Organization videos must use the resumable API.
+
+## Company API
+
+Completed videos:
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/v1/org/videos` | List the authenticated organization's videos |
-| POST | `/api/v1/org/videos` | Upload a video (`multipart/form-data`, field: `file`) |
 | GET | `/api/v1/org/videos/{video}` | Get one owned video |
-| PATCH/PUT | `/api/v1/org/videos/{video}` | Replace an owned video (`multipart/form-data`, field: `file`) |
-| DELETE | `/api/v1/org/videos/{video}` | Delete an owned video |
+| DELETE | `/api/v1/org/videos/{video}` | Delete a completed owned video |
 
-The existing generic media endpoint also supports the `videos` prop for organizations:
+Resumable upload:
 
-`POST /api/v1/media/organization/{organizationId}/videos`
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/org/videos/uploads` | Initiate create/replace upload |
+| GET | `/api/v1/org/videos/uploads/{upload}` | Get progress/status |
+| PUT | `/api/v1/org/videos/uploads/{upload}/chunks/{chunk}` | Stream one raw binary chunk |
+| POST | `/api/v1/org/videos/uploads/{upload}/pause` | Pause session |
+| POST | `/api/v1/org/videos/uploads/{upload}/resume` | Resume session |
+| POST | `/api/v1/org/videos/uploads/{upload}/complete` | Assemble/finalize the video |
+| DELETE | `/api/v1/org/videos/uploads/{upload}` | Cancel unfinished session |
+
+Replacement is initiated with `replaceVideoId` in the initiation JSON body. The old video remains available until completion succeeds.
+
+## Admin API
+
+Admins manage videos for a specific organization.
+
+Completed videos:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/admin/organizations/{organization}/videos` | List videos |
+| GET | `/api/v1/admin/organizations/{organization}/videos/{video}` | Show video |
+| DELETE | `/api/v1/admin/organizations/{organization}/videos/{video}` | Delete video |
+
+Resumable upload:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/v1/admin/organizations/{organization}/videos/uploads` | Initiate create/replace upload |
+| GET | `/api/v1/admin/organizations/{organization}/videos/uploads/{upload}` | Get progress/status |
+| PUT | `/api/v1/admin/organizations/{organization}/videos/uploads/{upload}/chunks/{chunk}` | Stream one raw binary chunk |
+| POST | `/api/v1/admin/organizations/{organization}/videos/uploads/{upload}/pause` | Pause session |
+| POST | `/api/v1/admin/organizations/{organization}/videos/uploads/{upload}/resume` | Resume session |
+| POST | `/api/v1/admin/organizations/{organization}/videos/uploads/{upload}/complete` | Assemble/finalize the video |
+| DELETE | `/api/v1/admin/organizations/{organization}/videos/uploads/{upload}` | Cancel unfinished session |
 
 ## Public mobile API
 
@@ -30,48 +101,64 @@ These endpoints do not require authentication and are covered by the mobile disc
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/api/mobile/discovery/organizations/{organization}/videos` | Paginated public organization videos |
+| GET | `/api/mobile/discovery/organizations/{organization}/videos` | Paginated videos for an active organization |
 | GET | `/api/mobile/discovery/organizations/{organization}/videos/{video}` | Public video details |
 
-The list endpoint accepts `page` and `perPage` using the standard Laravel/mobile pagination contract.
+The list endpoint accepts `page` and `perPage` and returns the standard mobile response envelope and pagination metadata.
 
-Each video uses the existing `MediaResource` contract:
+## Upload progress contract
+
+The upload status resource contains:
 
 - `id`
-- `model`
-- `modelId`
-- `prop`
-- `url`
+- `organizationId`
+- `replaceVideoId`
+- `videoId`
 - `originalName`
 - `mimeType`
-- `size`
-- `position`
+- `totalSize`
+- `chunkSize`
+- `totalChunks`
+- `receivedChunks`
+- `missingChunks`
+- `nextChunk`
+- `uploadedBytes`
+- `progressPercent`
+- `status`
+- `canPause`
+- `canResume`
+- `canComplete`
+- `expiresAt`
+- `completedAt`
 - `createdAt`
 - `updatedAt`
 
-## System implementation plan
+Chunk bodies are sent as raw `application/octet-stream`. This avoids wrapping every chunk in multipart form data.
 
-### Organization dashboard
+For immediate pause behavior, the frontend should stop its queue and abort the current XHR/request before calling the pause endpoint. If the result of a chunk request is uncertain, fetch upload status and trust `missingChunks` instead of frontend-only state.
 
-1. Add a **Videos** section under organization profile/content management.
-2. Show current videos in a grid/list with playback preview, filename, size, and upload date.
-3. Add upload with client-side validation for MP4/MOV/WebM and 100 MB maximum size.
-4. Add replace and delete actions with loading/error states.
-5. Display the 10-video limit and disable upload when the limit is reached.
-6. Use the returned `url` for preview/playback; do not construct storage URLs on the frontend.
+## Frontend contracts
 
-### Mobile app
+Detailed implementation contracts are maintained separately per platform:
 
-1. Add a Videos tab/section to organization/public publisher profiles.
-2. Fetch `/api/mobile/discovery/organizations/{organization}/videos` only when the Videos section is opened or prefetched.
-3. Render video thumbnails/placeholders and open a player using the returned `url`.
-4. Paginate with the API metadata instead of loading all videos at once.
-5. Handle an empty video list without hiding the rest of the organization profile.
+- `docs/api-contracts/admin-organization-videos.md`
+- `docs/api-contracts/company-organization-videos.md`
+- `docs/api-contracts/user-mobile-organization-videos.md`
 
-### Follow-up enhancements
+## Current implementation notes
 
-- Generate server-side thumbnails/posters for videos.
-- Store duration, width, height, and transcoding status as metadata if playback requirements grow.
-- Move large uploads to direct/object-storage multipart uploads if 100 MB application-server uploads become a bottleneck.
-- Add moderation/status fields if organization videos later require admin review.
-- Add explicit video ordering/reordering if dashboard users need manual ordering beyond upload order.
+- Final videos use the existing public media storage and `MediaResource`.
+- Temporary chunks use the local filesystem until completion or cancellation.
+- The API verifies exact chunk byte sizes before marking chunks as received.
+- Re-sending an already accepted chunk index is idempotent from the upload session perspective.
+- Completion verifies all chunk indexes and final assembled byte size before creating/replacing the media record.
+- Organization limits include active non-expired new-video upload sessions, preventing multiple simultaneous sessions from bypassing the 10-video limit.
+
+## Future enhancements
+
+- server-side thumbnail/poster generation
+- duration/width/height metadata
+- video transcoding/adaptive bitrate streaming
+- direct object-storage multipart uploads if files grow beyond the current 100 MB application-server model
+- explicit video ordering/reordering
+- optional moderation/status workflow if organization video review is introduced later
