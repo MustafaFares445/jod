@@ -15,6 +15,14 @@ class MediaUploadRequest extends FormRequest
 
     public function rules(): array
     {
+        $prop = (string) $this->route('prop');
+
+        if ($prop === 'videos') {
+            return [
+                'file' => ['required', 'file', 'mimes:mp4,mov,webm', 'max:102400'],
+            ];
+        }
+
         return [
             'file' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
