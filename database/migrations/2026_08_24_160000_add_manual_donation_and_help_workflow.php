@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -25,9 +26,21 @@ return new class extends Migration
             $table->foreign('confirmed_by')->references('id')->on('users')->nullOnDelete();
         });
 
+        // Before this migration every stored donation was treated as received and already
+        // contributed to campaign totals. Preserve that accounting history while new rows
+        // start as pending intents through DonationService::createIntent().
+        DB::table('donations')->update([
+            'status' => 'completed',
+            'completed_at' => DB::raw('donated_at'),
+        ]);
+
         Schema::table('posts', function (Blueprint $table): void {
             $table->string('help_status')->nullable()->after('status')->index();
         });
+
+        DB::table('posts')
+            ->where('type', 'help_request')
+            ->update(['help_status' => 'open']);
 
         Schema::create('help_offers', function (Blueprint $table): void {
             $table->id();
