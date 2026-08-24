@@ -26,7 +26,6 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, HasRoles, HasStringPrimaryKey, Notifiable;
 
     public $incrementing = false;
-
     protected $keyType = 'string';
 
     protected function casts(): array
@@ -38,21 +37,12 @@ class User extends Authenticatable
         ];
     }
 
-    public function organization(): BelongsTo
-    {
-        return $this->belongsTo(Organization::class);
-    }
-
-    public function organizationStaffMembership(): HasOne
-    {
-        return $this->hasOne(OrganizationStaff::class);
-    }
+    public function organization(): BelongsTo { return $this->belongsTo(Organization::class); }
+    public function organizationStaffMembership(): HasOne { return $this->hasOne(OrganizationStaff::class); }
 
     public function activeOrganizationStaffMembership(): HasOne
     {
-        return $this->organizationStaffMembership()
-            ->where('organization_id', $this->organization_id)
-            ->where('status', 'active');
+        return $this->organizationStaffMembership()->where('organization_id', $this->organization_id)->where('status', 'active');
     }
 
     public function organizationDashboardRole(): ?string
@@ -60,15 +50,10 @@ class User extends Authenticatable
         if ($this->user_type === 'admin') {
             return 'admin';
         }
-
         if ($this->organization_id === null) {
             return null;
         }
-
-        $membership = $this->activeOrganizationStaffMembership()
-            ->with('role')
-            ->first();
-
+        $membership = $this->activeOrganizationStaffMembership()->with('role')->first();
         if ($membership === null || $membership->role === null || ! $membership->role->is_active) {
             return null;
         }
@@ -76,53 +61,24 @@ class User extends Authenticatable
         return $membership->isOwner() ? 'org_owner' : 'org_staff';
     }
 
-    public function isOrganizationOwner(): bool
+    public function isOrganizationOwner(): bool { return $this->organizationDashboardRole() === 'org_owner'; }
+    public function posts(): HasMany { return $this->hasMany(Post::class, 'author_id'); }
+    public function reports(): HasMany { return $this->hasMany(Report::class, 'reporter_id'); }
+    public function likedPosts(): BelongsToMany { return $this->belongsToMany(Post::class, 'post_likes')->withTimestamps(); }
+    public function savedPosts(): BelongsToMany { return $this->belongsToMany(Post::class, 'saved_posts')->withTimestamps(); }
+    public function assignedReports(): HasMany { return $this->hasMany(Report::class, 'assignee_id'); }
+    public function notifications(): HasMany { return $this->hasMany(Notification::class, 'recipient_id'); }
+    public function createdNotifications(): HasMany { return $this->hasMany(Notification::class, 'created_by'); }
+    public function donations(): HasMany { return $this->hasMany(Donation::class, 'created_by'); }
+    public function campaignApplications(): HasMany { return $this->hasMany(CampaignApplication::class, 'created_by'); }
+
+    public function helpOffersMade(): HasMany
     {
-        return $this->organizationDashboardRole() === 'org_owner';
+        return $this->hasMany(HelpOffer::class, 'helper_user_id');
     }
 
-    public function posts(): HasMany
+    public function helpOffersReceived(): HasMany
     {
-        return $this->hasMany(Post::class, 'author_id');
-    }
-
-    public function reports(): HasMany
-    {
-        return $this->hasMany(Report::class, 'reporter_id');
-    }
-
-    public function likedPosts(): BelongsToMany
-    {
-        return $this->belongsToMany(Post::class, 'post_likes')->withTimestamps();
-    }
-
-    public function savedPosts(): BelongsToMany
-    {
-        return $this->belongsToMany(Post::class, 'saved_posts')->withTimestamps();
-    }
-
-    public function assignedReports(): HasMany
-    {
-        return $this->hasMany(Report::class, 'assignee_id');
-    }
-
-    public function notifications(): HasMany
-    {
-        return $this->hasMany(Notification::class, 'recipient_id');
-    }
-
-    public function createdNotifications(): HasMany
-    {
-        return $this->hasMany(Notification::class, 'created_by');
-    }
-
-    public function donations(): HasMany
-    {
-        return $this->hasMany(Donation::class, 'created_by');
-    }
-
-    public function campaignApplications(): HasMany
-    {
-        return $this->hasMany(CampaignApplication::class, 'created_by');
+        return $this->hasMany(HelpOffer::class, 'post_owner_id');
     }
 }
