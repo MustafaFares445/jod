@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Mobile;
 
+use App\Enums\HelpOfferStatus;
+use App\Enums\HelpRequestStatus;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -60,6 +62,10 @@ class MobileHomePostResource extends JsonResource
             'location' => $this->location,
         ];
 
+        if ($postType === 'help_request') {
+            $data = [...$data, ...$this->helpRequestState($request)];
+        }
+
         if ($this->title !== null) {
             $data['title'] = $this->title;
         }
@@ -71,6 +77,49 @@ class MobileHomePostResource extends JsonResource
         }
 
         return $data;
+    }
+
+    /** @return array<string, mixed> */
+    private function helpRequestState(Request $request): array
+    {
+        $viewerId = $request->user('sanctum')?->id;
+        $helpStatus = $this->help_status?->value ?? $this->help_status ?? HelpRequestStatus::Open->value;
+        $activeStatuses = [
+            HelpOfferStatus::Pending->value,
+            HelpOfferStatus::Accepted->value,
+            HelpOfferStatus::Contacting->value,
+            HelpOfferStatus::Agreed->value,
+        ];
+
+        $activeOffersCount = $this->helpOffers()->whereIn('status', $activeStatuses)->count();
+        $myOffer = null;
+
+        if ($viewerId !== null) {
+            $offer = $this->helpOffers()
+                ->where('helper_user_id', $viewerId)
+                ->whereIn('status', $activeStatuses)
+                ->latest('created_at')
+                ->first();
+
+            if ($offer !== null) {
+                $myOffer = [
+                    'id' => (string) $offer->id,
+                    'status' => $offer->status?->value ?? (string) $offer->status,
+                ];
+            }
+        }
+
+        $canOfferHelp = $viewerId !== null
+            && (string) $viewerId !== (string) $this->author_id
+            && $helpStatus !== HelpRequestStatus::Fulfilled->value
+            && $myOffer === null;
+
+        return [
+            'helpStatus' => $helpStatus,
+            'canOfferHelp' => $canOfferHelp,
+            'activeOffersCount' => $activeOffersCount,
+            'myOffer' => $myOffer,
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -116,18 +165,13 @@ class MobileHomePostResource extends JsonResource
         }
 
         $slug = Str::slug($name, '.');
-
         return $slug !== '' ? $slug : 'jod';
     }
 
     private function mobilePostType(): string
     {
         return match ($this->type) {
-            'volunteer_opportunity',
-            'donation_campaign',
-            'help_request',
-            'campaign_update',
-            'awareness' => $this->type,
+            'volunteer_opportunity', 'donation_campaign', 'help_request', 'campaign_update', 'awareness' => $this->type,
             default => 'awareness',
         };
     }
@@ -148,7 +192,7 @@ class MobileHomePostResource extends JsonResource
         return match ($ctaType) {
             'apply' => 'قدّم الآن',
             'donate' => 'تبرّع الآن',
-            'contact' => 'تواصل',
+            'contact' => 'تقديم مساعدة',
             'details' => 'عرض التفاصيل',
             default => '',
         };
@@ -156,21 +200,22 @@ class MobileHomePostResource extends JsonResource
 
     private function ctaState(string $ctaType): ?string
     {
+        if ($ctaType === 'contact' && $this->type === 'help_request') {
+            return ($this->help_status?->value ?? $this->help_status) === HelpRequestStatus::Fulfilled->value
+                ? 'closed'
+                : 'open';
+        }
+
         if (! in_array($ctaType, ['apply', 'donate'], true)) {
             return null;
         }
 
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
-
         if ($campaign === null || $campaign->status !== 'active') {
             return 'closed';
         }
 
-        if (
-            $ctaType === 'apply'
-            && $this->relationLoaded('campaignApplications')
-            && $this->campaignApplications->isNotEmpty()
-        ) {
+        if ($ctaType === 'apply' && $this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) {
             return 'submitted';
         }
 
