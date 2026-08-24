@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\NotificationEventType;
 use App\Models\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -21,7 +22,10 @@ class OrgNotificationService
         $query = Notification::query()
             ->with('createdBy')
             ->where('organization_id', $organizationId)
-            ->whereNull('recipient_id')
+            ->where(function (Builder $builder): void {
+                $builder->whereNull('recipient_id')
+                    ->orWhere('recipient_id', auth()->id());
+            })
             ->when($mailbox && $mailbox !== 'all', fn (Builder $builder) => $builder->where('mailbox', $mailbox))
             ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->param($params, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
@@ -49,6 +53,12 @@ class OrgNotificationService
 
     public function create(array $attributes, string $organizationId, string $userId): Notification
     {
+        $eventType = $attributes['eventType'] ?? (
+            $attributes['category'] === 'system'
+                ? NotificationEventType::SystemAnnouncement->value
+                : null
+        );
+
         $notification = Notification::create([
             'organization_id' => $organizationId,
             'title' => $attributes['title'],
@@ -56,6 +66,7 @@ class OrgNotificationService
             'mailbox' => 'sent',
             'status' => 'sent',
             'category' => $attributes['category'],
+            'event_type' => $eventType,
             'recipient_scope' => $attributes['recipientScope'] ?? 'organizations',
             'recipient_label' => $attributes['recipientLabel'] ?? null,
             'priority' => $attributes['priority'] ?? 'normal',

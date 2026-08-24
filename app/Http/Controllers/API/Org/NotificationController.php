@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API\Org;
 
+use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\NotificationFilterRequest;
 use App\Http\Requests\Org\NotificationReadStateRequest;
@@ -52,10 +53,17 @@ class NotificationController extends Controller
     {
         $this->authorize('updateOrganization', $notification);
 
+        $category = $request->validated('category');
+        $eventType = $request->validated('eventType') ?? $notification->event_type;
+        if ($eventType === null && $category === 'system') {
+            $eventType = NotificationEventType::SystemAnnouncement->value;
+        }
+
         $notification->update([
             'title' => $request->validated('title'),
             'body' => $request->validated('body'),
-            'category' => $request->validated('category'),
+            'category' => $category,
+            'event_type' => $eventType,
             'recipient_scope' => $request->validated('recipientScope') ?? $notification->recipient_scope,
             'recipient_label' => $request->validated('recipientLabel') ?? null,
             'priority' => $request->validated('priority') ?? $notification->priority,

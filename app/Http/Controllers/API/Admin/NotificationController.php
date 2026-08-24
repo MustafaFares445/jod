@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API\Admin;
 
+use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\NotificationReadStateRequest;
 use App\Http\Requests\Org\NotificationRequest;
@@ -30,7 +31,10 @@ class NotificationController extends Controller
 
         $query = Notification::query()
             ->with('createdBy')
-            ->whereNull('recipient_id')
+            ->where(function (Builder $builder): void {
+                $builder->whereNull('recipient_id')
+                    ->orWhere('recipient_id', auth()->id());
+            })
             ->when(($mailbox = $this->queryParam($request, 'filter.mailbox')) && $mailbox !== 'all', fn (Builder $builder) => $builder->where('mailbox', $mailbox))
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($category = $this->queryParam($request, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category))
@@ -61,6 +65,11 @@ class NotificationController extends Controller
         $this->authorize('create', Notification::class);
 
         $data = $request->validated();
+        $eventType = $data['eventType'] ?? (
+            $data['category'] === 'system'
+                ? NotificationEventType::SystemAnnouncement->value
+                : null
+        );
 
         $notification = Notification::query()->create([
             'id' => (string) Str::uuid(),
@@ -69,6 +78,7 @@ class NotificationController extends Controller
             'mailbox' => 'sent',
             'status' => 'sent',
             'category' => $data['category'],
+            'event_type' => $eventType,
             'recipient_scope' => $data['recipientScope'] ?? 'all',
             'recipient_label' => $data['recipientLabel'] ?? null,
             'priority' => $data['priority'] ?? 'normal',
@@ -95,11 +105,16 @@ class NotificationController extends Controller
         $this->authorize('update', $notification);
 
         $data = $request->validated();
+        $eventType = $data['eventType'] ?? $notification->event_type;
+        if ($eventType === null && $data['category'] === 'system') {
+            $eventType = NotificationEventType::SystemAnnouncement->value;
+        }
 
         $notification->update([
             'title' => $data['title'],
             'body' => $data['body'],
             'category' => $data['category'],
+            'event_type' => $eventType,
             'recipient_scope' => $data['recipientScope'] ?? $notification->recipient_scope,
             'recipient_label' => $data['recipientLabel'] ?? $notification->recipient_label,
             'priority' => $data['priority'] ?? $notification->priority,

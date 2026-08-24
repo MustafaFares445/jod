@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\NotificationEventType;
 use App\Models\AuditLog;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
+use App\Models\User;
 use App\Services\Permissions\OrganizationPermissionSyncService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,7 @@ class OrganizationStaffService
 {
     public function __construct(
         private readonly OrganizationPermissionSyncService $permissionSyncService,
+        private readonly NotificationEventService $notifications,
     ) {}
 
     public function getStaff(Organization $organization, array $filters = [], int $perPage = 20): LengthAwarePaginator
@@ -62,6 +65,22 @@ class OrganizationStaffService
                 'role_id' => $role->id,
             ]);
 
+            $invitedUser = User::query()->where('email', $staff->email)->first();
+            if ($invitedUser !== null) {
+                $this->notifications->notifyUser(
+                    $invitedUser,
+                    NotificationEventType::StaffInvited,
+                    'دعوة للانضمام إلى فريق مؤسسة',
+                    "تمت دعوتك للانضمام إلى فريق {$organization->name} بدور {$role->name}.",
+                    'staff',
+                    'high',
+                    $organization->name,
+                    '/organization/staff',
+                    (string) $organization->id,
+                    $actorUserId,
+                );
+            }
+
             return $staff->load('role');
         });
     }
@@ -77,6 +96,7 @@ class OrganizationStaffService
         return DB::transaction(function () use ($staff, $data, $actorUserId, $targetRole, $targetStatus): OrganizationStaff {
             $this->guardLastOwnerTransition($staff, $targetRole, $targetStatus);
             $originalData = $staff->only(['name', 'email', 'phone', 'organization_role_id', 'status']);
+            $originalRoleId = $staff->organization_role_id;
 
             $staff->update([
                 'name' => $data['name'] ?? $staff->name,
@@ -93,6 +113,21 @@ class OrganizationStaffService
 
             if ($staff->user !== null) {
                 $this->permissionSyncService->syncForUser($staff->user);
+
+                if ((string) $originalRoleId !== (string) $targetRole?->id) {
+                    $this->notifications->notifyUser(
+                        $staff->user,
+                        NotificationEventType::StaffRoleChanged,
+                        'تم تغيير دورك في المؤسسة',
+                        "تم تغيير دورك في {$staff->organization->name} إلى {$targetRole?->name}.",
+                        'staff',
+                        'high',
+                        $staff->organization->name,
+                        '/organization/staff',
+                        (string) $staff->organization_id,
+                        $actorUserId,
+                    );
+                }
             }
 
             return $staff->fresh()->load('role');
@@ -119,6 +154,8 @@ class OrganizationStaffService
             }
 
             $user = $staff->user;
+            $organizationId = (string) $staff->organization_id;
+            $organizationName = (string) $staff->organization->name;
 
             $this->logAudit($actorUserId, 'staff.removed', 'OrganizationStaff', (string) $staff->id, [
                 'name' => $staff->name,
@@ -129,6 +166,18 @@ class OrganizationStaffService
 
             if ($user !== null) {
                 $this->permissionSyncService->syncForUser($user);
+                $this->notifications->notifyUser(
+                    $user,
+                    NotificationEventType::StaffRemoved,
+                    'تمت إزالتك من فريق المؤسسة',
+                    "تمت إزالة عضويتك من فريق {$organizationName}.",
+                    'staff',
+                    'high',
+                    $organizationName,
+                    null,
+                    $organizationId,
+                    $actorUserId,
+                );
             }
         });
     }

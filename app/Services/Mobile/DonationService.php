@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Enums\NotificationEventType;
 use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\User;
+use App\Services\NotificationEventService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class DonationService
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     /**
      * @param  array{perPage?: int, campaignId?: string, flow?: 'contributed'|'received'}  $params
      */
@@ -82,6 +86,7 @@ class DonationService
             }
 
             $amount = number_format((float) $attributes['amount'], 2, '.', '');
+            $previousRaised = (float) $campaign->raised_amount;
             $hasPreviousDonation = Donation::query()
                 ->where('campaign_id', $campaign->id)
                 ->where('created_by', $user->id)
@@ -108,6 +113,47 @@ class DonationService
             $campaign->increment('raised_amount', $amount);
             if (! $hasPreviousDonation) {
                 $campaign->increment('donors_count');
+            }
+            $campaign->refresh();
+
+            $formattedAmount = number_format((float) $amount, 2);
+            $this->notifications->notifyUser(
+                $user,
+                NotificationEventType::DonationCompleted,
+                'تم تسجيل تبرعك بنجاح',
+                "شكراً لك. تم تسجيل تبرع بقيمة {$formattedAmount} لحملة {$campaign->title}.",
+                'donation',
+                'normal',
+                $campaign->title,
+                '/campaigns/'.$campaign->id,
+                (string) $campaign->organization_id,
+            );
+
+            $this->notifications->notifyOrganization(
+                (string) $campaign->organization_id,
+                NotificationEventType::DonationReceived,
+                'تبرع جديد للحملة',
+                "تم استلام تبرع بقيمة {$formattedAmount} لحملة {$campaign->title}.",
+                'donation',
+                'high',
+                $campaign->title,
+                '/org/donations/'.$donation->id,
+                (string) $user->id,
+            );
+
+            $goal = (float) $campaign->goal_amount;
+            $raised = (float) $campaign->raised_amount;
+            if ($goal > 0 && $previousRaised < $goal && $raised >= $goal) {
+                $this->notifications->notifyOrganization(
+                    (string) $campaign->organization_id,
+                    NotificationEventType::CampaignGoalReached,
+                    'الحملة وصلت إلى هدفها',
+                    "وصلت حملة {$campaign->title} إلى هدف التبرعات المحدد.",
+                    'campaign',
+                    'high',
+                    $campaign->title,
+                    '/org/campaigns/'.$campaign->id,
+                );
             }
 
             return $donation->load('campaign.organization');

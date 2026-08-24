@@ -29,6 +29,7 @@ class NotificationResource extends JsonResource
             'body' => $this->body,
             'type' => $this->mobileType(),
             'category' => $this->category,
+            'eventType' => $this->event_type,
             'priority' => $this->priority,
             'status' => $this->status,
             'isRead' => $this->status === 'read',

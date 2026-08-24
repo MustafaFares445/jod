@@ -5,19 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Controllers\API\Org;
 
 use App\Data\CampaignData;
+use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\CampaignRequest;
 use App\Http\Requests\Org\CloseCampaignRequest;
 use App\Http\Resources\CampaignResource;
 use App\Models\Campaign;
 use App\Services\CampaignService;
+use App\Services\NotificationEventService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
 class CampaignController extends Controller
 {
-    public function __construct(private CampaignService $service) {}
+    public function __construct(
+        private CampaignService $service,
+        private readonly NotificationEventService $notifications,
+    ) {}
 
     public function index(): AnonymousResourceCollection
     {
@@ -67,7 +72,12 @@ class CampaignController extends Controller
         if (array_key_exists('status', $validated)) {
             $status = (string) $validated['status'];
             $this->authorize($status === 'closed' ? 'closeOrganization' : 'updateOrganization', $campaign);
+            $wasClosed = $campaign->status === 'closed';
             $campaign = $this->service->updateStatus($campaign, $status, $validated['closedReason'] ?? null);
+
+            if ($status === 'closed' && ! $wasClosed) {
+                $this->notifyCampaignClosed($campaign);
+            }
         }
 
         return CampaignResource::make($campaign->refresh()->load('imageMedia'));
@@ -77,6 +87,7 @@ class CampaignController extends Controller
     {
         $this->authorize('closeOrganization', $campaign);
         $campaign = $this->service->close($campaign, $request->validated('reason'));
+        $this->notifyCampaignClosed($campaign);
 
         return CampaignResource::make($campaign->loadMissing('imageMedia'));
     }
@@ -94,6 +105,37 @@ class CampaignController extends Controller
         $this->service->delete($campaign);
 
         return response()->noContent();
+    }
+
+    private function notifyCampaignClosed(Campaign $campaign): void
+    {
+        $creatorId = auth()->id() !== null ? (string) auth()->id() : null;
+        $reason = filled($campaign->closed_reason) ? ' السبب: '.$campaign->closed_reason : '';
+        $body = "تم إغلاق حملة {$campaign->title}.{$reason}";
+
+        $this->notifications->notifyOrganization(
+            (string) $campaign->organization_id,
+            NotificationEventType::CampaignClosed,
+            'تم إغلاق الحملة',
+            $body,
+            'campaign',
+            'normal',
+            $campaign->title,
+            '/org/campaigns/'.$campaign->id,
+            $creatorId,
+        );
+
+        $this->notifications->notifyCampaignParticipants(
+            $campaign,
+            NotificationEventType::CampaignClosed,
+            'انتهت الحملة',
+            $body,
+            'campaign',
+            'normal',
+            $campaign->title,
+            '/campaigns/'.$campaign->id,
+            $creatorId,
+        );
     }
 
     private function organizationId(): string
