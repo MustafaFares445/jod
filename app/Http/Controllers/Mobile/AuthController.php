@@ -14,6 +14,7 @@ use App\Http\Requests\Mobile\VerifyResetCodeRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Models\User;
 use App\Services\Auth\TokenService;
+use App\Services\Mobile\MobileDeviceService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +26,10 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly TokenService $tokenService) {}
+    public function __construct(
+        private readonly TokenService $tokenService,
+        private readonly MobileDeviceService $mobileDeviceService,
+    ) {}
 
     /**
      * Register a mobile account.
@@ -66,6 +70,10 @@ class AuthController extends Controller
      * @bodyParam email string optional The account email address. Required when phone is omitted.
      * @bodyParam phone string optional The account phone number. Required when email is omitted.
      * @bodyParam password string required The account password.
+     * @bodyParam fcmToken string optional Firebase Cloud Messaging registration token for this installation.
+     * @bodyParam fcmPlatform string optional Device platform. Allowed: ios, android.
+     * @bodyParam deviceId string optional Stable installation identifier.
+     * @bodyParam appVersion string optional Installed app version.
      *
      * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
@@ -98,6 +106,16 @@ class AuthController extends Controller
         $user->forceFill([
             'last_active_at' => now(),
         ])->save();
+
+        if (filled($validated['fcmToken'] ?? null)) {
+            $this->mobileDeviceService->register($user, [
+                'pushToken' => $validated['fcmToken'],
+                'pushTargetType' => 'token',
+                'platform' => $validated['fcmPlatform'] ?? 'mobile',
+                'deviceId' => $validated['deviceId'] ?? null,
+                'appVersion' => $validated['appVersion'] ?? null,
+            ]);
+        }
 
         return MobileApiResponse::success([
             ...$this->tokenService->issueTokenPair($user),
