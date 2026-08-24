@@ -43,14 +43,14 @@ class CampaignController extends Controller
             $this->organizationId(),
         );
 
-        return CampaignResource::make($campaign->refresh()->load('imageMedia'));
+        return CampaignResource::make($campaign->refresh()->load(['imageMedia', 'categoryRelation']));
     }
 
     public function show(Campaign $campaign): CampaignResource
     {
         $this->authorize('viewOrganization', $campaign);
 
-        return CampaignResource::make($campaign->loadMissing('imageMedia'));
+        return CampaignResource::make($campaign->loadMissing(['imageMedia', 'categoryRelation']));
     }
 
     public function update(CampaignRequest $request, Campaign $campaign): CampaignResource
@@ -80,7 +80,7 @@ class CampaignController extends Controller
             }
         }
 
-        return CampaignResource::make($campaign->refresh()->load('imageMedia'));
+        return CampaignResource::make($campaign->refresh()->load(['imageMedia', 'categoryRelation']));
     }
 
     public function close(CloseCampaignRequest $request, Campaign $campaign): CampaignResource
@@ -89,7 +89,7 @@ class CampaignController extends Controller
         $campaign = $this->service->close($campaign, $request->validated('reason'));
         $this->notifyCampaignClosed($campaign);
 
-        return CampaignResource::make($campaign->loadMissing('imageMedia'));
+        return CampaignResource::make($campaign->loadMissing(['imageMedia', 'categoryRelation']));
     }
 
     public function destroy(Campaign $campaign): Response
@@ -154,7 +154,7 @@ class CampaignController extends Controller
     private function hasCampaignUpdateFields(array $validated): bool
     {
         return count(array_intersect(array_keys($validated), [
-            'title', 'summary', 'category', 'location', 'goalAmount', 'beneficiariesCount', 'startDate', 'endDate',
+            'title', 'summary', 'category', 'categoryId', 'location', 'goalAmount', 'beneficiariesCount', 'startDate', 'endDate',
         ])) > 0;
     }
 
@@ -165,6 +165,7 @@ class CampaignController extends Controller
             'title' => $validated['title'] ?? $campaign->title,
             'summary' => $validated['summary'] ?? $campaign->summary,
             'category' => $validated['category'] ?? $campaign->category,
+            'categoryId' => $validated['categoryId'] ?? $campaign->category_id,
             'location' => $validated['location'] ?? $campaign->location,
             'goalAmount' => $validated['goalAmount'] ?? $campaign->goal_amount,
             'beneficiariesCount' => $validated['beneficiariesCount'] ?? $campaign->beneficiaries_count,
