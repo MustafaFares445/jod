@@ -27,14 +27,12 @@ class PostReviewPolicy
 
     public function view(User $user, Post $model): bool
     {
-        return $model->organization_id === null
-            && $this->authorizeAction($user, PermissionAction::VIEW);
+        return $this->authorizeAction($user, PermissionAction::VIEW);
     }
 
     public function viewAdmin(User $user, Post $model): bool
     {
-        return $model->organization_id === null
-            && $model->author?->user_type === 'admin'
+        return $user->user_type === 'admin'
             && $this->authorizeAction($user, PermissionAction::VIEW);
     }
 
@@ -46,8 +44,7 @@ class PostReviewPolicy
 
     public function updateAdmin(User $user, Post $model): bool
     {
-        return $model->organization_id === null
-            && $model->author?->user_type === 'admin'
+        return $user->user_type === 'admin'
             && $this->authorizeAction($user, PermissionAction::APPROVE);
     }
 
@@ -70,14 +67,12 @@ class PostReviewPolicy
 
     public function approve(User $user, Post $model): bool
     {
-        return $model->organization_id === null
-            && $this->authorizeAction($user, PermissionAction::APPROVE);
+        return $this->authorizeAction($user, PermissionAction::APPROVE);
     }
 
     public function reject(User $user, Post $model): bool
     {
-        return $model->organization_id === null
-            && $this->authorizeAction($user, PermissionAction::REJECT);
+        return $this->authorizeAction($user, PermissionAction::REJECT);
     }
 
     public function createOrganization(User $user): bool
