@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
     'disk',
     'path',
     'original_name',
+    'description',
     'mime_type',
     'size',
     'position',
