@@ -11,6 +11,8 @@ use App\Http\Requests\Badges\BadgeRequest;
 use App\Http\Resources\BadgeResource;
 use App\Models\Badge;
 use App\Services\BadgeService;
+use App\Support\SearchFilter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -25,11 +27,18 @@ class BadgeController extends Controller
 
         $queryParams = $request->query();
         $activeFilter = $this->queryParam($queryParams, 'filter.isActive');
-        $searchFilter = $this->queryParam($queryParams, 'filter.search') ?? $request->get('search');
+        $search = SearchFilter::fromArray($queryParams);
 
         $badges = Badge::query()
-            ->when($activeFilter !== null, fn ($q) => $q->where('is_active', (bool) $activeFilter))
-            ->when($searchFilter, fn ($q) => $q->where('name', 'LIKE', '%' . $searchFilter . '%'))
+            ->when($activeFilter !== null, fn (Builder $query) => $query->where('is_active', (bool) $activeFilter))
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $searchQuery) use ($search): void {
+                    $searchQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('criteria', 'like', "%{$search}%")
+                        ->orWhere('icon_name', 'like', "%{$search}%");
+                });
+            })
             ->orderByDesc('created_at')
             ->paginate($request->get('perPage', 20));
 
