@@ -11,6 +11,7 @@ use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Category;
 use App\Models\Donation;
+use App\Models\HelpOffer;
 use App\Models\Notification;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
@@ -26,6 +27,7 @@ use App\Policies\CampaignApplicationPolicy;
 use App\Policies\CampaignReviewPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\DonationPolicy;
+use App\Policies\HelpOfferPolicy;
 use App\Policies\NotificationPolicy;
 use App\Policies\OrganizationPolicy;
 use App\Policies\OrganizationRolePolicy;
@@ -47,6 +49,7 @@ class AuthServiceProvider extends ServiceProvider
         Report::class => ReportPolicy::class,
         Notification::class => NotificationPolicy::class,
         Donation::class => DonationPolicy::class,
+        HelpOffer::class => HelpOfferPolicy::class,
         CampaignApplication::class => CampaignApplicationPolicy::class,
         Article::class => ArticlePolicy::class,
         Badge::class => BadgePolicy::class,
