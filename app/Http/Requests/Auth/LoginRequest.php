@@ -20,6 +20,9 @@ class LoginRequest extends FormRequest
             'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'min:8'],
             'userType' => ['required', 'string', Rule::in(['admin', 'companies'])],
+            'fcmToken' => ['nullable', 'string', 'max:512'],
+            'deviceId' => ['nullable', 'string', 'max:255'],
+            'appVersion' => ['nullable', 'string', 'max:64'],
         ];
     }
 }

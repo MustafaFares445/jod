@@ -53,6 +53,7 @@ class FcmPushGateway implements MobilePushGateway
     private function message(MobileDevice $device, Notification $notification): array
     {
         $priority = in_array($notification->priority, ['high', 'urgent'], true) ? 'HIGH' : 'NORMAL';
+        $webUrgency = $priority === 'HIGH' ? 'high' : 'normal';
         $targetKey = $device->push_target_type === 'fid' ? 'fid' : 'token';
         $data = array_filter([
             'notificationId' => (string) $notification->id,
@@ -81,6 +82,11 @@ class FcmPushGateway implements MobilePushGateway
                     'aps' => [
                         'sound' => 'default',
                     ],
+                ],
+            ],
+            'webpush' => [
+                'headers' => [
+                    'Urgency' => $webUrgency,
                 ],
             ],
         ];
