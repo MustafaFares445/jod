@@ -20,10 +20,25 @@ return new class extends Migration
                 $table->softDeletes();
             });
         }
+
+        if (Schema::hasTable('campaigns') && Schema::hasColumn('campaigns', 'category_id')) {
+            Schema::table('campaigns', function (Blueprint $table) {
+                $table->foreign('category_id')
+                    ->references('id')
+                    ->on('categories')
+                    ->nullOnDelete();
+            });
+        }
     }
 
     public function down(): void
     {
+        if (Schema::hasTable('campaigns') && Schema::hasColumn('campaigns', 'category_id')) {
+            Schema::table('campaigns', function (Blueprint $table) {
+                $table->dropForeign(['category_id']);
+            });
+        }
+
         Schema::dropIfExists('categories');
     }
 };

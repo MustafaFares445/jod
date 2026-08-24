@@ -23,15 +23,10 @@ class CampaignRequest extends FormRequest
         return [
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
-            'category' => [
-                $isUpdate ? 'sometimes' : 'required_without:categoryId',
-                'string',
-                Rule::in(['health', 'education', 'food', 'shelter', 'employment', 'emergency', 'donation', 'volunteer', 'community']),
-            ],
             'categoryId' => [
-                $isUpdate ? 'sometimes' : 'required_without:category',
+                $isUpdate ? 'sometimes' : 'required',
                 'string',
-                Rule::exists('categories', 'id')->where(static fn ($query) => $query
+                Rule::exists('categories', 'id')->where(fn ($query) => $query
                     ->where('target', 'campaign')
                     ->where('status', 'active')
                     ->whereNull('deleted_at')),

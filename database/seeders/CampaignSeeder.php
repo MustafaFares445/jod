@@ -5,11 +5,33 @@ namespace Database\Seeders;
 use App\Models\Campaign;
 use App\Models\Category;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class CampaignSeeder extends Seeder
 {
     public function run(): void
     {
+        $categoryIds = collect([
+            'health' => 'الصحة',
+            'education' => 'التعليم',
+            'food' => 'الغذاء',
+            'emergency' => 'الطوارئ',
+            'shelter' => 'الإيواء',
+        ])->mapWithKeys(function (string $description, string $name): array {
+            $category = Category::query()->firstOrCreate(
+                ['name' => $name],
+                [
+                    'id' => (string) Str::uuid(),
+                    'target' => 'campaign',
+                    'description' => $description,
+                    'status' => 'active',
+                    'usage_count' => 0,
+                ],
+            );
+
+            return [$name => $category->id];
+        });
+
         Campaign::create([
             'id' => SeedIds::id('campaigns.emergencyMedicalFund'),
             'organization_id' => SeedIds::id('organizations.helpFoundation'),
@@ -17,8 +39,7 @@ class CampaignSeeder extends Seeder
             'title' => 'صندوق العلاج الطبي الطارئ',
             'summary' => 'جمع التبرعات لتغطية العلاج الطبي الطارئ للأطفال من الأسر الأقل حظاً.',
             'content' => 'تفاصيل حملة صندوق العلاج الطبي وآلية دعم الحالات المستفيدة.',
-            'category' => 'health',
-            'category_id' => $this->categoryId('health'),
+            'category_id' => $categoryIds['health'],
             'status' => 'active',
             'location' => 'عمّان',
             'goal_amount' => 50000,
@@ -41,8 +62,7 @@ class CampaignSeeder extends Seeder
             'title' => 'مبادرة العودة إلى المدارس',
             'summary' => 'توفير الحقائب والقرطاسية والزي المدرسي لخمسمائة طالب.',
             'content' => 'تفاصيل مبادرة العودة إلى المدارس وخطة توزيع المستلزمات على الطلبة.',
-            'category' => 'education',
-            'category_id' => $this->categoryId('education'),
+            'category_id' => $categoryIds['education'],
             'status' => 'active',
             'location' => 'الزرقاء',
             'goal_amount' => 30000,
@@ -65,8 +85,7 @@ class CampaignSeeder extends Seeder
             'title' => 'برنامج الأمن الغذائي',
             'summary' => 'توفير الاحتياجات الغذائية الأساسية للأسر الأكثر احتياجاً.',
             'content' => 'تفاصيل برنامج الأمن الغذائي والفئات المستهدفة وآلية التوزيع.',
-            'category' => 'food',
-            'category_id' => $this->categoryId('food'),
+            'category_id' => $categoryIds['food'],
             'status' => 'draft',
             'location' => 'عمّان',
             'goal_amount' => 25000,
@@ -89,8 +108,7 @@ class CampaignSeeder extends Seeder
             'title' => 'الإغاثة الطارئة 2024',
             'summary' => 'حملة إغاثة طارئة مكتملة لدعم الأسر المتضررة.',
             'content' => 'تفاصيل الحملة المكتملة ونتائج توزيع المساعدات على المستفيدين.',
-            'category' => 'emergency',
-            'category_id' => $this->categoryId('emergency'),
+            'category_id' => $categoryIds['emergency'],
             'status' => 'closed',
             'location' => 'إربد',
             'goal_amount' => 15000,
@@ -113,8 +131,7 @@ class CampaignSeeder extends Seeder
             'title' => 'مأوى للأشخاص بلا سكن',
             'summary' => 'إنشاء مرافق إيواء آمنة للأشخاص الذين لا يملكون سكناً.',
             'content' => 'تفاصيل مشروع المأوى ومراحل التنفيذ والطاقة الاستيعابية المستهدفة.',
-            'category' => 'shelter',
-            'category_id' => $this->categoryId('shelter'),
+            'category_id' => $categoryIds['shelter'],
             'status' => 'pending',
             'location' => 'عمّان',
             'goal_amount' => 100000,
@@ -129,19 +146,5 @@ class CampaignSeeder extends Seeder
             'closed_at' => null,
             'closed_reason' => null,
         ]);
-    }
-
-    private function categoryId(string $name): string
-    {
-        $categoryId = Category::query()
-            ->where('name', $name)
-            ->where('target', 'campaign')
-            ->value('id');
-
-        if (! is_string($categoryId) || $categoryId === '') {
-            throw new \RuntimeException("Missing seeded campaign category [{$name}].");
-        }
-
-        return $categoryId;
     }
 }

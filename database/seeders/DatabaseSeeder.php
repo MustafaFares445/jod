@@ -19,7 +19,6 @@ class DatabaseSeeder extends Seeder
         $this->call(StaffSeeder::class);
         $this->call(CompanyAccountSeeder::class);
         $this->call(BadgeSeeder::class);
-        $this->call(CategorySeeder::class);
         $this->call(CampaignSeeder::class);
         $this->call(NotificationSeeder::class);
         $this->call(PostSeeder::class);

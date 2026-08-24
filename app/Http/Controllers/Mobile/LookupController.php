@@ -19,7 +19,7 @@ class LookupController extends Controller
             ['id' => 'city_aleppo', 'name' => 'حلب', 'nameEn' => 'Aleppo', 'slug' => 'aleppo', 'sortOrder' => 2],
             ['id' => 'city_homs', 'name' => 'حمص', 'nameEn' => 'Homs', 'slug' => 'homs', 'sortOrder' => 3],
             ['id' => 'city_hama', 'name' => 'حماة', 'nameEn' => 'Hama', 'slug' => 'hama', 'sortOrder' => 4],
-            ['id' => 'city_lattakia', 'name' => 'اللاذقية', 'nameEn' => 'Latakia', 'slug' => 'latakia', 'sortOrder' => 5],
+            ['id' => 'city_lattakia', 'name' => 'اللاذقية', 'nameEn' => 'Lattakia', 'slug' => 'lattakia', 'sortOrder' => 5],
             ['id' => 'city_tartus', 'name' => 'طرطوس', 'nameEn' => 'Tartus', 'slug' => 'tartus', 'sortOrder' => 6],
             ['id' => 'city_idlib', 'name' => 'إدلب', 'nameEn' => 'Idlib', 'slug' => 'idlib', 'sortOrder' => 7],
             ['id' => 'city_daraa', 'name' => 'درعا', 'nameEn' => 'Daraa', 'slug' => 'daraa', 'sortOrder' => 8],
@@ -79,8 +79,9 @@ class LookupController extends Controller
             ['code' => 'campaign', 'label' => 'حملة', 'sortOrder' => 1],
             ['code' => 'post', 'label' => 'منشور', 'sortOrder' => 2],
             ['code' => 'donation', 'label' => 'تبرع', 'sortOrder' => 3],
-            ['code' => 'applicant', 'label' => 'تطوع', 'sortOrder' => 4],
-            ['code' => 'system', 'label' => 'النظام', 'sortOrder' => 5],
+            ['code' => 'help', 'label' => 'مساعدة', 'sortOrder' => 4],
+            ['code' => 'applicant', 'label' => 'تطوع', 'sortOrder' => 5],
+            ['code' => 'system', 'label' => 'النظام', 'sortOrder' => 6],
         ], 'Notification types retrieved successfully.');
     }
 
@@ -88,28 +89,26 @@ class LookupController extends Controller
     {
         return $this->lookup($request, [
             ['code' => 'contributed', 'label' => 'تبرعاتي', 'sortOrder' => 1],
-            ['code' => 'received', 'label' => 'تبرعات مستلمة', 'sortOrder' => 2],
+            ['code' => 'received', 'label' => 'طلبات تبرع مستلمة', 'sortOrder' => 2],
         ], 'Donation flows retrieved successfully.');
     }
 
     public function donationStatuses(Request $request): JsonResponse
     {
         return $this->lookup($request, [
-            ['code' => 'pending', 'label' => 'قيد الانتظار', 'sortOrder' => 1],
-            ['code' => 'completed', 'label' => 'مكتمل', 'sortOrder' => 2],
-            ['code' => 'failed', 'label' => 'فشل', 'sortOrder' => 3],
-            ['code' => 'cancelled', 'label' => 'ملغي', 'sortOrder' => 4],
+            ['code' => 'pending', 'label' => 'بانتظار التواصل', 'sortOrder' => 1],
+            ['code' => 'contacting', 'label' => 'جاري التواصل', 'sortOrder' => 2],
+            ['code' => 'agreed', 'label' => 'تم الاتفاق', 'sortOrder' => 3],
+            ['code' => 'completed', 'label' => 'مكتمل', 'sortOrder' => 4],
+            ['code' => 'cancelled', 'label' => 'ملغي', 'sortOrder' => 5],
         ], 'Donation statuses retrieved successfully.');
     }
 
-    /**
-     * @param  list<array<string, mixed>>  $items
-     */
+    /** @param list<array<string, mixed>> $items */
     private function lookup(Request $request, array $items, string $message): JsonResponse
     {
         $search = Str::lower((string) $request->query('search', ''));
         $status = (string) $request->query('status', 'active');
-
         $items = array_map(static fn (array $item): array => ['isActive' => true, ...$item], $items);
 
         if ($status === 'active') {
@@ -123,7 +122,6 @@ class LookupController extends Controller
         }
 
         usort($items, static fn (array $a, array $b): int => ($a['sortOrder'] ?? 0) <=> ($b['sortOrder'] ?? 0));
-
         return MobileApiResponse::success($items, $message);
     }
 }

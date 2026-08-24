@@ -9,14 +9,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class DonationResource extends JsonResource
 {
-    /**
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         $organizationName = $this->campaign?->organization?->name;
         $amount = (float) $this->amount_or_type;
-        $donatedAt = $this->donated_at?->toIso8601String();
 
         return [
             'id' => (string) $this->id,
@@ -24,19 +20,25 @@ class DonationResource extends JsonResource
             'campaignTitle' => $this->campaign_title,
             'organizationName' => $organizationName,
             'amount' => $amount,
+            'status' => $this->status?->value ?? (string) $this->status,
+            'contactMethod' => $this->contact_method,
             'paymentMethod' => $this->payment_method,
             'phone' => $this->phone,
             'city' => $this->city,
+            'notes' => $this->notes,
+            'cancelReason' => $this->cancel_reason,
             'source' => $this->source,
-            'donatedAt' => $donatedAt,
             'createdAt' => $this->created_at?->toIso8601String(),
+            'contactedAt' => $this->contacted_at?->toIso8601String(),
+            'agreedAt' => $this->agreed_at?->toIso8601String(),
+            'completedAt' => $this->completed_at?->toIso8601String(),
+            'cancelledAt' => $this->cancelled_at?->toIso8601String(),
 
-            // Mobile My Donations screen contract.
+            // Backward-compatible fields for the existing My Donations screen.
             'organization' => $organizationName,
             'donatedAmount' => $amount,
             'targetAmount' => (float) ($this->campaign?->goal_amount ?? 0),
-            'date' => $donatedAt,
-            'status' => $this->campaign?->status,
+            'date' => ($this->completed_at ?? $this->created_at)?->toIso8601String(),
             'flow' => $this->flow($request),
         ];
     }
@@ -48,8 +50,6 @@ class DonationResource extends JsonResource
             return $requestedFlow;
         }
 
-        return $request->user()?->id === $this->created_by
-            ? 'contributed'
-            : 'received';
+        return (string) $request->user()?->id === (string) $this->created_by ? 'contributed' : 'received';
     }
 }

@@ -1,15 +1,17 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Models\Campaign;
 use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('user can record donation and campaign totals are updated', function () {
+test('user creates pending donation intent without changing campaign totals', function () {
     $user = User::factory()->create([
         'name' => 'Mobile Donor',
         'email' => 'mobile.donor@example.com',
@@ -23,46 +25,35 @@ test('user can record donation and campaign totals are updated', function () {
 
     $response = $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
         'amount' => 25.50,
+        'contactMethod' => 'whatsapp',
         'paymentMethod' => 'bank_transfer',
         'city' => 'Amman',
+        'notes' => 'Contact me in the evening.',
     ]);
 
     $response->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.campaignId', $campaign->id)
-        ->assertJsonPath('data.campaignTitle', $campaign->title)
-        ->assertJsonPath('data.organizationName', $campaign->organization->name)
         ->assertJsonPath('data.amount', 25.5)
-        ->assertJsonPath('data.paymentMethod', 'bank_transfer')
-        ->assertJsonPath('data.source', 'mobile_app');
+        ->assertJsonPath('data.status', 'pending')
+        ->assertJsonPath('data.contactMethod', 'whatsapp');
 
     $this->assertDatabaseHas('donations', [
         'id' => $response->json('data.id'),
         'campaign_id' => $campaign->id,
         'organization_id' => $campaign->organization_id,
-        'name' => 'Mobile Donor',
-        'email' => 'mobile.donor@example.com',
-        'phone' => '+962790000001',
         'amount_or_type' => '25.50',
-        'payment_method' => 'bank_transfer',
-        'source' => 'mobile_app',
+        'status' => 'pending',
+        'contact_method' => 'whatsapp',
         'created_by' => $user->id,
     ]);
 
     $campaign->refresh();
-    expect($campaign->raised_amount)->toBe('125.50');
-    expect($campaign->donors_count)->toBe(4);
-
-    $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
-        'amount' => 10,
-        'paymentMethod' => 'cash',
-    ])->assertOk();
-
-    $campaign->refresh();
-    expect($campaign->raised_amount)->toBe('135.50');
-    expect($campaign->donors_count)->toBe(4);
+    expect($campaign->raised_amount)->toBe('100.00');
+    expect($campaign->donors_count)->toBe(3);
 });
-test('donation requires active campaign and valid payload', function () {
+
+test('donation intent requires active campaign and valid payload', function () {
     $user = User::factory()->create();
     $activeCampaign = mobile_donation_test_createCampaign();
     $closedCampaign = mobile_donation_test_createCampaign(['status' => 'closed']);
@@ -70,17 +61,18 @@ test('donation requires active campaign and valid payload', function () {
 
     $this->postJson("/api/mobile/campaigns/{$activeCampaign->id}/donations", [
         'amount' => 0,
-        'paymentMethod' => 'crypto',
+        'contactMethod' => 'carrier_pigeon',
     ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['amount', 'paymentMethod'], 'error.details');
+        ->assertJsonValidationErrors(['amount', 'contactMethod'], 'error.details');
 
     $this->postJson("/api/mobile/campaigns/{$closedCampaign->id}/donations", [
         'amount' => 25,
-        'paymentMethod' => 'cash',
+        'contactMethod' => 'phone',
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['campaign'], 'error.details');
 });
-test('donation history is paginated filterable and scoped to user', function () {
+
+test('donation history includes lifecycle status and remains scoped to user', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $firstCampaign = mobile_donation_test_createCampaign(['title' => 'First Campaign']);
@@ -91,66 +83,53 @@ test('donation history is paginated filterable and scoped to user', function () 
         'campaign_id' => $firstCampaign->id,
         'campaign_title' => $firstCampaign->title,
         'created_by' => $user->id,
-        'donated_at' => now()->subDay(),
+        'status' => 'completed',
+        'completed_at' => now()->subDay(),
     ]);
     $secondDonation = Donation::factory()->create([
         'organization_id' => $secondCampaign->organization_id,
         'campaign_id' => $secondCampaign->id,
         'campaign_title' => $secondCampaign->title,
         'created_by' => $user->id,
-        'donated_at' => now(),
+        'status' => 'pending',
     ]);
     $otherDonation = Donation::factory()->create([
         'organization_id' => $firstCampaign->organization_id,
         'campaign_id' => $firstCampaign->id,
         'campaign_title' => $firstCampaign->title,
         'created_by' => $otherUser->id,
+        'status' => 'pending',
     ]);
     Sanctum::actingAs($user);
 
-    $this->getJson('/api/mobile/me/donations?perPage=1')
+    $this->getJson('/api/mobile/me/donations?status=pending')
         ->assertOk()
-        ->assertJsonPath('meta.total', 2)
-        ->assertJsonPath('meta.perPage', 1)
-        ->assertJsonPath('data.0.id', (string) $secondDonation->id);
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('data.0.id', (string) $secondDonation->id)
+        ->assertJsonPath('data.0.status', 'pending');
 
     $this->getJson("/api/mobile/me/donations?campaignId={$firstCampaign->id}")
         ->assertOk()
         ->assertJsonPath('meta.total', 1)
         ->assertJsonPath('data.0.id', (string) $firstDonation->id);
 
-    $this->getJson("/api/mobile/me/donations/{$firstDonation->id}")
-        ->assertOk()
-        ->assertJsonPath('data.id', (string) $firstDonation->id);
-
     $this->getJson("/api/mobile/me/donations/{$otherDonation->id}")
         ->assertNotFound()
         ->assertJsonPath('error.code', 'not_found');
 });
+
 test('donation endpoints require authentication', function () {
     $campaign = mobile_donation_test_createCampaign();
 
     $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
         'amount' => 25,
-        'paymentMethod' => 'cash',
+        'contactMethod' => 'phone',
     ])->assertUnauthorized();
     $this->getJson('/api/mobile/me/donations')->assertUnauthorized();
     $this->getJson('/api/mobile/me/donations/1')->assertUnauthorized();
 });
-/**
- * @param  array{
- *     id?: string,
- *     title?: string,
- *     summary?: string|null,
- *     category?: string,
- *     status?: string,
- *     location?: string|null,
- *     organization_id?: string,
- *     goal_amount?: int|float|string,
- *     raised_amount?: int|float|string,
- *     donors_count?: int
- * }  $overrides
- */
+
+/** @param array<string,mixed> $overrides */
 function mobile_donation_test_createCampaign(array $overrides = []): Campaign
 {
     $organization = Organization::factory()->create();

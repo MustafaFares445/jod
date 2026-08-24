@@ -25,16 +25,14 @@ class MobileDonationHistoryContractTest extends TestCase
     {
         $user = User::factory()->create();
         $organization = Organization::factory()->create();
-        $campaign = $this->campaign($organization, [
-            'goal_amount' => 500000,
-            'status' => 'active',
-        ]);
+        $campaign = $this->campaign($organization, ['goal_amount' => 500000, 'status' => 'active']);
         $donation = Donation::factory()->create([
             'organization_id' => $organization->id,
             'campaign_id' => $campaign->id,
             'campaign_title' => $campaign->title,
             'amount_or_type' => 25000,
             'created_by' => $user->id,
+            'status' => 'pending',
         ]);
         Sanctum::actingAs($user);
 
@@ -45,7 +43,7 @@ class MobileDonationHistoryContractTest extends TestCase
             ->assertJsonPath('data.0.flow', 'contributed')
             ->assertJsonPath('data.0.donatedAmount', 25000)
             ->assertJsonPath('data.0.targetAmount', 500000)
-            ->assertJsonPath('data.0.status', 'active')
+            ->assertJsonPath('data.0.status', 'pending')
             ->assertJsonPath('data.0.organization', $organization->name);
     }
 
@@ -73,9 +71,8 @@ class MobileDonationHistoryContractTest extends TestCase
         ]);
 
         Sanctum::actingAs($staff);
-
-        $response = $this->getJson('/api/mobile/me/donations?flow=received&perPage=10');
-        $response->assertOk()
+        $this->getJson('/api/mobile/me/donations?flow=received&perPage=10')
+            ->assertOk()
             ->assertJsonPath('meta.total', 1)
             ->assertJsonPath('data.0.id', (string) $received->id)
             ->assertJsonPath('data.0.flow', 'received');
@@ -115,11 +112,10 @@ class MobileDonationHistoryContractTest extends TestCase
             ->assertJsonPath('data.flow', 'received');
 
         Sanctum::actingAs($outsider);
-        $this->getJson("/api/mobile/me/donations/{$donation->id}")
-            ->assertNotFound();
+        $this->getJson("/api/mobile/me/donations/{$donation->id}")->assertNotFound();
     }
 
-    public function test_recorded_donation_defaults_city_from_profile(): void
+    public function test_recorded_donation_intent_defaults_city_from_profile(): void
     {
         $user = User::factory()->create(['city' => 'Aleppo']);
         $organization = Organization::factory()->create();
@@ -128,10 +124,12 @@ class MobileDonationHistoryContractTest extends TestCase
 
         $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
             'amount' => 100,
+            'contactMethod' => 'phone',
             'paymentMethod' => 'cash',
         ])
             ->assertOk()
-            ->assertJsonPath('data.city', 'Aleppo');
+            ->assertJsonPath('data.city', 'Aleppo')
+            ->assertJsonPath('data.status', 'pending');
     }
 
     private function grantDonorView(User $user): void
@@ -141,9 +139,7 @@ class MobileDonationHistoryContractTest extends TestCase
         $user->givePermissionTo($name);
     }
 
-    /**
-     * @param  array<string, mixed>  $overrides
-     */
+    /** @param array<string, mixed> $overrides */
     private function campaign(Organization $organization, array $overrides = []): Campaign
     {
         return Campaign::query()->create(array_merge([

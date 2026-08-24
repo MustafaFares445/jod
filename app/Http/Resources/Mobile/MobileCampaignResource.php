@@ -17,17 +17,13 @@ class MobileCampaignResource extends JsonResource
     {
         $publisher = $this->publisher();
         $images = $this->images();
-        $category = $this->relationLoaded('categoryRelation')
-            ? $this->categoryRelation
-            : $this->resource->categoryRelation()->first();
 
         $data = [
             'id' => (string) $this->id,
             'title' => $this->title,
             'summary' => $this->summary,
             'content' => (string) ($this->content ?? $this->summary ?? ''),
-            'categoryId' => $this->category_id,
-            'category' => $category?->name ?? $this->resource->getAttribute('category'),
+            'category' => $this->category,
             'status' => $this->status,
             'publisher' => $publisher,
             'images' => $images,

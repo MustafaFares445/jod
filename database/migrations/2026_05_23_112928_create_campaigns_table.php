@@ -14,7 +14,7 @@ return new class extends Migration
                 $table->string('title');
                 $table->string('summary')->nullable();
                 $table->text('content')->nullable();
-                $table->enum('category', ['health', 'education', 'shelter', 'food', 'emergency', 'employment', 'donation', 'volunteer', 'community'])->default('health');
+                $table->string('category_id')->nullable()->index();
                 $table->enum('status', ['draft', 'pending', 'approved', 'rejected', 'active', 'closed'])->default('active');
                 $table->string('location')->nullable();
                 $table->json('images')->nullable();

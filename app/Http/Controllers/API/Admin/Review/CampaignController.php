@@ -23,19 +23,13 @@ class CampaignController extends Controller
         $sortBy = (string) ($this->queryParam($request, 'sortBy') ?? '');
 
         $query = Campaign::query()
-            ->with(['organization', 'creator', 'reviewedBy', 'categoryRelation'])
+            ->with(['organization', 'creator', 'reviewedBy'])
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($organizationId = $this->queryParam($request, 'filter.organizationId')) && $organizationId !== 'all', fn (Builder $builder) => $builder->where('organization_id', $organizationId))
             ->when(($organizationName = $this->queryParam($request, 'filter.organizationName')) && $organizationName !== 'all', function (Builder $builder) use ($organizationName): void {
                 $builder->whereHas('organization', fn (Builder $org) => $org->where('name', 'like', '%'.$organizationName.'%'));
             })
-            ->when(($category = $this->queryParam($request, 'filter.category')) && $category !== 'all', function (Builder $builder) use ($category): void {
-                $builder->where(function (Builder $inner) use ($category): void {
-                    $inner->where('category', $category)
-                        ->orWhere('category_id', $category)
-                        ->orWhereHas('categoryRelation', fn (Builder $relation) => $relation->where('name', $category));
-                });
-            });
+            ->when(($category = $this->queryParam($request, 'filter.category')) && $category !== 'all', fn (Builder $builder) => $builder->where('category', $category));
 
         $normalizedSort = $sort !== '' ? $sort : match ($sortBy) {
             'title_asc' => 'title',
@@ -60,7 +54,7 @@ class CampaignController extends Controller
     {
         $this->authorize('view', $campaign);
 
-        return CampaignResource::make($campaign->loadMissing(['organization', 'creator', 'reviewedBy', 'categoryRelation']));
+        return CampaignResource::make($campaign->loadMissing(['organization', 'creator', 'reviewedBy']));
     }
 
     public function approve(Request $request, Campaign $campaign): CampaignResource
@@ -79,7 +73,7 @@ class CampaignController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return CampaignResource::make($campaign->refresh()->loadMissing(['organization', 'creator', 'reviewedBy', 'categoryRelation']));
+        return CampaignResource::make($campaign->refresh()->loadMissing(['organization', 'creator', 'reviewedBy']));
     }
 
     public function reject(Request $request, Campaign $campaign): CampaignResource
@@ -98,7 +92,7 @@ class CampaignController extends Controller
             'rejection_reason' => $data['reason'],
         ]);
 
-        return CampaignResource::make($campaign->refresh()->loadMissing(['organization', 'creator', 'reviewedBy', 'categoryRelation']));
+        return CampaignResource::make($campaign->refresh()->loadMissing(['organization', 'creator', 'reviewedBy']));
     }
 
     private function assertPending(Campaign $campaign): void

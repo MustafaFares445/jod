@@ -1,11 +1,13 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Article;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
@@ -18,6 +20,7 @@ beforeEach(function () {
     ]);
     Sanctum::actingAs($this->user);
 });
+
 test('lists articles', function () {
     Article::factory()->count(3)->create();
 
@@ -26,6 +29,7 @@ test('lists articles', function () {
     $response->assertOk();
     expect($response->json('data'))->toHaveCount(3);
 });
+
 test('creates an article', function () {
     $payload = [
         'title' => 'Getting Started with Our Platform',
@@ -42,6 +46,7 @@ test('creates an article', function () {
     expect($response->json('data.status'))->toEqual('published');
     expect($response->json('data.slug'))->not->toBeEmpty();
 });
+
 test('auto generates slug for article', function () {
     $payload = [
         'title' => 'My Test Article',
@@ -56,6 +61,42 @@ test('auto generates slug for article', function () {
     $response->assertCreated();
     expect($response->json('data.slug'))->toEqual('my-test-article');
 });
+
+test('ignores slug supplied by frontend', function () {
+    $payload = [
+        'title' => 'Backend Owns This Slug',
+        'slug' => 'frontend-controlled-slug',
+        'excerpt' => 'Test excerpt',
+        'content' => 'Test content',
+        'status' => 'draft',
+        'authorName' => 'Jane Doe',
+    ];
+
+    $response = $this->postJson('/api/v1/admin/articles', $payload);
+
+    $response->assertCreated();
+    expect($response->json('data.slug'))->toEqual('backend-owns-this-slug');
+    $this->assertDatabaseMissing('articles', ['slug' => 'frontend-controlled-slug']);
+});
+
+test('regenerates slug when article title changes', function () {
+    $article = Article::factory()->create(['title' => 'Original Article Title']);
+
+    $payload = [
+        'title' => 'Updated Article Title',
+        'slug' => 'frontend-update-slug',
+        'excerpt' => 'Updated excerpt',
+        'content' => 'Updated content',
+        'status' => 'draft',
+        'authorName' => 'Updated Author',
+    ];
+
+    $response = $this->patchJson("/api/v1/admin/articles/{$article->id}", $payload);
+
+    $response->assertOk();
+    expect($response->json('data.slug'))->toEqual('updated-article-title');
+});
+
 test('sets published at when publishing', function () {
     $payload = [
         'title' => 'Published Article',
@@ -69,6 +110,7 @@ test('sets published at when publishing', function () {
     $response->assertCreated();
     expect($response->json('data.publishedAt'))->not->toBeEmpty();
 });
+
 test('shows a single article', function () {
     $article = Article::factory()->create();
 
@@ -78,6 +120,7 @@ test('shows a single article', function () {
     expect($response->json('data.id'))->toEqual($article->id);
     expect($response->json('data.title'))->toEqual($article->title);
 });
+
 test('updates an article', function () {
     $article = Article::factory()->create();
 
@@ -95,6 +138,7 @@ test('updates an article', function () {
     expect($response->json('data.title'))->toEqual('Updated Title');
     expect($response->json('data.authorName'))->toEqual('Updated Author');
 });
+
 test('deletes an article', function () {
     $article = Article::factory()->create();
 
@@ -103,6 +147,7 @@ test('deletes an article', function () {
     $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
     $this->assertDatabaseMissing('articles', ['id' => $article->id]);
 });
+
 test('filters articles by status', function () {
     Article::factory()->published()->create(['title' => 'Published']);
     Article::factory()->draft()->create(['title' => 'Draft']);
@@ -113,6 +158,7 @@ test('filters articles by status', function () {
     expect($response->json('data'))->toHaveCount(1);
     expect($response->json('data.0.status'))->toEqual('published');
 });
+
 test('searches articles by title', function () {
     Article::factory()->create(['title' => 'Beginners Guide']);
     Article::factory()->create(['title' => 'Advanced Topics']);
