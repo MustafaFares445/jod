@@ -7,6 +7,7 @@ namespace App\Services\Mobile;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
+use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -35,11 +36,12 @@ class PublisherService
     }
 
     /**
-     * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, type?: string|null, sort?: string|null, sortBy?: string|null}  $params
+     * @param  array{page?: int|string|null, perPage?: int|string|null, search?: string|null, searchQueries?: string|null, type?: string|null, sort?: string|null, sortBy?: string|null}  $params
      */
     public function paginatePosts(Organization|User $publisher, array $params, ?User $viewer = null): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
+        $search = SearchFilter::fromArray($params);
 
         $query = Post::query()
             ->with($this->postRelations($viewer))
@@ -54,12 +56,13 @@ class PublisherService
 
         $query
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
-            ->when(filled($params['search'] ?? null), function (Builder $builder) use ($params): void {
-                $search = (string) $params['search'];
+            ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
-                        ->orWhere('content', 'like', "%{$search}%");
+                        ->orWhere('content', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('title', 'like', "%{$search}%"));
                 });
             });
 
