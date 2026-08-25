@@ -21,12 +21,10 @@ class CategoryService
 
         $query = Category::query()
             ->where('status', 'active')
-            ->when(filled($params['target'] ?? null), fn ($builder) => $builder->where('target', $params['target']))
             ->when($search !== '', function ($builder) use ($search): void {
                 $builder->where(function ($inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%")
-                        ->orWhere('target', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%");
                 });
             });
 
