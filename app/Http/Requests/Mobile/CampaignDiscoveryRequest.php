@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Mobile;
 
+use App\Enums\ContentAudience;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CampaignDiscoveryRequest extends FormRequest
 {
@@ -13,7 +15,7 @@ class CampaignDiscoveryRequest extends FormRequest
         return true;
     }
 
-    /** @return array<string, list<string>> */
+    /** @return array<string, list<mixed>> */
     public function rules(): array
     {
         return [
@@ -24,6 +26,7 @@ class CampaignDiscoveryRequest extends FormRequest
             'filter.search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'in:active'],
             'category' => ['nullable', 'string', 'max:50'],
+            'audience' => ['nullable', 'string', Rule::enum(ContentAudience::class)],
             'location' => ['nullable', 'string', 'max:255'],
             'organizationId' => ['nullable', 'string', 'max:255'],
             'sort' => ['nullable', 'string', 'in:updatedAt,-updatedAt,newest,oldest,progress,-progress'],
