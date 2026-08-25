@@ -18,5 +18,6 @@ class CampaignData extends Data
         public string $startDate,
         public string $endDate,
         public ?string $status = 'draft',
+        public string $audience = 'general',
     ) {}
 }
