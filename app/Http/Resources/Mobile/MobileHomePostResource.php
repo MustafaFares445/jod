@@ -13,7 +13,6 @@ use Illuminate\Support\Str;
 
 class MobileHomePostResource extends JsonResource
 {
-    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $postType = $this->mobilePostType();
@@ -21,17 +20,10 @@ class MobileHomePostResource extends JsonResource
         $ctaState = $this->ctaState($ctaType);
         $publisher = $this->publisher();
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
-        $targetId = in_array($ctaType, ['apply', 'donate'], true)
-            ? ($campaign?->id ? (string) $campaign->id : null)
-            : (string) $this->id;
+        $targetId = in_array($ctaType, ['apply', 'donate'], true) ? ($campaign?->id ? (string) $campaign->id : null) : (string) $this->id;
         $cta = ['type' => $ctaType, 'label' => $this->ctaLabel($ctaType)];
-
-        if ($targetId !== null) {
-            $cta['targetId'] = $targetId;
-        }
-        if ($ctaState !== null) {
-            $cta['state'] = $ctaState;
-        }
+        if ($targetId !== null) $cta['targetId'] = $targetId;
+        if ($ctaState !== null) $cta['state'] = $ctaState;
 
         $isLiked = $this->relationLoaded('likes') && $this->likes->isNotEmpty();
         $isSaved = $this->relationLoaded('saves') && $this->saves->isNotEmpty();
@@ -41,15 +33,12 @@ class MobileHomePostResource extends JsonResource
             'id' => (string) $this->id,
             'publisher' => $publisher,
             'postType' => $postType,
+            'audience' => $this->audience ?? 'general',
             'content' => (string) ($this->content ?? $this->summary ?? ''),
             'createdAt' => ($this->published_at ?? $this->created_at)?->toIso8601String(),
             'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
             'cta' => $cta,
-            'stats' => [
-                'likes' => (int) $this->reactions_count,
-                'comments' => 0,
-                'shares' => 0,
-            ],
+            'stats' => ['likes' => (int) $this->reactions_count, 'comments' => 0, 'shares' => 0],
             'viewsCount' => (int) $this->views_count,
             'reactionsCount' => (int) $this->reactions_count,
             'commentsCount' => 0,
@@ -62,67 +51,32 @@ class MobileHomePostResource extends JsonResource
             'location' => $this->location,
         ];
 
-        if ($postType === 'help_request') {
-            $data = [...$data, ...$this->helpRequestState($request)];
-        }
-
-        if ($this->title !== null) {
-            $data['title'] = $this->title;
-        }
-        if (isset($publisher['phoneNumber'])) {
-            $data['phoneNumber'] = $publisher['phoneNumber'];
-        }
-        if (isset($publisher['whatsappNumber'])) {
-            $data['whatsappNumber'] = $publisher['whatsappNumber'];
-        }
-
+        if ($postType === 'help_request') $data = [...$data, ...$this->helpRequestState($request)];
+        if ($this->title !== null) $data['title'] = $this->title;
+        if (isset($publisher['phoneNumber'])) $data['phoneNumber'] = $publisher['phoneNumber'];
+        if (isset($publisher['whatsappNumber'])) $data['whatsappNumber'] = $publisher['whatsappNumber'];
         return $data;
     }
 
-    /** @return array<string, mixed> */
     private function helpRequestState(Request $request): array
     {
         $viewerId = $request->user('sanctum')?->id;
         $helpStatus = $this->help_status?->value ?? $this->help_status ?? HelpRequestStatus::Open->value;
-        $activeStatuses = [
-            HelpOfferStatus::Pending->value,
-            HelpOfferStatus::Accepted->value,
-            HelpOfferStatus::Contacting->value,
-            HelpOfferStatus::Agreed->value,
-        ];
-
+        $activeStatuses = [HelpOfferStatus::Pending->value, HelpOfferStatus::Accepted->value, HelpOfferStatus::Contacting->value, HelpOfferStatus::Agreed->value];
         $activeOffersCount = $this->helpOffers()->whereIn('status', $activeStatuses)->count();
         $myOffer = null;
-
         if ($viewerId !== null) {
-            $offer = $this->helpOffers()
-                ->where('helper_user_id', $viewerId)
-                ->whereIn('status', $activeStatuses)
-                ->latest('created_at')
-                ->first();
-
-            if ($offer !== null) {
-                $myOffer = [
-                    'id' => (string) $offer->id,
-                    'status' => $offer->status?->value ?? (string) $offer->status,
-                ];
-            }
+            $offer = $this->helpOffers()->where('helper_user_id', $viewerId)->whereIn('status', $activeStatuses)->latest('created_at')->first();
+            if ($offer !== null) $myOffer = ['id' => (string) $offer->id, 'status' => $offer->status?->value ?? (string) $offer->status];
         }
-
-        $canOfferHelp = $viewerId !== null
-            && (string) $viewerId !== (string) $this->author_id
-            && $helpStatus !== HelpRequestStatus::Fulfilled->value
-            && $myOffer === null;
-
         return [
             'helpStatus' => $helpStatus,
-            'canOfferHelp' => $canOfferHelp,
+            'canOfferHelp' => $viewerId !== null && (string) $viewerId !== (string) $this->author_id && $helpStatus !== HelpRequestStatus::Fulfilled->value && $myOffer === null,
             'activeOffersCount' => $activeOffersCount,
             'myOffer' => $myOffer,
         ];
     }
 
-    /** @return array<string, mixed> */
     private function publisher(): array
     {
         $organization = $this->relationLoaded('organization') ? $this->organization : null;
@@ -133,38 +87,26 @@ class MobileHomePostResource extends JsonResource
         $phone = $organization?->phone ?? $author?->phone;
         $city = $organization?->location ?? $author?->city ?? $this->location;
         $bio = $organization?->description ?? $author?->bio;
-
         $publisher = [
             'id' => (string) $publisherId,
             'publisherType' => $organization !== null ? 'organization' : 'user',
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
             'avatarUrl' => null,
-            'verified' => $organization !== null
-                ? $organization->verification_status === 'verified'
-                : $author?->email_verified_at !== null,
+            'verified' => $organization !== null ? $organization->verification_status === 'verified' : $author?->email_verified_at !== null,
         ];
-
-        if (filled($bio)) {
-            $publisher['bio'] = $bio;
-        }
-        if (filled($city)) {
-            $publisher['city'] = $city;
-        }
+        if (filled($bio)) $publisher['bio'] = $bio;
+        if (filled($city)) $publisher['city'] = $city;
         if (filled($phone)) {
             $publisher['phoneNumber'] = $phone;
             $publisher['whatsappNumber'] = $phone;
         }
-
         return $publisher;
     }
 
     private function username(?string $email, string $name): string
     {
-        if (filled($email)) {
-            return Str::before($email, '@');
-        }
-
+        if (filled($email)) return Str::before($email, '@');
         $slug = Str::slug($name, '.');
         return $slug !== '' ? $slug : 'jod';
     }
@@ -179,47 +121,23 @@ class MobileHomePostResource extends JsonResource
 
     private function ctaType(string $postType): string
     {
-        return match ($postType) {
-            'volunteer_opportunity' => 'apply',
-            'donation_campaign' => 'donate',
-            'help_request' => 'contact',
-            'campaign_update' => 'details',
-            default => 'none',
-        };
+        return match ($postType) { 'volunteer_opportunity' => 'apply', 'donation_campaign' => 'donate', 'help_request' => 'contact', 'campaign_update' => 'details', default => 'none' };
     }
 
     private function ctaLabel(string $ctaType): string
     {
-        return match ($ctaType) {
-            'apply' => 'قدّم الآن',
-            'donate' => 'تبرّع الآن',
-            'contact' => 'تقديم مساعدة',
-            'details' => 'عرض التفاصيل',
-            default => '',
-        };
+        return match ($ctaType) { 'apply' => 'قدّم الآن', 'donate' => 'تبرّع الآن', 'contact' => 'تقديم مساعدة', 'details' => 'عرض التفاصيل', default => '' };
     }
 
     private function ctaState(string $ctaType): ?string
     {
         if ($ctaType === 'contact' && $this->type === 'help_request') {
-            return ($this->help_status?->value ?? $this->help_status) === HelpRequestStatus::Fulfilled->value
-                ? 'closed'
-                : 'open';
+            return ($this->help_status?->value ?? $this->help_status) === HelpRequestStatus::Fulfilled->value ? 'closed' : 'open';
         }
-
-        if (! in_array($ctaType, ['apply', 'donate'], true)) {
-            return null;
-        }
-
+        if (! in_array($ctaType, ['apply', 'donate'], true)) return null;
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
-        if ($campaign === null || $campaign->status !== 'active') {
-            return 'closed';
-        }
-
-        if ($ctaType === 'apply' && $this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) {
-            return 'submitted';
-        }
-
+        if ($campaign === null || $campaign->status !== 'active') return 'closed';
+        if ($ctaType === 'apply' && $this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) return 'submitted';
         return 'open';
     }
 }
