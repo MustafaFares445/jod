@@ -12,24 +12,38 @@ class CampaignSeeder extends Seeder
     public function run(): void
     {
         $categoryIds = collect([
-            'health' => 'الصحة',
-            'education' => 'التعليم',
-            'food' => 'الغذاء',
-            'emergency' => 'الطوارئ',
-            'shelter' => 'الإيواء',
-        ])->mapWithKeys(function (string $description, string $name): array {
+            'health' => [
+                'name' => 'الصحة',
+                'description' => 'الحملات والمبادرات المتعلقة بالصحة والعلاج والرعاية الطبية.',
+            ],
+            'education' => [
+                'name' => 'التعليم',
+                'description' => 'الحملات والمبادرات المتعلقة بالتعليم ودعم الطلبة والمؤسسات التعليمية.',
+            ],
+            'food' => [
+                'name' => 'الغذاء',
+                'description' => 'الحملات والمبادرات المتعلقة بالأمن الغذائي وتوفير الاحتياجات الغذائية.',
+            ],
+            'emergency' => [
+                'name' => 'الطوارئ',
+                'description' => 'حملات الإغاثة والاستجابة للحالات الطارئة والكوارث.',
+            ],
+            'shelter' => [
+                'name' => 'الإيواء',
+                'description' => 'الحملات والمبادرات المتعلقة بتوفير السكن والمأوى للمحتاجين.',
+            ],
+        ])->mapWithKeys(function (array $data, string $key): array {
             $category = Category::query()->firstOrCreate(
-                ['name' => $name],
+                ['name' => $data['name']],
                 [
                     'id' => (string) Str::uuid(),
-                    'target' => 'campaign',
-                    'description' => $description,
+                    'description' => $data['description'],
                     'status' => 'active',
                     'usage_count' => 0,
                 ],
             );
 
-            return [$name => $category->id];
+            return [$key => $category->id];
         });
 
         Campaign::create([
