@@ -13,7 +13,6 @@ class CategoryFactory extends Factory
     {
         return [
             'name' => $this->faker->unique()->words(2, true),
-            'target' => $this->faker->randomElement(['post', 'campaign']),
             'description' => $this->faker->sentence(12),
             'status' => $this->faker->randomElement(['active', 'inactive']),
             'usage_count' => $this->faker->numberBetween(0, 20),
