@@ -17,7 +17,6 @@ class CategoryRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', 'unique:categories,name,'.($this->category->id ?? 'NULL')],
-            'target' => ['required', 'in:post,campaign'],
             'description' => ['required', 'string', 'max:1000'],
             'status' => ['sometimes', 'in:active,inactive'],
         ];
