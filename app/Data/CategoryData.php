@@ -13,8 +13,6 @@ class CategoryData extends Data
     public function __construct(
         #[Max(255)]
         public ?string $name = null,
-        #[In('post', 'campaign')]
-        public ?string $target = null,
         #[Max(1000)]
         public ?string $description = null,
         #[In('active', 'inactive')]
@@ -26,7 +24,6 @@ class CategoryData extends Data
     {
         return array_filter([
             'name' => $this->name,
-            'target' => $this->target,
             'description' => $this->description,
             'status' => $this->status,
             'usage_count' => $this->usageCount,
