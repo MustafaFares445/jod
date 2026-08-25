@@ -25,7 +25,6 @@ class CategoryController extends Controller
 
         $perPage = max(1, min((int) $request->integer('perPage', 20), 100));
         $query = Category::query()
-            ->when(($target = $this->queryParam($request, 'filter.target')) && $target !== 'all', fn (Builder $builder) => $builder->where('target', $target))
             ->when(($status = $this->queryParam($request, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when(($search = $this->queryParam($request, 'filter.search')) && $search !== 'all', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
