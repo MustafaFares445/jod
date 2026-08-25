@@ -25,7 +25,6 @@ class CategoryDiscoveryRequest extends FormRequest
             'searchQueries' => ['nullable', 'string', 'max:255'],
             'filter.search' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'in:active'],
-            'target' => ['nullable', 'string', 'in:post,campaign'],
             'sort' => ['nullable', 'string', 'in:createdAt,-createdAt'],
         ];
     }
