@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'type', 'status', 'help_status', 'location',
+    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'location',
     'organization_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
     'rejection_reason', 'views_count', 'reactions_count', 'applications_count',
     'published_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'approved_at',
