@@ -12,7 +12,6 @@ return new class extends Migration
             Schema::create('categories', function (Blueprint $table) {
                 $table->string('id')->primary();
                 $table->string('name')->unique();
-                $table->enum('target', ['post', 'campaign']);
                 $table->text('description');
                 $table->enum('status', ['active', 'inactive'])->default('active');
                 $table->unsignedInteger('usage_count')->default(0);
