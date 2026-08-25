@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Org;
 
+use App\Enums\ContentAudience;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,6 +25,7 @@ class PostRequest extends FormRequest
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
             'type' => [$isUpdate ? 'sometimes' : 'required', Rule::in(['general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary'])],
+            'audience' => ['sometimes', 'string', Rule::enum(ContentAudience::class)],
             'status' => [$isUpdate ? 'prohibited' : 'sometimes', Rule::in(['draft', 'published'])],
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'campaignTitle' => [

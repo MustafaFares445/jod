@@ -23,32 +23,21 @@ class PostController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $this->authorize('viewAnyOrganization', Post::class);
-        $posts = $this->service->paginate(request()->all(), $this->organizationId());
-
-        return PostResource::collection($posts);
+        return PostResource::collection($this->service->paginate(request()->all(), $this->organizationId()));
     }
 
     public function store(PostRequest $request): PostResource
     {
         $this->authorize('createOrganization', Post::class);
-
-        $data = collect($request->validated())->merge([
-            'status' => $request->validated('status', 'published'),
-        ])->all();
-
+        $data = collect($request->validated())->merge(['status' => $request->validated('status', 'published')])->all();
         $post = $this->service->create(PostData::from($data), $this->organizationId());
-        $post->update([
-            'author_id' => auth()->id(),
-            'updated_by' => auth()->id(),
-        ]);
-
+        $post->update(['author_id' => auth()->id(), 'updated_by' => auth()->id()]);
         return PostResource::make($post->refresh()->load(['campaign', 'images', 'author', 'updatedBy']));
     }
 
     public function show(Post $post): PostResource
     {
         $this->authorize('viewOrganization', $post);
-
         return PostResource::make($post->loadMissing(['campaign', 'images', 'author', 'updatedBy']));
     }
 
@@ -65,10 +54,9 @@ class PostController extends Controller
                     'summary' => $validated['summary'] ?? $post->summary,
                     'type' => $validated['type'] ?? $post->type,
                     'location' => $validated['location'] ?? $post->location,
-                    'campaignTitle' => array_key_exists('campaignTitle', $validated)
-                        ? $validated['campaignTitle']
-                        : $post->campaign?->title,
+                    'campaignTitle' => array_key_exists('campaignTitle', $validated) ? $validated['campaignTitle'] : $post->campaign?->title,
                     'status' => $post->status,
+                    'audience' => $validated['audience'] ?? $post->audience ?? 'general',
                 ]),
                 $this->organizationId(),
             );
@@ -81,36 +69,27 @@ class PostController extends Controller
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
     {
         $status = (string) $request->validated('status');
-        $ability = match ($status) {
-            'published' => 'publishOrganization',
-            'archived' => 'archiveOrganization',
-            'draft' => 'restoreOrganization',
-        };
-
+        $ability = match ($status) { 'published' => 'publishOrganization', 'archived' => 'archiveOrganization', 'draft' => 'restoreOrganization' };
         $this->authorize($ability, $post);
         $post = $this->service->updateStatus($post, $status);
-
         return PostResource::make($post->refresh()->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function publish(Post $post): PostResource
     {
         $this->authorize('publishOrganization', $post);
-
         return PostResource::make($this->service->publish($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function archive(Post $post): PostResource
     {
         $this->authorize('archiveOrganization', $post);
-
         return PostResource::make($this->service->archive($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function restore(Post $post): PostResource
     {
         $this->authorize('restoreOrganization', $post);
-
         return PostResource::make($this->service->restore($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
@@ -118,14 +97,11 @@ class PostController extends Controller
     {
         $this->authorize('deleteOrganization', $post);
         $post->loadMissing('images');
-
         foreach ($post->images as $media) {
             Storage::disk($media->disk)->delete($media->path);
             $media->delete();
         }
-
         $this->service->delete($post);
-
         return response()->noContent();
     }
 
@@ -133,11 +109,8 @@ class PostController extends Controller
     {
         $organizationId = (string) auth()->user()?->organization_id;
         if ($organizationId === '') {
-            throw ValidationException::withMessages([
-                'organizationId' => ['Authenticated user is not linked to an organization.'],
-            ]);
+            throw ValidationException::withMessages(['organizationId' => ['Authenticated user is not linked to an organization.']]);
         }
-
         return $organizationId;
     }
 }

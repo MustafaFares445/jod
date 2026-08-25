@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'summary',
     'content',
     'category_id',
+    'audience',
     'status',
     'location',
     'images',

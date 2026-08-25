@@ -15,5 +15,6 @@ class PostData extends Data
         public string $location,
         public ?string $campaignTitle = null,
         public string $status = 'published',
+        public string $audience = 'general',
     ) {}
 }

@@ -12,7 +12,6 @@ use Illuminate\Support\Str;
 
 class MobileCampaignResource extends JsonResource
 {
-    /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
         $publisher = $this->publisher();
@@ -24,6 +23,7 @@ class MobileCampaignResource extends JsonResource
             'summary' => $this->summary,
             'content' => (string) ($this->content ?? $this->summary ?? ''),
             'category' => $this->category,
+            'audience' => $this->audience ?? 'general',
             'status' => $this->status,
             'publisher' => $publisher,
             'images' => $images,
@@ -53,11 +53,9 @@ class MobileCampaignResource extends JsonResource
 
         if (isset($publisher['phoneNumber'])) $data['phoneNumber'] = $publisher['phoneNumber'];
         if (isset($publisher['whatsappNumber'])) $data['whatsappNumber'] = $publisher['whatsappNumber'];
-
         return $data;
     }
 
-    /** @return array<string, mixed> */
     private function publisher(): array
     {
         $organization = $this->relationLoaded('organization') ? $this->organization : null;
@@ -68,43 +66,30 @@ class MobileCampaignResource extends JsonResource
         $phone = $organization?->phone ?? $manager?->phone;
         $city = $organization?->location ?? $manager?->city ?? $this->location;
         $bio = $organization?->description ?? $manager?->bio;
-
         $publisher = [
             'id' => (string) $publisherId,
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
             'avatarUrl' => null,
-            'verified' => $organization !== null
-                ? $organization->verification_status === 'verified'
-                : $manager?->email_verified_at !== null,
+            'verified' => $organization !== null ? $organization->verification_status === 'verified' : $manager?->email_verified_at !== null,
         ];
-
         if (filled($bio)) $publisher['bio'] = $bio;
         if (filled($city)) $publisher['city'] = $city;
         if (filled($phone)) {
             $publisher['phoneNumber'] = $phone;
             $publisher['whatsappNumber'] = $phone;
         }
-
         return $publisher;
     }
 
-    /** @return list<string> */
     private function images(): array
     {
         $campaignImages = ($this->relationLoaded('imageMedia') ? $this->imageMedia : $this->resource->imageMedia()->get())
             ->map(static fn (Media $media): string => $media->publicUrl());
-
-        if (! $this->relationLoaded('posts')) {
-            return $campaignImages->take(10)->values()->all();
-        }
-
+        if (! $this->relationLoaded('posts')) return $campaignImages->take(10)->values()->all();
         $postImages = $this->posts
-            ->flatMap(static function (Post $post) {
-                return $post->relationLoaded('images') ? $post->images : $post->images()->get();
-            })
+            ->flatMap(static function (Post $post) { return $post->relationLoaded('images') ? $post->images : $post->images()->get(); })
             ->map(static fn (Media $media): string => $media->publicUrl());
-
         return $campaignImages->concat($postImages)->unique()->take(10)->values()->all();
     }
 

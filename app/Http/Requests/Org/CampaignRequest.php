@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Org;
 
+use App\Enums\ContentAudience;
 use App\Support\SyrianGovernorates;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,7 @@ class CampaignRequest extends FormRequest
                     ->where('status', 'active')
                     ->whereNull('deleted_at')),
             ],
+            'audience' => ['sometimes', 'string', Rule::enum(ContentAudience::class)],
             'status' => $isUpdate
                 ? [$allowsStatusUpdate ? 'sometimes' : 'prohibited', Rule::in(['draft', 'active', 'closed'])]
                 : ['sometimes', Rule::in(['draft', 'active'])],

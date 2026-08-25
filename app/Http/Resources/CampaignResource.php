@@ -21,6 +21,7 @@ class CampaignResource extends JsonResource
             'summary' => $this->summary,
             'categoryId' => $this->category_id,
             'category' => $category?->name,
+            'audience' => $this->audience ?? 'general',
             'status' => $this->status,
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,

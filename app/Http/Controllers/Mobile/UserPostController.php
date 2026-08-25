@@ -20,9 +20,6 @@ class UserPostController extends Controller
 {
     public function __construct(private readonly UserPostService $service) {}
 
-    /**
-     * List the authenticated user's posts.
-     */
     public function index(MyPostRequest $request): JsonResponse
     {
         $paginator = $this->service->paginate($request->user(), $request->validated());
@@ -33,9 +30,6 @@ class UserPostController extends Controller
         );
     }
 
-    /**
-     * Show one post owned by the authenticated user, including drafts and rejected posts.
-     */
     public function show(Request $request, Post $post): JsonResponse
     {
         Gate::authorize('viewOwn', $post);
@@ -46,37 +40,34 @@ class UserPostController extends Controller
         );
     }
 
-    /**
-     * Create a draft or submit a new post for review.
-     *
-     * Media is intentionally not accepted in this request. If images are needed,
-     * create the post with saveAsDraft=true, upload each file through the general
-     * media manager, then call the submit endpoint.
-     */
     public function store(PostRequest $request): JsonResponse
     {
         Gate::authorize('createOwn', Post::class);
 
-        $post = $this->service->create($request->user(), $request->validated());
+        $validated = $request->validated();
+        $post = $this->service->create($request->user(), $validated);
+        if (array_key_exists('audience', $validated)) {
+            $post->update(['audience' => $validated['audience']]);
+            $post->refresh()->loadMissing('images');
+        }
         $message = $request->savesAsDraft() ? 'Draft saved successfully.' : 'Post submitted for review.';
 
-        return MobileApiResponse::success(
-            UserPostResource::make($post)->resolve($request),
-            $message,
-        );
+        return MobileApiResponse::success(UserPostResource::make($post)->resolve($request), $message);
     }
 
-    /**
-     * Update the authenticated user's draft or rejected post.
-     *
-     * Media changes are handled through /api/v1/media/post/{postId}/images.
-     */
     public function update(PostRequest $request, Post $post): JsonResponse
     {
         Gate::authorize('updateOwn', $post);
 
+        $validated = $request->validated();
+        $post = $this->service->update($post, $validated);
+        if (array_key_exists('audience', $validated)) {
+            $post->update(['audience' => $validated['audience']]);
+            $post->refresh()->loadMissing('images');
+        }
+
         return MobileApiResponse::success(
-            UserPostResource::make($this->service->update($post, $request->validated()))->resolve($request),
+            UserPostResource::make($post)->resolve($request),
             'Post updated successfully.',
         );
     }
@@ -114,7 +105,6 @@ class UserPostController extends Controller
     public function destroy(Request $request, Post $post): JsonResponse
     {
         Gate::authorize('deleteOwn', $post);
-
         $this->service->delete($post);
 
         return MobileApiResponse::success(null, 'Post deleted successfully.');

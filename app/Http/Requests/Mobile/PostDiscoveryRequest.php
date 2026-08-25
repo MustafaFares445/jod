@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Mobile;
 
+use App\Enums\ContentAudience;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class PostDiscoveryRequest extends FormRequest
 {
@@ -13,7 +15,7 @@ class PostDiscoveryRequest extends FormRequest
         return true;
     }
 
-    /** @return array<string, list<string>> */
+    /** @return array<string, list<mixed>> */
     public function rules(): array
     {
         return [
@@ -26,6 +28,7 @@ class PostDiscoveryRequest extends FormRequest
             'status' => ['nullable', 'string', 'in:published'],
             'actionState' => ['nullable', 'string', 'in:open,submitted,closed'],
             'type' => ['nullable', 'string', 'max:50'],
+            'audience' => ['nullable', 'string', Rule::enum(ContentAudience::class)],
             'location' => ['nullable', 'string', 'max:255'],
             'categoryId' => ['nullable', 'string', 'exists:categories,id'],
             'category' => ['nullable', 'string', 'max:255'],

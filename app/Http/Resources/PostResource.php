@@ -23,6 +23,7 @@ class PostResource extends JsonResource
             'description' => $this->content,
             'body' => $this->content,
             'type' => $this->type,
+            'audience' => $this->audience ?? 'general',
             'status' => $this->status,
             'organizationName' => $this->organization?->name,
             'authorName' => $this->whenLoaded('author', fn () => $this->author?->name),
@@ -51,17 +52,9 @@ class PostResource extends JsonResource
         ];
     }
 
-    /** @return array{id: string, name: string, email: string|null}|null */
     private function userSummary(?User $user): ?array
     {
-        if ($user === null) {
-            return null;
-        }
-
-        return [
-            'id' => (string) $user->id,
-            'name' => (string) $user->name,
-            'email' => $user->email,
-        ];
+        if ($user === null) return null;
+        return ['id' => (string) $user->id, 'name' => (string) $user->name, 'email' => $user->email];
     }
 }
