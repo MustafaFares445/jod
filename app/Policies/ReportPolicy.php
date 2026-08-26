@@ -58,16 +58,6 @@ class ReportPolicy
             && $this->authorizeOrganizationAction($user, PermissionAction::CLAIM);
     }
 
-    public function requestInfo(User $user, Report $model): bool
-    {
-        if ($user->user_type === 'admin') {
-            return $this->authorizeAction($user, PermissionAction::REQUEST_INFO);
-        }
-
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::REQUEST_INFO);
-    }
-
     public function close(User $user, Report $model): bool
     {
         if ($user->user_type === 'admin') {

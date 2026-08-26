@@ -146,7 +146,7 @@ class CampaignSeeder extends Seeder
             'summary' => 'إنشاء مرافق إيواء آمنة للأشخاص الذين لا يملكون سكناً.',
             'content' => 'تفاصيل مشروع المأوى ومراحل التنفيذ والطاقة الاستيعابية المستهدفة.',
             'category_id' => $categoryIds['shelter'],
-            'status' => 'pending',
+            'status' => 'active',
             'location' => 'عمّان',
             'goal_amount' => 100000,
             'raised_amount' => 0,

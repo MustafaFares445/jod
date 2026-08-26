@@ -27,13 +27,16 @@ class PostReviewPolicy
 
     public function view(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::VIEW);
+        return $this->authorizeAction($user, PermissionAction::VIEW)
+            && $this->isReviewableUserPost($model);
     }
 
     public function viewAdmin(User $user, Post $model): bool
     {
         return $user->user_type === 'admin'
-            && $this->authorizeAction($user, PermissionAction::VIEW);
+            && $this->authorizeAction($user, PermissionAction::VIEW)
+            && $model->organization_id === null
+            && ($this->isReviewableUserPost($model) || $this->isAdminPost($model));
     }
 
     public function createAdmin(User $user): bool
@@ -45,7 +48,9 @@ class PostReviewPolicy
     public function updateAdmin(User $user, Post $model): bool
     {
         return $user->user_type === 'admin'
-            && $this->authorizeAction($user, PermissionAction::APPROVE);
+            && $this->authorizeAction($user, PermissionAction::APPROVE)
+            && $model->organization_id === null
+            && $this->isAdminPost($model);
     }
 
     public function deleteAdmin(User $user, Post $model): bool
@@ -67,12 +72,14 @@ class PostReviewPolicy
 
     public function approve(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::APPROVE);
+        return $this->authorizeAction($user, PermissionAction::APPROVE)
+            && $this->isReviewableUserPost($model);
     }
 
     public function reject(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::REJECT);
+        return $this->authorizeAction($user, PermissionAction::REJECT)
+            && $this->isReviewableUserPost($model);
     }
 
     public function createOrganization(User $user): bool
@@ -171,5 +178,23 @@ class PostReviewPolicy
     {
         return $model->author_id !== null
             && (string) $user->id === (string) $model->author_id;
+    }
+
+    private function isReviewableUserPost(Post $model): bool
+    {
+        if ($model->organization_id !== null || $model->author_id === null) {
+            return false;
+        }
+
+        return $model->author()->where('user_type', '!=', 'admin')->exists();
+    }
+
+    private function isAdminPost(Post $model): bool
+    {
+        if ($model->organization_id !== null || $model->author_id === null) {
+            return false;
+        }
+
+        return $model->author()->where('user_type', 'admin')->exists();
     }
 }

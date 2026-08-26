@@ -68,7 +68,6 @@ class ReportSeeder extends Seeder
             'timeline' => [
                 ['status' => 'new', 'timestamp' => now()->subDays(3)->toIso8601String(), 'note' => 'تم إرسال البلاغ.'],
                 ['status' => 'in_progress', 'timestamp' => now()->subDays(2)->toIso8601String(), 'note' => 'البلاغ قيد التحقيق.'],
-                ['action' => 'request_info', 'status' => 'in_progress', 'timestamp' => now()->subDay()->toIso8601String(), 'note' => 'تم طلب معلومات إضافية.'],
             ],
             'created_at' => now()->subDays(4),
             'updated_at' => now()->subDay(),

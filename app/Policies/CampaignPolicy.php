@@ -8,28 +8,10 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Campaign;
 use App\Models\User;
-use App\Policies\Concerns\AuthorizesByPermissionGroup;
 use App\Support\Permissions\PermissionNameResolver;
 
-class CampaignReviewPolicy
+class CampaignPolicy
 {
-    use AuthorizesByPermissionGroup;
-
-    protected function permissionGroup(): PermissionGroup
-    {
-        return PermissionGroup::CAMPAIGN_REVIEW;
-    }
-
-    public function viewAny(User $user): bool
-    {
-        return false;
-    }
-
-    public function view(User $user, Campaign $model): bool
-    {
-        return false;
-    }
-
     public function viewAnyOrganization(User $user): bool
     {
         return $user->organization_id !== null
@@ -40,16 +22,6 @@ class CampaignReviewPolicy
     {
         return $this->sameOrganization($user, $model)
             && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
-    }
-
-    public function approve(User $user, Campaign $model): bool
-    {
-        return false;
-    }
-
-    public function reject(User $user, Campaign $model): bool
-    {
-        return false;
     }
 
     public function createOrganization(User $user): bool

@@ -79,23 +79,6 @@ class ReportController extends Controller
         return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
     }
 
-    public function requestInfo(Request $request, Report $report): ReportResource
-    {
-        $this->authorize('requestInfo', $report);
-
-        $data = $request->validate([
-            'note' => ['nullable', 'string', 'max:2000'],
-        ]);
-
-        $report = $this->service->requestInfo(
-            $report,
-            $data['note'] ?? null,
-            (string) $request->user()->name,
-        );
-
-        return ReportResource::make($report->refresh()->loadMissing(ReportService::relations()));
-    }
-
     public function close(Request $request, Report $report): ReportResource
     {
         $this->authorize('close', $report);

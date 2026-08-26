@@ -33,7 +33,11 @@ class OverviewService
                 [
                     'id' => 'pending_posts',
                     'label' => 'Pending Posts',
-                    'value' => Post::where('status', 'pending')->whereNull('organization_id')->count(),
+                    'value' => Post::query()
+                        ->where('status', 'pending')
+                        ->whereNull('organization_id')
+                        ->whereHas('author', fn ($author) => $author->where('user_type', '!=', 'admin'))
+                        ->count(),
                     'subLabel' => 'Awaiting review',
                     'icon' => 'document',
                 ],
