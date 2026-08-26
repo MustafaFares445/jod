@@ -116,19 +116,19 @@ class MobileHomePostResource extends JsonResource
     private function mobilePostType(): string
     {
         return match ($this->type) {
-            'volunteer_opportunity', 'donation_campaign', 'help_request', 'campaign_update', 'awareness' => $this->type,
+            'volunteer_opportunity', 'donation_campaign', 'help_request', 'service_offer', 'campaign_update', 'awareness' => $this->type,
             default => 'awareness',
         };
     }
 
     private function ctaType(string $postType): string
     {
-        return match ($postType) { 'volunteer_opportunity' => 'apply', 'donation_campaign' => 'donate', 'help_request' => 'contact', 'campaign_update' => 'details', default => 'none' };
+        return match ($postType) { 'volunteer_opportunity' => 'apply', 'donation_campaign' => 'donate', 'help_request', 'service_offer' => 'contact', 'campaign_update' => 'details', default => 'none' };
     }
 
     private function ctaLabel(string $ctaType): string
     {
-        return match ($ctaType) { 'apply' => 'قدّم الآن', 'donate' => 'تبرّع الآن', 'contact' => 'تقديم مساعدة', 'details' => 'عرض التفاصيل', default => '' };
+        return match ($ctaType) { 'apply' => 'قدّم الآن', 'donate' => 'تبرّع الآن', 'contact' => $this->type === 'service_offer' ? 'تواصل' : 'تقديم مساعدة', 'details' => 'عرض التفاصيل', default => '' };
     }
 
     private function ctaState(string $ctaType): ?string

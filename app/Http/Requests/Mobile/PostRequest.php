@@ -22,7 +22,7 @@ class PostRequest extends FormRequest
     {
         if ($this->isMethod('patch')) {
             return [
-                'type' => ['sometimes', 'string', Rule::in(['volunteer_opportunity', 'donation_campaign', 'help_request'])],
+                'type' => ['sometimes', 'string', Rule::in(['volunteer_opportunity', 'donation_campaign', 'help_request', 'service_offer'])],
                 'title' => ['sometimes', 'nullable', 'string', 'min:4', 'max:255'],
                 'details' => ['sometimes', 'nullable', 'string', 'min:10'],
                 'city' => ['sometimes', 'nullable', 'string', 'min:2', 'max:100'],
@@ -36,7 +36,7 @@ class PostRequest extends FormRequest
         $requiredWhenSubmitting = $submitting ? 'required' : 'nullable';
 
         return [
-            'type' => ['required', 'string', Rule::in(['volunteer_opportunity', 'donation_campaign', 'help_request'])],
+            'type' => ['required', 'string', Rule::in(['volunteer_opportunity', 'donation_campaign', 'help_request', 'service_offer'])],
             'title' => [$requiredWhenSubmitting, 'string', 'min:4', 'max:255'],
             'details' => [$requiredWhenSubmitting, 'string', 'min:10'],
             'city' => [$requiredWhenSubmitting, 'string', 'min:2', 'max:100'],

@@ -48,8 +48,9 @@ class LookupController extends Controller
             ['code' => 'volunteer_opportunity', 'label' => 'فرصة تطوع', 'hint' => 'مناسب لطلبات المتطوعين.', 'canCreate' => true, 'canFilter' => true, 'sortOrder' => 1],
             ['code' => 'donation_campaign', 'label' => 'حملة تبرع', 'hint' => 'مناسب لحملات جمع التبرعات.', 'canCreate' => true, 'canFilter' => true, 'sortOrder' => 2],
             ['code' => 'help_request', 'label' => 'طلب مساعدة', 'hint' => 'مناسب لطلبات المساعدة المباشرة.', 'canCreate' => true, 'canFilter' => true, 'sortOrder' => 3],
-            ['code' => 'campaign_update', 'label' => 'تحديث حملة', 'hint' => 'منشورات تحديثية مرتبطة بالحملات.', 'canCreate' => false, 'canFilter' => true, 'sortOrder' => 4],
-            ['code' => 'awareness', 'label' => 'منشور توعوي', 'hint' => 'محتوى توعوي أو إرشادي.', 'canCreate' => false, 'canFilter' => true, 'sortOrder' => 5],
+            ['code' => 'service_offer', 'label' => 'تقديم مساعدة', 'hint' => 'مناسب لعرض خدمة أو مساعدة يمكنك تقديمها.', 'canCreate' => true, 'canFilter' => true, 'sortOrder' => 4],
+            ['code' => 'campaign_update', 'label' => 'تحديث حملة', 'hint' => 'منشورات تحديثية مرتبطة بالحملات.', 'canCreate' => false, 'canFilter' => true, 'sortOrder' => 5],
+            ['code' => 'awareness', 'label' => 'منشور توعوي', 'hint' => 'محتوى توعوي أو إرشادي.', 'canCreate' => false, 'canFilter' => true, 'sortOrder' => 6],
         ], 'Post types retrieved successfully.');
     }
 

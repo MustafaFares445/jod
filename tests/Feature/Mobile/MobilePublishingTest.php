@@ -54,6 +54,24 @@ test('my posts filters active as internal published', function () {
     $response->assertJsonMissing(['title' => 'Draft post']);
 });
 test('create draft allows incomplete fields and assigns owner', function () {
+test('user can create and submit a service offer post', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $response = $this->postJson('/api/mobile/posts', [
+        'type' => 'service_offer',
+        'title' => 'I can provide tutoring',
+        'details' => 'I can provide free math tutoring for students in the city.',
+        'city' => 'Damascus',
+        'saveAsDraft' => false,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.type', 'service_offer')
+        ->assertJsonPath('data.status', 'pending');
+});
+
+
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 

@@ -35,7 +35,7 @@ class PostSubmitRequest extends FormRequest
                     return;
                 }
 
-                if (! in_array($post->type, ['volunteer_opportunity', 'donation_campaign', 'help_request'], true)) {
+                if (! in_array($post->type, ['volunteer_opportunity', 'donation_campaign', 'help_request', 'service_offer'], true)) {
                     $validator->errors()->add('type', 'The selected type is invalid.');
                 }
 
