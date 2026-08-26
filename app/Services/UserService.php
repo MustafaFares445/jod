@@ -47,6 +47,10 @@ class UserService
         return DB::transaction(static function () use ($user, $status) {
             tap($user)->update(['status' => $status]);
 
+            if ($status !== 'active') {
+                $user->tokens()->delete();
+            }
+
             return $user;
         });
     }

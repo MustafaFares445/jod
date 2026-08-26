@@ -28,6 +28,7 @@ class MobileHomePostResource extends JsonResource
         $isLiked = $this->relationLoaded('likes') && $this->likes->isNotEmpty();
         $isSaved = $this->relationLoaded('saves') && $this->saves->isNotEmpty();
         $images = $this->relationLoaded('images') ? $this->images : $this->resource->images()->get();
+        $videos = $this->relationLoaded('videos') ? $this->videos : $this->resource->videos()->get();
 
         $data = [
             'id' => (string) $this->id,
@@ -37,6 +38,7 @@ class MobileHomePostResource extends JsonResource
             'content' => (string) ($this->content ?? $this->summary ?? ''),
             'createdAt' => ($this->published_at ?? $this->created_at)?->toIso8601String(),
             'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
+            'videos' => $videos->map(static fn (Media $video): string => $video->publicUrl())->values()->all(),
             'cta' => $cta,
             'stats' => ['likes' => (int) $this->reactions_count, 'comments' => 0, 'shares' => 0],
             'viewsCount' => (int) $this->views_count,

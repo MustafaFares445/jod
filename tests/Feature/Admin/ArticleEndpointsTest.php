@@ -6,12 +6,15 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Article;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->user = User::factory()->create();
+    Storage::fake('public');
+    $this->user = User::factory()->create(['name' => 'Article Admin']);
     $this->grantPermissions($this->user, [
         [PermissionGroup::ARTICLE, PermissionAction::VIEW],
         [PermissionGroup::ARTICLE, PermissionAction::CREATE],
@@ -24,148 +27,122 @@ beforeEach(function () {
 test('lists articles', function () {
     Article::factory()->count(3)->create();
 
-    $response = $this->getJson('/api/v1/admin/articles');
-
-    $response->assertOk();
-    expect($response->json('data'))->toHaveCount(3);
+    $this->getJson('/api/v1/admin/articles')
+        ->assertOk()
+        ->assertJsonCount(3, 'data');
 });
 
-test('creates an article', function () {
-    $payload = [
+test('creates a published article from title and description and owns publisher on backend', function () {
+    $response = $this->postJson('/api/v1/admin/articles', [
         'title' => 'Getting Started with Our Platform',
-        'excerpt' => 'Learn the basics of using our platform',
-        'content' => 'This is the full article content...',
-        'status' => 'published',
-        'authorName' => 'John Doe',
-    ];
-
-    $response = $this->postJson('/api/v1/admin/articles', $payload);
-
-    $response->assertCreated();
-    expect($response->json('data.title'))->toEqual('Getting Started with Our Platform');
-    expect($response->json('data.status'))->toEqual('published');
-    expect($response->json('data.slug'))->not->toBeEmpty();
-});
-
-test('auto generates slug for article', function () {
-    $payload = [
-        'title' => 'My Test Article',
-        'excerpt' => 'Test excerpt',
-        'content' => 'Test content',
+        'description' => 'This is the article description.',
+        'authorName' => 'Frontend Author Must Be Ignored',
         'status' => 'draft',
-        'authorName' => 'Jane Doe',
-    ];
+    ]);
 
-    $response = $this->postJson('/api/v1/admin/articles', $payload);
+    $response->assertCreated()
+        ->assertJsonPath('data.title', 'Getting Started with Our Platform')
+        ->assertJsonPath('data.description', 'This is the article description.')
+        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.authorName', 'Article Admin')
+        ->assertJsonPath('data.images', [])
+        ->assertJsonPath('data.videos', []);
 
-    $response->assertCreated();
-    expect($response->json('data.slug'))->toEqual('my-test-article');
+    $article = Article::query()->findOrFail((string) $response->json('data.id'));
+    expect($article->author_id)->toBe($this->user->id)
+        ->and($article->published_at)->not->toBeNull();
 });
 
-test('ignores slug supplied by frontend', function () {
-    $payload = [
+test('auto generates slug and ignores frontend slug', function () {
+    $response = $this->postJson('/api/v1/admin/articles', [
         'title' => 'Backend Owns This Slug',
+        'description' => 'Description',
         'slug' => 'frontend-controlled-slug',
-        'excerpt' => 'Test excerpt',
-        'content' => 'Test content',
-        'status' => 'draft',
-        'authorName' => 'Jane Doe',
-    ];
+    ]);
 
-    $response = $this->postJson('/api/v1/admin/articles', $payload);
-
-    $response->assertCreated();
-    expect($response->json('data.slug'))->toEqual('backend-owns-this-slug');
+    $response->assertCreated()
+        ->assertJsonPath('data.slug', 'backend-owns-this-slug');
     $this->assertDatabaseMissing('articles', ['slug' => 'frontend-controlled-slug']);
 });
 
-test('regenerates slug when article title changes', function () {
-    $article = Article::factory()->create(['title' => 'Original Article Title']);
+test('updates only title and description and keeps backend publisher', function () {
+    $article = Article::factory()->create([
+        'author_id' => $this->user->id,
+        'author_name' => $this->user->name,
+    ]);
 
-    $payload = [
+    $response = $this->patchJson("/api/v1/admin/articles/{$article->id}", [
         'title' => 'Updated Article Title',
-        'slug' => 'frontend-update-slug',
-        'excerpt' => 'Updated excerpt',
-        'content' => 'Updated content',
+        'description' => 'Updated article description',
+        'authorName' => 'Another Frontend Author',
         'status' => 'draft',
-        'authorName' => 'Updated Author',
-    ];
+    ]);
 
-    $response = $this->patchJson("/api/v1/admin/articles/{$article->id}", $payload);
-
-    $response->assertOk();
-    expect($response->json('data.slug'))->toEqual('updated-article-title');
+    $response->assertOk()
+        ->assertJsonPath('data.title', 'Updated Article Title')
+        ->assertJsonPath('data.description', 'Updated article description')
+        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.authorName', $this->user->name)
+        ->assertJsonPath('data.slug', 'updated-article-title');
 });
 
-test('sets published at when publishing', function () {
-    $payload = [
-        'title' => 'Published Article',
-        'excerpt' => 'Test excerpt',
-        'status' => 'published',
-        'authorName' => 'Test Author',
-    ];
+test('article media api accepts optional multiple images and videos', function () {
+    $article = Article::factory()->create([
+        'author_id' => $this->user->id,
+        'author_name' => $this->user->name,
+    ]);
 
-    $response = $this->postJson('/api/v1/admin/articles', $payload);
+    $this->post("/api/v1/media/article/{$article->id}/images", [
+        'file' => UploadedFile::fake()->image('article-one.jpg'),
+    ], ['Accept' => 'application/json'])->assertCreated();
 
-    $response->assertCreated();
-    expect($response->json('data.publishedAt'))->not->toBeEmpty();
+    $this->post("/api/v1/media/article/{$article->id}/images", [
+        'file' => UploadedFile::fake()->image('article-two.webp'),
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    $this->post("/api/v1/media/article/{$article->id}/videos", [
+        'file' => UploadedFile::fake()->create('article-video.mp4', 250, 'video/mp4'),
+    ], ['Accept' => 'application/json'])->assertCreated();
+
+    $this->getJson("/api/v1/admin/articles/{$article->id}")
+        ->assertOk()
+        ->assertJsonCount(2, 'data.images')
+        ->assertJsonCount(1, 'data.videos')
+        ->assertJsonCount(3, 'data.media');
 });
 
-test('shows a single article', function () {
-    $article = Article::factory()->create();
-
-    $response = $this->getJson("/api/v1/admin/articles/{$article->id}");
-
-    $response->assertOk();
-    expect($response->json('data.id'))->toEqual($article->id);
-    expect($response->json('data.title'))->toEqual($article->title);
+test('article can be created without media', function () {
+    $this->postJson('/api/v1/admin/articles', [
+        'title' => 'Text only article',
+        'description' => 'No media is required for this article.',
+    ])->assertCreated()
+        ->assertJsonPath('data.images', [])
+        ->assertJsonPath('data.videos', []);
 });
 
-test('updates an article', function () {
-    $article = Article::factory()->create();
+test('deletes an article and its media', function () {
+    $article = Article::factory()->create([
+        'author_id' => $this->user->id,
+        'author_name' => $this->user->name,
+    ]);
 
-    $payload = [
-        'title' => 'Updated Title',
-        'excerpt' => 'Updated excerpt',
-        'content' => 'Updated content',
-        'status' => 'published',
-        'authorName' => 'Updated Author',
-    ];
+    $upload = $this->post("/api/v1/media/article/{$article->id}/images", [
+        'file' => UploadedFile::fake()->image('delete-me.jpg'),
+    ], ['Accept' => 'application/json'])->assertCreated();
 
-    $response = $this->patchJson("/api/v1/admin/articles/{$article->id}", $payload);
+    $mediaId = (string) $upload->json('data.id');
 
-    $response->assertOk();
-    expect($response->json('data.title'))->toEqual('Updated Title');
-    expect($response->json('data.authorName'))->toEqual('Updated Author');
-});
-
-test('deletes an article', function () {
-    $article = Article::factory()->create();
-
-    $response = $this->deleteJson("/api/v1/admin/articles/{$article->id}");
-
-    $response->assertOk()->assertJsonPath('message', 'Data deleted successfully.');
+    $this->deleteJson("/api/v1/admin/articles/{$article->id}")->assertNoContent();
     $this->assertDatabaseMissing('articles', ['id' => $article->id]);
+    $this->assertDatabaseMissing('media', ['id' => $mediaId]);
 });
 
-test('filters articles by status', function () {
-    Article::factory()->published()->create(['title' => 'Published']);
-    Article::factory()->draft()->create(['title' => 'Draft']);
+test('filters and searches articles', function () {
+    Article::factory()->published()->create(['title' => 'Beginners Guide']);
+    Article::factory()->draft()->create(['title' => 'Advanced Topics']);
 
-    $response = $this->getJson('/api/v1/admin/articles?filter.status=published');
-
-    $response->assertOk();
-    expect($response->json('data'))->toHaveCount(1);
-    expect($response->json('data.0.status'))->toEqual('published');
-});
-
-test('searches articles by title', function () {
-    Article::factory()->create(['title' => 'Beginners Guide']);
-    Article::factory()->create(['title' => 'Advanced Topics']);
-
-    $response = $this->getJson('/api/v1/admin/articles?filter.search=Beginners');
-
-    $response->assertOk();
-    expect($response->json('data'))->toHaveCount(1);
-    expect($response->json('data.0.title'))->toEqual('Beginners Guide');
+    $this->getJson('/api/v1/admin/articles?filter.status=published&filter.search=Beginners')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.title', 'Beginners Guide');
 });

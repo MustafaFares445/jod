@@ -22,6 +22,7 @@ class ArticleData extends Data
         public ?Carbon $publishedAt = null,
         #[Max(255)]
         public ?string $authorName = null,
+        public ?string $authorId = null,
     ) {}
 
     public function onlyModelAttributes(): array
@@ -33,6 +34,7 @@ class ArticleData extends Data
             'status' => $this->status,
             'published_at' => $this->publishedAt?->toDateTimeString(),
             'author_name' => $this->authorName,
+            'author_id' => $this->authorId,
         ], static fn (mixed $value): bool => $value !== null);
     }
 }

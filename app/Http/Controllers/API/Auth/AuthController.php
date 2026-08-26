@@ -32,6 +32,7 @@ class AuthController extends Controller
         $validated = $request->validated();
 
         $user = User::query()
+            ->with('organization')
             ->where('email', $validated['email'])
             ->first();
 
@@ -43,8 +44,12 @@ class AuthController extends Controller
             return $this->errorResponse('The provided credentials are incorrect.', 401);
         }
 
-        if ($validated['userType'] === 'companies' && $user->status !== 'active') {
-            return $this->errorResponse('This company account is not active.', 403);
+        if ($user->status !== 'active') {
+            return $this->errorResponse('This account is not active.', 403);
+        }
+
+        if ($validated['userType'] === 'companies' && ! $user->organization?->isActiveAndVerified()) {
+            return $this->errorResponse('This organization account must be active and verified before login.', 403);
         }
 
         $user->forceFill([

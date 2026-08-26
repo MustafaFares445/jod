@@ -103,6 +103,24 @@ class AuthController extends Controller
             );
         }
 
+        if ($user->status !== 'active') {
+            return MobileApiResponse::error(
+                'account_inactive',
+                'This account is not active.',
+                null,
+                403,
+            );
+        }
+
+        if ($user->organization_id !== null && ! $user->organization?->isActiveAndVerified()) {
+            return MobileApiResponse::error(
+                'organization_inactive',
+                'This organization account must be active and verified before login.',
+                null,
+                403,
+            );
+        }
+
         $user->forceFill([
             'last_active_at' => now(),
         ])->save();

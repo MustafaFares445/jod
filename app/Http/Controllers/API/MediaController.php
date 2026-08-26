@@ -8,6 +8,7 @@ use App\Enums\MediaModel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Media\MediaUploadRequest;
 use App\Http\Resources\MediaResource;
+use App\Models\Article;
 use App\Models\Post;
 use App\Services\MediaService;
 use Illuminate\Database\Eloquent\Model;
@@ -77,6 +78,9 @@ class MediaController extends Controller
             MediaModel::ORGANIZATION => $this->authorize('updateSettings', $target),
             MediaModel::CAMPAIGN => $this->authorize('updateOrganization', $target),
             MediaModel::POST => $this->authorizePost($target),
+            MediaModel::ARTICLE => $target instanceof Article
+                ? $this->authorize('update', $target)
+                : abort(404),
         };
     }
 

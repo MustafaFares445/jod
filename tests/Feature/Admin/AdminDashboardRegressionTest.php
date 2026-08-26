@@ -100,7 +100,7 @@ test('admin with reset password permission can change another user password', fu
     expect(Hash::check('12345678', $user->fresh()->password))->toBeTrue();
 });
 
-test('admin can create ordinary post without images then upload multiple images through media manager', function () {
+test('admin can create ordinary post without media then upload images and videos through media manager', function () {
     Sanctum::actingAs($this->admin);
 
     $response = $this->postJson('/api/v1/admin/posts', [
@@ -108,9 +108,10 @@ test('admin can create ordinary post without images then upload multiple images 
         'description' => 'General announcement created by an administrator.',
     ])->assertOk()
         ->assertJsonPath('data.type', 'general')
-        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.status', 'approved')
         ->assertJsonPath('data.author.id', $this->admin->id)
-        ->assertJsonPath('data.images', []);
+        ->assertJsonPath('data.images', [])
+        ->assertJsonPath('data.videos', []);
 
     $postId = (string) $response->json('data.id');
 
@@ -124,10 +125,15 @@ test('admin can create ordinary post without images then upload multiple images 
         'file' => UploadedFile::fake()->image('second.webp'),
     ], ['Accept' => 'application/json'])->assertCreated();
 
+    $this->post("/api/v1/media/post/{$postId}/videos", [
+        'file' => UploadedFile::fake()->create('announcement.mp4', 250, 'video/mp4'),
+    ], ['Accept' => 'application/json'])->assertCreated();
+
     $this->getJson("/api/v1/admin/posts/{$postId}")
         ->assertOk()
         ->assertJsonCount(2, 'data.images')
-        ->assertJsonCount(2, 'data.media')
+        ->assertJsonCount(1, 'data.videos')
+        ->assertJsonCount(3, 'data.media')
         ->assertJsonPath('data.media.0.id', $first)
         ->assertJsonPath('data.updatedBy.id', $this->admin->id);
 

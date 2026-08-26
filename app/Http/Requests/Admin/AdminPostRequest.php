@@ -18,18 +18,17 @@ class AdminPostRequest extends FormRequest
     {
         $isUpdate = $this->route('post') !== null;
 
+        if (! $isUpdate) {
+            return [
+                'title' => ['required', 'string', 'max:255'],
+                'description' => ['required', 'string'],
+            ];
+        }
+
         return [
-            'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
-            'summary' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'content' => [$isUpdate ? 'sometimes' : 'required_without:description', 'nullable', 'string'],
-            'description' => [$isUpdate ? 'sometimes' : 'required_without:content', 'nullable', 'string'],
-            'type' => ['sometimes', 'string', 'max:100'],
+            'title' => ['sometimes', 'string', 'max:255'],
+            'description' => ['sometimes', 'string'],
             'status' => ['sometimes', Rule::in(['draft', 'pending', 'approved', 'rejected', 'published', 'archived'])],
-            'location' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'category_id' => ['sometimes', 'nullable', Rule::exists('categories', 'id')],
-            'campaign_id' => ['sometimes', 'nullable', Rule::exists('campaigns', 'id')],
-            'organization_id' => ['sometimes', 'nullable', Rule::exists('organizations', 'id')],
-            'author_id' => ['sometimes', 'nullable', Rule::exists('users', 'id')],
         ];
     }
 }

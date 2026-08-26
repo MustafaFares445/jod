@@ -78,11 +78,15 @@ test('updates status verification and accepts', function () {
 
     $this->patchJson("/api/v1/admin/organizations/{$organization->id}/status", [
         'status' => 'active',
-    ])->assertOk()->assertJsonPath('data.status', 'active');
+    ])->assertOk()
+        ->assertJsonPath('data.status', 'active')
+        ->assertJsonPath('data.verificationStatus', 'verified');
 
     $this->patchJson("/api/v1/admin/organizations/{$organization->id}/verification", [
-        'verificationStatus' => 'verified',
-    ])->assertOk()->assertJsonPath('data.verificationStatus', 'verified');
+        'verificationStatus' => 'unverified',
+    ])->assertOk()
+        ->assertJsonPath('data.status', 'inactive')
+        ->assertJsonPath('data.verificationStatus', 'unverified');
 
     $this->postJson("/api/v1/admin/organizations/{$organization->id}/accept")
         ->assertOk()

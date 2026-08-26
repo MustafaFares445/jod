@@ -93,7 +93,7 @@ class PostService
         $audience = $params['audience'] ?? $this->param($params, 'filter.audience');
 
         $query = Post::query()
-            ->with(['campaign', 'images'])
+            ->with(['campaign', 'images', 'videos'])
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when($audience && $audience !== 'all', fn (Builder $builder) => $builder->where('audience', $audience))
@@ -223,7 +223,7 @@ class PostService
 
     private function mobileRelations(?User $viewer): array
     {
-        $relations = ['organization', 'campaign', 'author', 'images'];
+        $relations = ['organization', 'campaign', 'author', 'images', 'videos'];
         if ($viewer === null) return $relations;
         $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);

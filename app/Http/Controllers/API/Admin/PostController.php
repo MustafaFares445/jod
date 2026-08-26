@@ -24,6 +24,7 @@ class PostController extends Controller
         'campaign',
         'category',
         'images',
+        'videos',
         'author',
         'updatedBy',
         'reviewedBy',
@@ -94,28 +95,25 @@ class PostController extends Controller
         $this->authorize('createAdmin', Post::class);
 
         $data = $request->validated();
-        $content = (string) ($data['content'] ?? $data['description'] ?? '');
-        $status = (string) ($data['status'] ?? 'published');
+        $content = trim((string) $data['description']);
         $actorId = (string) $request->user()->id;
         $now = now();
 
         $post = Post::query()->create([
-            'title' => $data['title'],
-            'summary' => $data['summary'] ?? mb_substr($content, 0, 255),
+            'title' => trim((string) $data['title']),
+            'summary' => mb_substr($content, 0, 255),
             'content' => $content,
-            'type' => $data['type'] ?? 'general',
-            'status' => $status,
-            'location' => $data['location'] ?? null,
-            'category_id' => $data['category_id'] ?? null,
-            'campaign_id' => $data['campaign_id'] ?? null,
-            'organization_id' => $data['organization_id'] ?? null,
-            'author_id' => $data['author_id'] ?? $actorId,
+            'type' => 'general',
+            'status' => 'approved',
+            'organization_id' => null,
+            'campaign_id' => null,
+            'author_id' => $actorId,
             'updated_by' => $actorId,
-            'published_at' => in_array($status, ['published', 'approved'], true) ? $now : null,
-            'reviewed_at' => $status === 'approved' ? $now : null,
-            'reviewed_by' => $status === 'approved' ? $actorId : null,
-            'approved_at' => $status === 'approved' ? $now : null,
-            'approved_by' => $status === 'approved' ? $actorId : null,
+            'published_at' => $now,
+            'reviewed_at' => $now,
+            'reviewed_by' => $actorId,
+            'approved_at' => $now,
+            'approved_by' => $actorId,
         ]);
 
         return PostResource::make($post->load(self::RELATIONS));
@@ -136,19 +134,14 @@ class PostController extends Controller
         $actorId = (string) $request->user()->id;
         $updates = ['updated_by' => $actorId];
 
-        foreach (['title', 'summary', 'type', 'location', 'category_id', 'campaign_id', 'organization_id', 'author_id'] as $field) {
-            if (array_key_exists($field, $data)) {
-                $updates[$field] = $data[$field];
-            }
+        if (array_key_exists('title', $data)) {
+            $updates['title'] = trim((string) $data['title']);
         }
 
-        if (array_key_exists('content', $data) || array_key_exists('description', $data)) {
-            $content = (string) ($data['content'] ?? $data['description'] ?? '');
+        if (array_key_exists('description', $data)) {
+            $content = trim((string) $data['description']);
             $updates['content'] = $content;
-
-            if (! array_key_exists('summary', $data)) {
-                $updates['summary'] = mb_substr($content, 0, 255);
-            }
+            $updates['summary'] = mb_substr($content, 0, 255);
         }
 
         if (array_key_exists('status', $data)) {
@@ -190,10 +183,10 @@ class PostController extends Controller
 
     public function destroy(Post $post): Response
     {
-        $post->loadMissing('images');
+        $post->loadMissing('media');
         $this->authorize('deleteAdmin', $post);
 
-        foreach ($post->images as $media) {
+        foreach ($post->media as $media) {
             Storage::disk($media->disk)->delete($media->path);
             $media->delete();
         }

@@ -15,9 +15,12 @@ use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Storage;
 
 class ArticleController extends Controller
 {
+    private const RELATIONS = ['author', 'media'];
+
     public function __construct(protected ArticleService $service) {}
 
     public function index(ArticleFilterRequest $request): AnonymousResourceCollection
@@ -29,6 +32,7 @@ class ArticleController extends Controller
         $search = SearchFilter::fromArray($queryParams);
 
         $articles = Article::query()
+            ->with(self::RELATIONS)
             ->when($statusFilter, fn (Builder $query) => $query->where('status', $statusFilter))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $searchQuery) use ($search): void {
@@ -47,30 +51,58 @@ class ArticleController extends Controller
     {
         $this->authorize('create', Article::class);
 
-        $article = $this->service->store(ArticleData::from($request->validated()));
+        $data = $request->validated();
+        $description = trim((string) $data['description']);
+        $actor = $request->user();
+        $article = $this->service->store(ArticleData::from([
+            'title' => trim((string) $data['title']),
+            'excerpt' => mb_substr($description, 0, 500),
+            'content' => $description,
+            'status' => 'published',
+            'authorName' => (string) $actor->name,
+            'authorId' => (string) $actor->id,
+        ]));
 
-        return ArticleResource::make($article);
+        return ArticleResource::make($article->load(self::RELATIONS));
     }
 
     public function show(Article $article): ArticleResource
     {
         $this->authorize('view', $article);
 
-        return ArticleResource::make($article);
+        return ArticleResource::make($article->loadMissing(self::RELATIONS));
     }
 
     public function update(ArticleRequest $request, Article $article): ArticleResource
     {
         $this->authorize('update', $article);
 
-        $updated = $this->service->update(ArticleData::from($request->validated()), $article);
+        $data = $request->validated();
+        $description = array_key_exists('description', $data)
+            ? trim((string) $data['description'])
+            : (string) ($article->content ?? $article->excerpt ?? '');
 
-        return ArticleResource::make($updated);
+        $updated = $this->service->update(ArticleData::from([
+            'title' => isset($data['title']) ? trim((string) $data['title']) : (string) $article->title,
+            'excerpt' => mb_substr($description, 0, 500),
+            'content' => $description,
+            'status' => 'published',
+            'authorName' => (string) $article->author_name,
+            'authorId' => $article->author_id !== null ? (string) $article->author_id : null,
+        ]), $article);
+
+        return ArticleResource::make($updated->load(self::RELATIONS));
     }
 
     public function destroy(Article $article): Response
     {
         $this->authorize('delete', $article);
+        $article->loadMissing('media');
+
+        foreach ($article->media as $media) {
+            Storage::disk($media->disk)->delete($media->path);
+            $media->delete();
+        }
 
         $article->delete();
 

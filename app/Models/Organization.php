@@ -111,6 +111,11 @@ class Organization extends Model
         return $this->hasMany(Donation::class);
     }
 
+    public function isActiveAndVerified(): bool
+    {
+        return $this->status === 'active' && $this->verification_status === 'verified';
+    }
+
     public function campaignApplications(): HasMany
     {
         return $this->hasMany(CampaignApplication::class);

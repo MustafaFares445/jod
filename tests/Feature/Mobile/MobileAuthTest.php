@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Models\Organization;
 use App\Models\User;
 use App\Services\Auth\TokenService;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,35 @@ test('mobile login issues rotating token pair with mobile envelope', function ()
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
     expect($user->fresh()->last_active_at)->not->toBeNull();
 });
+test('mobile login rejects inactive users and unverified organization accounts', function () {
+    $inactiveUser = User::factory()->create([
+        'email' => 'inactive-mobile@example.com',
+        'password' => Hash::make('password'),
+        'status' => 'inactive',
+    ]);
+
+    $this->postJson('/api/mobile/auth/login', [
+        'email' => $inactiveUser->email,
+        'password' => 'password',
+    ])->assertForbidden()->assertJsonPath('error.code', 'account_inactive');
+
+    $organization = Organization::factory()->create([
+        'status' => 'inactive',
+        'verification_status' => 'unverified',
+    ]);
+    $organizationUser = User::factory()->create([
+        'email' => 'organization-mobile@example.com',
+        'password' => Hash::make('password'),
+        'organization_id' => $organization->id,
+        'status' => 'active',
+    ]);
+
+    $this->postJson('/api/mobile/auth/login', [
+        'email' => $organizationUser->email,
+        'password' => 'password',
+    ])->assertForbidden()->assertJsonPath('error.code', 'organization_inactive');
+});
+
 test('mobile login accepts phone credentials', function () {
     $user = User::factory()->create([
         'phone' => '+962790000333',

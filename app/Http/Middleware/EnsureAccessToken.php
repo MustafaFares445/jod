@@ -27,6 +27,12 @@ class EnsureAccessToken
             return $this->errorResponse('An access token is required.', 403);
         }
 
+        if ($user !== null && $user->status !== 'active') {
+            $user->tokens()->delete();
+
+            return $this->errorResponse('This account is not active.', 403);
+        }
+
         return $next($request);
     }
 }

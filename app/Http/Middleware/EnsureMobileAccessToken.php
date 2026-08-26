@@ -37,6 +37,17 @@ final class EnsureMobileAccessToken
             );
         }
 
+        if ($user !== null && $user->status !== 'active') {
+            $user->tokens()->delete();
+
+            return MobileApiResponse::error(
+                'account_inactive',
+                'This account is not active.',
+                null,
+                403,
+            );
+        }
+
         return $next($request);
     }
 }

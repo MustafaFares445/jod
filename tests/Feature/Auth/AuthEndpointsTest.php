@@ -139,6 +139,39 @@ test('dashboard login accepts company user on shared endpoint', function () {
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
 });
 
+test('dashboard login rejects inactive users and organizations that are not active and verified', function () {
+    $inactiveUser = User::factory()->create([
+        'email' => 'inactive@example.com',
+        'password' => Hash::make('password'),
+        'user_type' => 'admin',
+        'status' => 'inactive',
+    ]);
+
+    $this->postJson('/api/v1/auth/login', authLoginPayload([
+        'email' => $inactiveUser->email,
+        'password' => 'password',
+        'userType' => 'admin',
+    ]))->assertForbidden()->assertJsonPath('message', 'This account is not active.');
+
+    $organization = Organization::factory()->create([
+        'status' => 'inactive',
+        'verification_status' => 'unverified',
+    ]);
+    $companyUser = User::factory()->create([
+        'email' => 'blocked-company@example.com',
+        'password' => Hash::make('password'),
+        'user_type' => 'general',
+        'organization_id' => $organization->id,
+        'status' => 'active',
+    ]);
+
+    $this->postJson('/api/v1/auth/login', authLoginPayload([
+        'email' => $companyUser->email,
+        'password' => 'password',
+        'userType' => 'companies',
+    ]))->assertForbidden()->assertJsonPath('message', 'This organization account must be active and verified before login.');
+});
+
 test('dashboard login rejects cross type requests', function () {
     $organization = Organization::factory()->create();
 

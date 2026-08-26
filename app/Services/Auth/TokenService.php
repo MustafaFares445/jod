@@ -54,7 +54,7 @@ final class TokenService
 
             $user = $refreshToken->tokenable;
 
-            if (! $user instanceof User) {
+            if (! $user instanceof User || $user->status !== 'active') {
                 return null;
             }
 

@@ -21,6 +21,7 @@ class OrganizationVideoController extends Controller
         $perPage = max(1, min((int) $request->query('perPage', 20), 100));
 
         $paginator = Media::query()
+            ->with('organization.logoMedia')
             ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('model_id', $model->id)
             ->where('prop', 'videos')
@@ -39,6 +40,7 @@ class OrganizationVideoController extends Controller
         $model = $this->publicOrganization($organization);
 
         $media = Media::query()
+            ->with('organization.logoMedia')
             ->whereKey($video)
             ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('model_id', $model->id)

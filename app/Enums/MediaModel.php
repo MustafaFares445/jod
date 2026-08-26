@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\Organization;
 use App\Models\Post;
@@ -17,6 +18,7 @@ enum MediaModel: string
     case ORGANIZATION = 'organization';
     case CAMPAIGN = 'campaign';
     case POST = 'post';
+    case ARTICLE = 'article';
 
     /** @return class-string<Model> */
     public function modelClass(): string
@@ -25,6 +27,7 @@ enum MediaModel: string
             self::ORGANIZATION => Organization::class,
             self::CAMPAIGN => Campaign::class,
             self::POST => Post::class,
+            self::ARTICLE => Article::class,
         };
     }
 
@@ -36,7 +39,11 @@ enum MediaModel: string
                 'logo' => 1,
                 'videos' => 10,
             ],
-            self::CAMPAIGN, self::POST => ['images' => 10],
+            self::CAMPAIGN => ['images' => 10],
+            self::POST, self::ARTICLE => [
+                'images' => 10,
+                'videos' => 10,
+            ],
         };
     }
 

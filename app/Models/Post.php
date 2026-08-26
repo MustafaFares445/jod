@@ -73,6 +73,11 @@ class Post extends Model
         return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'images')->orderBy('position')->orderBy('id');
     }
 
+    public function videos(): HasMany
+    {
+        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'videos')->orderBy('position')->orderBy('id');
+    }
+
     public function likes(): HasMany { return $this->hasMany(PostLike::class); }
     public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
     public function helpOffers(): HasMany { return $this->hasMany(HelpOffer::class); }

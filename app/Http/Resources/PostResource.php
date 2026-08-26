@@ -14,6 +14,8 @@ class PostResource extends JsonResource
     public function toArray(Request $request): array
     {
         $images = $this->relationLoaded('images') ? $this->images : $this->resource->images()->get();
+        $videos = $this->relationLoaded('videos') ? $this->videos : $this->resource->videos()->get();
+        $media = $images->concat($videos)->values();
 
         return [
             'id' => $this->id,
@@ -33,7 +35,8 @@ class PostResource extends JsonResource
             'location' => $this->location,
             'campaignTitle' => $this->whenLoaded('campaign', fn () => $this->campaign?->title, $this->campaign?->title),
             'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
-            'media' => $images->map(fn (Media $image): array => MediaResource::make($image)->resolve($request))->values()->all(),
+            'videos' => $videos->map(static fn (Media $video): string => $video->publicUrl())->values()->all(),
+            'media' => $media->map(fn (Media $item): array => MediaResource::make($item)->resolve($request))->values()->all(),
             'submittedAt' => $this->submitted_at?->toIso8601String() ?? $this->created_at?->toIso8601String(),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),

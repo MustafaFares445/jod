@@ -8,6 +8,7 @@ use App\Enums\NotificationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\OrganizationResource;
 use App\Models\Organization;
+use App\Models\User;
 use App\Services\NotificationEventService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -87,6 +88,12 @@ class OrganizationController extends Controller
             'verificationStatus' => ['nullable', Rule::in(['verified', 'unverified', 'pending'])],
         ]);
 
+        $status = $data['status'] ?? match ($data['verificationStatus'] ?? null) {
+            'verified' => 'active',
+            'pending' => 'pending',
+            default => 'inactive',
+        };
+
         $organization = Organization::query()->create([
             'id' => (string) Str::uuid(),
             'name' => $data['name'],
@@ -105,8 +112,8 @@ class OrganizationController extends Controller
             'owner_phone' => $data['ownerPhone'] ?? null,
             'website' => $data['website'] ?? null,
             'social_media' => $data['socialMedia'] ?? null,
-            'status' => $data['status'] ?? 'active',
-            'verification_status' => $data['verificationStatus'] ?? 'unverified',
+            'status' => $status,
+            'verification_status' => $this->verificationStatusFor($status),
         ]);
 
         return OrganizationResource::make($organization)->response()->setStatusCode(201);
@@ -181,7 +188,7 @@ class OrganizationController extends Controller
             'status' => ['required', Rule::in(['active', 'inactive'])],
         ]);
 
-        $organization->update(['status' => $data['status']]);
+        $this->applyAccountStatus($organization, $data['status']);
 
         return OrganizationResource::make($organization->refresh());
     }
@@ -194,25 +201,10 @@ class OrganizationController extends Controller
             'verificationStatus' => ['required', Rule::in(['verified', 'unverified'])],
         ]);
 
-        $previousStatus = (string) $organization->verification_status;
-        $organization->update(['verification_status' => $data['verificationStatus']]);
-
-        if ($previousStatus !== $data['verificationStatus']) {
-            $verified = $data['verificationStatus'] === 'verified';
-            $this->notifications->notifyOrganization(
-                (string) $organization->id,
-                $verified ? NotificationEventType::OrganizationApproved : NotificationEventType::OrganizationRejected,
-                $verified ? 'تم توثيق المؤسسة' : 'تعذر توثيق المؤسسة',
-                $verified
-                    ? "تم توثيق {$organization->name} بنجاح على المنصة."
-                    : "تم تحديث حالة توثيق {$organization->name} إلى غير موثقة.",
-                'account',
-                'high',
-                $organization->name,
-                '/organization/profile',
-                auth()->id() !== null ? (string) auth()->id() : null,
-            );
-        }
+        $this->applyAccountStatus(
+            $organization,
+            $data['verificationStatus'] === 'verified' ? 'active' : 'inactive',
+        );
 
         return OrganizationResource::make($organization->refresh());
     }
@@ -222,11 +214,7 @@ class OrganizationController extends Controller
         $this->authorize('accept', $organization);
 
         $wasAccepted = $organization->accepted_at !== null;
-        $organization->update([
-            'status' => 'active',
-            'verification_status' => 'verified',
-            'accepted_at' => now(),
-        ]);
+        $this->applyAccountStatus($organization, 'active', notify: false);
 
         if (! $wasAccepted) {
             $this->notifications->notifyOrganization(
@@ -243,6 +231,50 @@ class OrganizationController extends Controller
         }
 
         return OrganizationResource::make($organization->refresh());
+    }
+
+    private function applyAccountStatus(Organization $organization, string $status, bool $notify = true): void
+    {
+        $previousStatus = (string) $organization->status;
+        $organization->update([
+            'status' => $status,
+            'verification_status' => $this->verificationStatusFor($status),
+            'accepted_at' => $status === 'active'
+                ? ($organization->accepted_at ?? now())
+                : $organization->accepted_at,
+        ]);
+
+        if ($status !== 'active') {
+            User::query()
+                ->where('organization_id', $organization->id)
+                ->each(fn (User $user) => $user->tokens()->delete());
+        }
+
+        if ($notify && $previousStatus !== $status) {
+            $active = $status === 'active';
+            $this->notifications->notifyOrganization(
+                (string) $organization->id,
+                $active ? NotificationEventType::OrganizationApproved : NotificationEventType::OrganizationRejected,
+                $active ? 'تم تفعيل المؤسسة وتوثيقها' : 'تم إلغاء تفعيل المؤسسة',
+                $active
+                    ? "تم تفعيل {$organization->name} وتوثيقها بنجاح على المنصة."
+                    : "تم إلغاء تفعيل {$organization->name} وأصبحت غير موثقة على المنصة.",
+                'account',
+                'high',
+                $organization->name,
+                '/organization/profile',
+                auth()->id() !== null ? (string) auth()->id() : null,
+            );
+        }
+    }
+
+    private function verificationStatusFor(string $status): string
+    {
+        return match ($status) {
+            'active' => 'verified',
+            'pending' => 'pending',
+            default => 'unverified',
+        };
     }
 
     private function queryParam(Request $request, string $key): mixed

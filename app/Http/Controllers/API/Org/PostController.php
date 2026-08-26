@@ -32,13 +32,13 @@ class PostController extends Controller
         $data = collect($request->validated())->merge(['status' => $request->validated('status', 'published')])->all();
         $post = $this->service->create(PostData::from($data), $this->organizationId());
         $post->update(['author_id' => auth()->id(), 'updated_by' => auth()->id()]);
-        return PostResource::make($post->refresh()->load(['campaign', 'images', 'author', 'updatedBy']));
+        return PostResource::make($post->refresh()->load(['campaign', 'images', 'videos', 'author', 'updatedBy']));
     }
 
     public function show(Post $post): PostResource
     {
         $this->authorize('viewOrganization', $post);
-        return PostResource::make($post->loadMissing(['campaign', 'images', 'author', 'updatedBy']));
+        return PostResource::make($post->loadMissing(['campaign', 'images', 'videos', 'author', 'updatedBy']));
     }
 
     public function update(PostRequest $request, Post $post): PostResource
@@ -63,7 +63,7 @@ class PostController extends Controller
             $post->update(['updated_by' => auth()->id()]);
         }
 
-        return PostResource::make($post->refresh()->load(['campaign', 'images', 'author', 'updatedBy']));
+        return PostResource::make($post->refresh()->load(['campaign', 'images', 'videos', 'author', 'updatedBy']));
     }
 
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
