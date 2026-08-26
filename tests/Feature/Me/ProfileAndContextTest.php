@@ -124,27 +124,27 @@ test('returns dashboard context counters scoped to the user organization', funct
 
     Post::query()->create([
         'organization_id' => $this->organization->id,
-        'title' => 'Pending post',
-        'status' => 'pending',
+        'title' => 'Published post',
+        'status' => 'published',
         'type' => 'general',
     ]);
 
     Post::query()->create([
         'organization_id' => $otherOrganization->id,
-        'title' => 'Other pending post',
-        'status' => 'pending',
+        'title' => 'Other published post',
+        'status' => 'published',
         'type' => 'general',
     ]);
 
     Campaign::query()->create([
-        'title' => 'Pending campaign',
-        'status' => 'pending',
+        'title' => 'Active campaign',
+        'status' => 'active',
         'organization_id' => $this->organization->id,
     ]);
 
     Campaign::query()->create([
-        'title' => 'Other pending campaign',
-        'status' => 'pending',
+        'title' => 'Other active campaign',
+        'status' => 'active',
         'organization_id' => $otherOrganization->id,
     ]);
 
@@ -170,6 +170,6 @@ test('returns dashboard context counters scoped to the user organization', funct
 
     $response->assertOk();
     expect($response->json('data.counters.unreadNotifications'))->toBe(2);
-    expect($response->json('data.counters.pendingReviews'))->toBe(2);
+    expect($response->json('data.counters.pendingReviews'))->toBe(0);
     expect($response->json('data.counters.openReports'))->toBe(1);
 });

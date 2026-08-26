@@ -45,8 +45,6 @@ class MobileCampaignResource extends JsonResource
             'updatedAt' => $this->updated_at?->toIso8601String(),
             'closedAt' => $this->closed_at?->toIso8601String(),
             'closedReason' => $this->closed_reason,
-            'reviewedBy' => $this->whenLoaded('reviewedBy', fn () => $this->reviewedBy?->name),
-            'rejectionReason' => $this->rejection_reason,
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,
         ];

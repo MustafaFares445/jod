@@ -188,8 +188,16 @@ final class JodCompleteDemoSeeder extends Seeder
                 'organization_id' => $this->id($row['organizationKey']),
                 'creator_id' => $this->id($row['creatorKey']),
                 'category_id' => $this->id($row['categoryKey']),
-                'reviewed_by' => $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null,
             ];
+
+            $attrs['status'] = match ($attrs['status'] ?? 'draft') {
+                'pending', 'approved' => 'active',
+                'rejected' => 'draft',
+                default => $attrs['status'] ?? 'draft',
+            };
+            $attrs['reviewed_by'] = null;
+            $attrs['rejection_reason'] = null;
+
             $this->upsert('campaigns', ['id' => $attrs['id']], $attrs);
         }
 
@@ -201,8 +209,29 @@ final class JodCompleteDemoSeeder extends Seeder
                 'campaign_id' => $row['campaignKey'] ? $this->id($row['campaignKey']) : null,
                 'category_id' => $this->id($row['categoryKey']),
                 'author_id' => $this->id($row['authorKey']),
-                'reviewed_by' => $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null,
             ];
+
+            if ($attrs['organization_id'] !== null) {
+                $attrs['status'] = match ($attrs['status'] ?? 'draft') {
+                    'pending', 'approved' => 'published',
+                    'rejected' => 'draft',
+                    default => $attrs['status'] ?? 'draft',
+                };
+                $attrs['reviewed_by'] = null;
+                $attrs['reviewed_at'] = null;
+                $attrs['approved_by'] = null;
+                $attrs['approved_at'] = null;
+                $attrs['rejected_by'] = null;
+                $attrs['rejected_at'] = null;
+                $attrs['rejection_reason'] = null;
+
+                if ($attrs['status'] === 'published' && empty($attrs['published_at'])) {
+                    $attrs['published_at'] = now();
+                }
+            } else {
+                $attrs['reviewed_by'] = $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null;
+            }
+
             $this->upsert('posts', ['id' => $attrs['id']], $attrs);
         }
 
@@ -276,6 +305,9 @@ final class JodCompleteDemoSeeder extends Seeder
                 'assignee_id' => $row['assigneeUserKey'] ? $this->id($row['assigneeUserKey']) : null,
                 'entity_id' => $this->id($row['entityKey']),
             ];
+            $attrs['status'] = ($attrs['status'] ?? 'new') === 'waiting_response'
+                ? 'in_progress'
+                : ($attrs['status'] ?? 'new');
             $attrs['evidence'] = json_encode([], JSON_THROW_ON_ERROR);
             $attrs['timeline'] = json_encode([['note' => $row['timelineNote']]], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             $attrs['category'] = match ($attrs['category']) {

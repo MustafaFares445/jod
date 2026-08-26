@@ -24,7 +24,7 @@ use App\Policies\ArticlePolicy;
 use App\Policies\AuditLogPolicy;
 use App\Policies\BadgePolicy;
 use App\Policies\CampaignApplicationPolicy;
-use App\Policies\CampaignReviewPolicy;
+use App\Policies\CampaignPolicy;
 use App\Policies\CategoryPolicy;
 use App\Policies\DonationPolicy;
 use App\Policies\HelpOfferPolicy;
@@ -45,7 +45,7 @@ class AuthServiceProvider extends ServiceProvider
         User::class => UserPolicy::class,
         Organization::class => OrganizationPolicy::class,
         Post::class => PostReviewPolicy::class,
-        Campaign::class => CampaignReviewPolicy::class,
+        Campaign::class => CampaignPolicy::class,
         Report::class => ReportPolicy::class,
         Notification::class => NotificationPolicy::class,
         Donation::class => DonationPolicy::class,

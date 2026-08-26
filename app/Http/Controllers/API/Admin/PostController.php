@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class PostController extends Controller
 {
@@ -44,17 +45,17 @@ class PostController extends Controller
         $type = $this->queryParam($request, 'filter.type') ?? $request->query('type');
         $location = $this->queryParam($request, 'filter.location') ?? $request->query('location');
         $categoryId = $this->queryParam($request, 'filter.categoryId') ?? $request->query('categoryId');
-        $organizationId = $this->queryParam($request, 'filter.organizationId') ?? $request->query('organizationId');
         $authorId = $this->queryParam($request, 'filter.authorId') ?? $request->query('authorId');
         $sort = (string) ($request->query('sort') ?: '-createdAt');
 
         $query = Post::query()
             ->with(self::RELATIONS)
+            ->whereNull('organization_id')
+            ->whereHas('author', fn (Builder $author) => $author->where('user_type', '!=', 'admin'))
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when($type && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
             ->when(filled($location), fn (Builder $builder) => $builder->where('location', 'like', '%'.$location.'%'))
             ->when(filled($categoryId), fn (Builder $builder) => $builder->where('category_id', $categoryId))
-            ->when(filled($organizationId), fn (Builder $builder) => $builder->where('organization_id', $organizationId))
             ->when(filled($authorId), fn (Builder $builder) => $builder->where('author_id', $authorId))
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
@@ -63,11 +64,6 @@ class PostController extends Controller
                         ->orWhere('content', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%")
                         ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', "%{$search}%"))
-                        ->orWhereHas('organization', function (Builder $organization) use ($search): void {
-                            $organization->where('name', 'like', "%{$search}%")
-                                ->orWhere('email', 'like', "%{$search}%")
-                                ->orWhere('location', 'like', "%{$search}%");
-                        })
                         ->orWhereHas('author', function (Builder $author) use ($search): void {
                             $author->where('name', 'like', "%{$search}%")
                                 ->orWhere('email', 'like', "%{$search}%");
@@ -104,16 +100,12 @@ class PostController extends Controller
             'summary' => mb_substr($content, 0, 255),
             'content' => $content,
             'type' => 'general',
-            'status' => 'approved',
+            'status' => 'published',
             'organization_id' => null,
             'campaign_id' => null,
             'author_id' => $actorId,
             'updated_by' => $actorId,
             'published_at' => $now,
-            'reviewed_at' => $now,
-            'reviewed_by' => $actorId,
-            'approved_at' => $now,
-            'approved_by' => $actorId,
         ]);
 
         return PostResource::make($post->load(self::RELATIONS));
@@ -128,9 +120,21 @@ class PostController extends Controller
 
     public function update(AdminPostRequest $request, Post $post): PostResource
     {
+        $data = $request->validated();
+        $status = array_key_exists('status', $data) ? (string) $data['status'] : null;
+
+        if (in_array($status, ['approved', 'rejected'], true)) {
+            return $this->reviewUserPost($request, $post, $data, $status);
+        }
+
         $this->authorize('updateAdmin', $post);
 
-        $data = $request->validated();
+        if ($status !== null && ! in_array($status, ['draft', 'published', 'archived'], true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Admin-authored posts support only draft, published, or archived status.'],
+            ]);
+        }
+
         $actorId = (string) $request->user()->id;
         $updates = ['updated_by' => $actorId];
 
@@ -144,42 +148,16 @@ class PostController extends Controller
             $updates['summary'] = mb_substr($content, 0, 255);
         }
 
-        if (array_key_exists('status', $data)) {
-            $status = (string) $data['status'];
-            $now = now();
+        if ($status !== null) {
             $updates['status'] = $status;
-            $updates['published_at'] = in_array($status, ['published', 'approved'], true)
-                ? ($post->published_at ?? $now)
+            $updates['published_at'] = $status === 'published'
+                ? ($post->published_at ?? now())
                 : null;
-
-            if ($status === 'approved') {
-                $updates['reviewed_at'] = $now;
-                $updates['reviewed_by'] = $actorId;
-                $updates['approved_at'] = $now;
-                $updates['approved_by'] = $actorId;
-                $updates['rejected_at'] = null;
-                $updates['rejected_by'] = null;
-                $updates['rejection_reason'] = null;
-            } elseif ($status === 'rejected') {
-                $updates['reviewed_at'] = $now;
-                $updates['reviewed_by'] = $actorId;
-                $updates['rejected_at'] = $now;
-                $updates['rejected_by'] = $actorId;
-                $updates['approved_at'] = null;
-                $updates['approved_by'] = null;
-                $updates['rejection_reason'] = trim((string) $data['rejectionReason']);
-            }
         }
 
-        $previousStatus = (string) $post->status;
         $post->update($updates);
-        $post->refresh();
 
-        if (array_key_exists('status', $data) && $previousStatus !== $post->status) {
-            $this->notifyStatusChange($post, $actorId);
-        }
-
-        return PostResource::make($post->load(self::RELATIONS));
+        return PostResource::make($post->refresh()->load(self::RELATIONS));
     }
 
     public function destroy(Post $post): Response
@@ -195,6 +173,57 @@ class PostController extends Controller
         $post->delete();
 
         return response()->noContent();
+    }
+
+    private function reviewUserPost(Request $request, Post $post, array $data, string $status): PostResource
+    {
+        $this->authorize($status === 'approved' ? 'approve' : 'reject', $post);
+
+        if ($post->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'status' => ['Only pending user posts can be reviewed.'],
+            ]);
+        }
+
+        if (array_key_exists('title', $data) || array_key_exists('description', $data)) {
+            throw ValidationException::withMessages([
+                'post' => ['Admin review cannot edit user post content.'],
+            ]);
+        }
+
+        $actorId = (string) $request->user()->id;
+        $now = now();
+        $updates = [
+            'status' => $status,
+            'updated_by' => $actorId,
+            'reviewed_at' => $now,
+            'reviewed_by' => $actorId,
+            'published_at' => $status === 'approved' ? ($post->published_at ?? $now) : null,
+        ];
+
+        if ($status === 'approved') {
+            $updates += [
+                'approved_at' => $now,
+                'approved_by' => $actorId,
+                'rejected_at' => null,
+                'rejected_by' => null,
+                'rejection_reason' => null,
+            ];
+        } else {
+            $updates += [
+                'rejected_at' => $now,
+                'rejected_by' => $actorId,
+                'approved_at' => null,
+                'approved_by' => null,
+                'rejection_reason' => trim((string) ($data['rejectionReason'] ?? '')),
+            ];
+        }
+
+        $post->update($updates);
+        $post->refresh();
+        $this->notifyStatusChange($post, $actorId);
+
+        return PostResource::make($post->load(self::RELATIONS));
     }
 
     private function queryParam(Request $request, string $key): mixed

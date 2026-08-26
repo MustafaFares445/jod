@@ -16,7 +16,6 @@ enum PermissionAction: string
     case APPROVE = 'approve';
     case REJECT = 'reject';
     case CLAIM = 'claim';
-    case REQUEST_INFO = 'request_info';
     case CLOSE = 'close';
     case MANAGE = 'manage';
     case PUBLISH = 'publish';
@@ -38,7 +37,6 @@ enum PermissionAction: string
             self::APPROVE => 'موافقة',
             self::REJECT => 'رفض',
             self::CLAIM => 'استلام',
-            self::REQUEST_INFO => 'طلب معلومات',
             self::CLOSE => 'إغلاق',
             self::MANAGE => 'إدارة',
             self::PUBLISH => 'نشر',

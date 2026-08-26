@@ -12,7 +12,6 @@ enum PermissionGroup: string
     case USER = 'users';
     case ORGANIZATION = 'organizations';
     case POST_REVIEW = 'posts.review';
-    case CAMPAIGN_REVIEW = 'campaigns.review';
     case REPORT = 'reports';
     case NOTIFICATION = 'notifications';
     case BADGE = 'badges';
@@ -76,14 +75,6 @@ enum PermissionGroup: string
                 sectionLabel: 'المراجعة',
                 actions: [PermissionAction::VIEW, PermissionAction::APPROVE, PermissionAction::REJECT],
             ),
-            self::CAMPAIGN_REVIEW => new PermissionGroupDefinition(
-                label: 'مراجعة الحملات',
-                module: PermissionModule::ADMIN,
-                description: 'مراجعة الحملات والإشراف عليها.',
-                order: 50,
-                sectionLabel: 'المراجعة',
-                actions: [PermissionAction::VIEW, PermissionAction::APPROVE, PermissionAction::REJECT],
-            ),
             self::REPORT => new PermissionGroupDefinition(
                 label: 'البلاغات',
                 module: PermissionModule::ADMIN,
@@ -92,7 +83,6 @@ enum PermissionGroup: string
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::CLAIM,
-                    PermissionAction::REQUEST_INFO,
                     PermissionAction::CLOSE,
                 ],
             ),
@@ -245,7 +235,6 @@ enum PermissionGroup: string
                     PermissionAction::VIEW,
                     PermissionAction::UPDATE,
                     PermissionAction::CLAIM,
-                    PermissionAction::REQUEST_INFO,
                     PermissionAction::CLOSE,
                 ],
             ),

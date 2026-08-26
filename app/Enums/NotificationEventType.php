@@ -40,7 +40,6 @@ enum NotificationEventType: string
 
     case ReportSubmitted = 'report.submitted';
     case ReportInProgress = 'report.in_progress';
-    case ReportInfoRequested = 'report.info_requested';
     case ReportClosed = 'report.closed';
 
     case OrganizationSubmitted = 'organization.submitted';
@@ -66,7 +65,7 @@ enum NotificationEventType: string
             self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed => 'campaign',
             self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
             self::PostSubmitted, self::PostApproved, self::PostRejected => 'post',
-            self::ReportSubmitted, self::ReportInProgress, self::ReportInfoRequested, self::ReportClosed => 'report',
+            self::ReportSubmitted, self::ReportInProgress, self::ReportClosed => 'report',
             self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',
             self::StaffInvited, self::StaffRoleChanged, self::StaffRemoved => 'staff',
             self::SystemAnnouncement, self::SystemMaintenance => 'system',

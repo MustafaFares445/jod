@@ -32,7 +32,6 @@ class ReportService
             'reportedPost.rejectedBy',
             'reportedCampaign.organization',
             'reportedCampaign.creator',
-            'reportedCampaign.reviewedBy',
             'reportedCampaign.imageMedia',
             'reportedUser',
             'reportedOrganization',
@@ -106,33 +105,6 @@ class ReportService
             'بدأت مراجعة بلاغك',
             'تم استلام البلاغ من فريق المراجعة وبدأ العمل عليه.',
             'normal',
-        );
-
-        return $report;
-    }
-
-    public function requestInfo(Report $report, ?string $note, string $actorName): Report
-    {
-        if ($report->status !== 'in_progress') {
-            throw ValidationException::withMessages([
-                'status' => ['Only in progress reports can request info.'],
-            ]);
-        }
-
-        $report->update([
-            'timeline' => $this->appendTimeline($report->timeline, 'request_info', 'Additional information requested', $actorName, $note),
-        ]);
-
-        $message = filled($note)
-            ? 'طلب فريق المراجعة معلومات إضافية: '.$note
-            : 'طلب فريق المراجعة معلومات إضافية بخصوص بلاغك.';
-
-        $this->notifyReporter(
-            $report,
-            NotificationEventType::ReportInfoRequested,
-            'مطلوب معلومات إضافية',
-            $message,
-            'high',
         );
 
         return $report;

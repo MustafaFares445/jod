@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\API\Me;
 
 use App\Http\Controllers\Controller;
-use App\Models\Campaign;
 use App\Models\Notification;
 use App\Models\OrganizationStaff;
 use App\Models\Post;
@@ -90,8 +89,11 @@ class DashboardContextController extends Controller
                     ->where('mailbox', 'inbox')
                     ->where('status', 'unread')
                     ->count(),
-                'pendingReviews' => Post::query()->where('status', 'pending')->count()
-                    + Campaign::query()->where('status', 'pending')->count(),
+                'pendingReviews' => Post::query()
+                    ->where('status', 'pending')
+                    ->whereNull('organization_id')
+                    ->whereHas('author', fn ($author) => $author->where('user_type', '!=', 'admin'))
+                    ->count(),
                 'openReports' => Report::query()
                     ->whereIn('status', ['new', 'in_progress'])
                     ->count(),
@@ -114,14 +116,7 @@ class DashboardContextController extends Controller
                     });
                 })
                 ->count(),
-            'pendingReviews' => Post::query()
-                ->where('organization_id', $organizationId)
-                ->where('status', 'pending')
-                ->count()
-                + Campaign::query()
-                    ->where('organization_id', $organizationId)
-                    ->where('status', 'pending')
-                    ->count(),
+            'pendingReviews' => 0,
             'openReports' => Report::query()
                 ->where('organization_id', $organizationId)
                 ->whereIn('status', ['new', 'in_progress'])
