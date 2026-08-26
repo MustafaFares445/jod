@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('body');
             $table->enum('mailbox', ['inbox', 'sent'])->default('sent');
             $table->enum('status', ['unread', 'read', 'sent'])->default('sent');
-            $table->enum('category', ['campaign', 'post', 'account', 'report', 'system', 'donation', 'applicant', 'staff', 'badge'])->default('system');
+            $table->enum('category', ['campaign', 'post', 'account', 'report', 'system', 'donation', 'help', 'applicant', 'staff', 'badge'])->default('system');
             $table->enum('recipient_scope', ['all', 'users', 'organizations'])->default('all');
             $table->string('recipient_label')->nullable();
             $table->enum('priority', ['normal', 'high'])->default('normal');
