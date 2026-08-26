@@ -28,6 +28,37 @@ test('mobile post create body does not accept media files', function () {
         ->assertJsonValidationErrors(['images'], 'error.details');
 });
 
+test('dedicated mobile post image endpoint allows ten images total', function () {
+    $user = User::factory()->create();
+    $post = mobile_post_media_test_createPost($user);
+    Sanctum::actingAs($user);
+
+    $images = collect(range(1, 10))
+        ->map(fn (int $index): UploadedFile => UploadedFile::fake()->image("image-{$index}.jpg"))
+        ->all();
+
+    $this->post("/api/mobile/posts/{$post->id}/images", ['images' => $images], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonCount(10, 'data.images')
+        ->assertJsonCount(10, 'data.imageMedia');
+
+    $this->post("/api/mobile/posts/{$post->id}/images", [
+        'images' => [UploadedFile::fake()->image('eleventh.jpg')],
+    ], ['Accept' => 'application/json'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['images'], 'error.details');
+});
+
+test('personal post videos are forbidden through the generic media API', function () {
+    $user = User::factory()->create();
+    $post = mobile_post_media_test_createPost($user);
+    Sanctum::actingAs($user);
+
+    $this->post("/api/v1/media/post/{$post->id}/videos", [
+        'file' => UploadedFile::fake()->create('blocked.mp4', 1024, 'video/mp4'),
+    ], ['Accept' => 'application/json'])->assertForbidden();
+});
+
 test('personal post images use the general media manager one file per request', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);

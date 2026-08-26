@@ -16,7 +16,7 @@ use Throwable;
 
 class PostImageService
 {
-    public const MAX_IMAGES = 5;
+    public const MAX_IMAGES = 10;
 
     /** @param list<UploadedFile> $files */
     public function add(Post $post, array $files): Post
@@ -34,7 +34,7 @@ class PostImageService
 
                 if ($currentCount + count($files) > self::MAX_IMAGES) {
                     throw ValidationException::withMessages([
-                        'images' => ['A post may contain at most 5 images.'],
+                        'images' => ['A post may contain at most 10 images.'],
                     ]);
                 }
 

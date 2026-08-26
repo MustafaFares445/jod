@@ -22,7 +22,7 @@ class PostImageController extends Controller
     /**
      * Add images to an owned draft or rejected post.
      *
-     * Send as multipart/form-data. A post may contain at most five images total.
+     * Send as multipart/form-data. A post may contain at most ten images total.
      *
      * @urlParam post string required The post identifier.
      * @bodyParam images file[] required JPEG, PNG, or WebP images, up to 5 MB each.

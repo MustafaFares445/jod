@@ -23,7 +23,7 @@ class MediaController extends Controller
     {
         $mediaModel = MediaModel::from($model);
         $target = $this->service->resolveTarget($mediaModel, $modelId);
-        $this->authorizeTarget($mediaModel, $target);
+        $this->authorizeTarget($mediaModel, $target, $prop);
 
         $media = $this->service->upload(
             $mediaModel,
@@ -47,7 +47,7 @@ class MediaController extends Controller
     ): MediaResource {
         $mediaModel = MediaModel::from($model);
         $target = $this->service->resolveTarget($mediaModel, $modelId);
-        $this->authorizeTarget($mediaModel, $target);
+        $this->authorizeTarget($mediaModel, $target, $prop);
 
         $media = $this->service->replace(
             $mediaModel,
@@ -65,26 +65,26 @@ class MediaController extends Controller
     {
         $mediaModel = MediaModel::from($model);
         $target = $this->service->resolveTarget($mediaModel, $modelId);
-        $this->authorizeTarget($mediaModel, $target);
+        $this->authorizeTarget($mediaModel, $target, $prop);
         $this->service->delete($mediaModel, $modelId, $prop, $mediaId);
         $this->markPostUpdated($target);
 
         return response()->noContent();
     }
 
-    private function authorizeTarget(MediaModel $model, Model $target): void
+    private function authorizeTarget(MediaModel $model, Model $target, string $prop): void
     {
         match ($model) {
             MediaModel::ORGANIZATION => $this->authorize('updateSettings', $target),
             MediaModel::CAMPAIGN => $this->authorize('updateOrganization', $target),
-            MediaModel::POST => $this->authorizePost($target),
+            MediaModel::POST => $this->authorizePost($target, $prop),
             MediaModel::ARTICLE => $target instanceof Article
                 ? $this->authorize('update', $target)
                 : abort(404),
         };
     }
 
-    private function authorizePost(Model $target): void
+    private function authorizePost(Model $target, string $prop): void
     {
         if (! $target instanceof Post) {
             abort(404);
@@ -102,6 +102,10 @@ class MediaController extends Controller
             $this->authorize('updateAdmin', $target);
 
             return;
+        }
+
+        if ($prop === 'videos') {
+            abort(403, 'Videos are not allowed for user-created posts.');
         }
 
         $this->authorize('manageOwnMedia', $target);
