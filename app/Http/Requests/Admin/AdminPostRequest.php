@@ -29,6 +29,7 @@ class AdminPostRequest extends FormRequest
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
             'status' => ['sometimes', Rule::in(['draft', 'pending', 'approved', 'rejected', 'published', 'archived'])],
+            'rejectionReason' => ['required_if:status,rejected', 'nullable', 'string', 'min:3', 'max:1000'],
         ];
     }
 }

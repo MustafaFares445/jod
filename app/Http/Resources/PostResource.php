@@ -30,6 +30,12 @@ class PostResource extends JsonResource
             'organizationName' => $this->organization?->name,
             'authorName' => $this->whenLoaded('author', fn () => $this->author?->name),
             'author' => $this->whenLoaded('author', fn () => $this->userSummary($this->author)),
+            'publisher' => $this->publisherSummary(),
+            'categoryId' => $this->category_id ? (string) $this->category_id : null,
+            'category' => $this->whenLoaded('category', fn () => $this->category ? [
+                'id' => (string) $this->category->id,
+                'name' => (string) $this->category->name,
+            ] : null),
             'updatedBy' => $this->whenLoaded('updatedBy', fn () => $this->userSummary($this->updatedBy)),
             'updatedByName' => $this->whenLoaded('updatedBy', fn () => $this->updatedBy?->name),
             'location' => $this->location,
@@ -52,6 +58,25 @@ class PostResource extends JsonResource
             'viewsCount' => (int) $this->views_count,
             'reactionsCount' => (int) $this->reactions_count,
             'applicationsCount' => (int) $this->applications_count,
+        ];
+    }
+
+    private function publisherSummary(): array
+    {
+        if ($this->relationLoaded('organization') && $this->organization !== null) {
+            return [
+                'id' => (string) $this->organization->id,
+                'name' => (string) $this->organization->name,
+                'type' => 'organization',
+            ];
+        }
+
+        $author = $this->relationLoaded('author') ? $this->author : null;
+
+        return [
+            'id' => $author?->id ? (string) $author->id : (string) ($this->author_id ?? ''),
+            'name' => (string) ($author?->name ?? $this->author_name ?? 'JOD'),
+            'type' => $author?->user_type === 'admin' ? 'admin' : 'user',
         ];
     }
 

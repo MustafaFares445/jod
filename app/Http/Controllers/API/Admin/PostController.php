@@ -167,6 +167,7 @@ class PostController extends Controller
                 $updates['rejected_by'] = $actorId;
                 $updates['approved_at'] = null;
                 $updates['approved_by'] = null;
+                $updates['rejection_reason'] = trim((string) $data['rejectionReason']);
             }
         }
 
@@ -238,7 +239,7 @@ class PostController extends Controller
             (string) $post->author_id,
             NotificationEventType::PostRejected,
             'تم رفض منشورك',
-            "تم رفض «{$title}» من إدارة المنصة.",
+            "تم رفض «{$title}». السبب: {$post->rejection_reason}",
             'post',
             'high',
             $title,
