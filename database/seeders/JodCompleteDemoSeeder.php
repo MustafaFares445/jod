@@ -264,6 +264,7 @@ final class JodCompleteDemoSeeder extends Seeder
                 'reference_label' => $row['referenceKey'],
                 'reference_path' => $this->referencePath($row['referenceKey']),
             ];
+            $attrs['recipient_scope'] = $this->normalizeNotificationRecipientScope($attrs['recipient_scope'] ?? null);
             $this->upsert('notifications', ['id' => $attrs['id']], $attrs);
         }
 
@@ -408,6 +409,15 @@ final class JodCompleteDemoSeeder extends Seeder
             str_starts_with($key, 'offer_') => '/api/mobile/me/help-offers/'.$id,
             str_starts_with($key, 'org_') => '/api/mobile/organizations/'.$id,
             default => '/api/mobile',
+        };
+    }
+
+    private function normalizeNotificationRecipientScope(mixed $scope): string
+    {
+        return match ($scope) {
+            'user' => 'users',
+            'all', 'users', 'organizations' => $scope,
+            default => throw new \UnexpectedValueException('Unsupported notification recipient scope in demo dataset: '.(string) $scope),
         };
     }
 
