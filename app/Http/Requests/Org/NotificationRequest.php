@@ -16,7 +16,7 @@ class NotificationRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
-            'category' => ['required', Rule::in(['campaign', 'post', 'account', 'report', 'system', 'donation', 'applicant', 'staff'])],
+            'category' => ['required', Rule::in(['campaign', 'post', 'account', 'report', 'system', 'donation', 'help', 'applicant', 'staff'])],
             'eventType' => ['nullable', Rule::enum(NotificationEventType::class)],
             'recipientScope' => ['nullable', Rule::in(['all', 'users', 'organizations'])],
             'recipientLabel' => ['nullable', 'string', 'max:255'],
