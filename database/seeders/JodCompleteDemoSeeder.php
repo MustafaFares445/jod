@@ -277,6 +277,12 @@ final class JodCompleteDemoSeeder extends Seeder
             ];
             $attrs['evidence'] = json_encode([], JSON_THROW_ON_ERROR);
             $attrs['timeline'] = json_encode([['note' => $row['timelineNote']]], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            $attrs['category'] = match ($attrs['category']) {
+                'abusive' => 'abuse',
+                'fraud', 'impersonation' => 'fraud',
+                'misleading' => 'other',
+                default => $attrs['category'],
+            };
             unset($attrs['timeline_note']);
             $this->upsert('reports', ['id' => $attrs['id']], $attrs);
         }
@@ -344,6 +350,7 @@ final class JodCompleteDemoSeeder extends Seeder
     {
         foreach ($data['post_likes'] as $row) {
             $this->upsert('post_likes', ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])], [
+                'id' => $this->id($row['key']),
                 'user_id' => $this->id($row['userKey']),
                 'post_id' => $this->id($row['postKey']),
             ]);
@@ -351,6 +358,7 @@ final class JodCompleteDemoSeeder extends Seeder
 
         foreach ($data['saved_posts'] as $row) {
             $this->upsert('saved_posts', ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])], [
+                'id' => $this->id($row['key']),
                 'user_id' => $this->id($row['userKey']),
                 'post_id' => $this->id($row['postKey']),
             ]);

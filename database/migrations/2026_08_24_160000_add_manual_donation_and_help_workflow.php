@@ -43,7 +43,8 @@ return new class extends Migration
             ->update(['help_status' => 'open']);
 
         Schema::create('help_offers', function (Blueprint $table): void {
-            $table->id();
+            // Help offers are addressed by UUIDs throughout the API and seed dataset.
+            $table->uuid('id')->primary();
             $table->string('post_id');
             $table->string('helper_user_id');
             $table->string('post_owner_id');
