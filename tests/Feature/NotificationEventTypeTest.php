@@ -126,3 +126,23 @@ test('fan out preserves event type on recipient copies', function () {
         'event_type' => 'system.maintenance',
     ]);
 });
+
+
+test('help notification category is supported by the database schema', function () {
+    $user = User::factory()->create();
+
+    $notification = Notification::factory()->create([
+        'recipient_id' => $user->id,
+        'category' => 'help',
+        'event_type' => NotificationEventType::HelpOfferCreated->value,
+    ]);
+
+    expect($notification->category)->toBe('help');
+    expect($notification->event_type)->toBe('help_offer.created');
+
+    $this->assertDatabaseHas('notifications', [
+        'id' => $notification->id,
+        'category' => 'help',
+        'event_type' => 'help_offer.created',
+    ]);
+});
