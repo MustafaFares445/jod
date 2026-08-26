@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
-use App\Models\Article;
 use App\Models\User;
 use App\Support\Permissions\PermissionCatalog;
 use Database\Seeders\Permissions\PermissionsSeeder;
@@ -213,8 +212,9 @@ final class JodCompleteDemoSeeder extends Seeder
                 'id' => $this->id($row['key']),
                 'author_id' => $this->id($row['authorKey']),
             ];
+            $attrs['slug'] = $this->seedSlug('articles', (string) $attrs['title'], (string) $attrs['id']);
 
-            Article::query()->updateOrCreate(['id' => $attrs['id']], $attrs);
+            $this->upsert('articles', ['id' => $attrs['id']], $attrs);
         }
 
         foreach ($data['help_offers'] as $row) {
@@ -401,6 +401,24 @@ final class JodCompleteDemoSeeder extends Seeder
             str_starts_with($key, 'org_') => '/api/mobile/organizations/'.$id,
             default => '/api/mobile',
         };
+    }
+
+    private function seedSlug(string $table, string $source, string $id): string
+    {
+        $slug = Str::slug($source);
+
+        if ($slug === '') {
+            $slug = 'seed-'.substr(str_replace('-', '', $id), 0, 12);
+        }
+
+        if (
+            Schema::hasTable($table)
+            && DB::table($table)->where('slug', $slug)->where('id', '!=', $id)->exists()
+        ) {
+            $slug .= '-'.substr(str_replace('-', '', $id), 0, 8);
+        }
+
+        return $slug;
     }
 
     private function upsert(string $table, array $where, array $attributes): void
