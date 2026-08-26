@@ -31,6 +31,7 @@ class NotificationHistoryRequest extends FormRequest
                 'report',
                 'system',
                 'donation',
+                'help',
                 'applicant',
                 'staff',
                 'badge',
