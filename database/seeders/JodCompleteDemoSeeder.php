@@ -292,6 +292,9 @@ final class JodCompleteDemoSeeder extends Seeder
         foreach ($row as $key => $value) {
             if (in_array($key, $exclude, true)) continue;
             if (is_array($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/', $value) === 1) {
+                $value = (new \DateTimeImmutable($value))->format('Y-m-d H:i:s');
+            }
             $out[Str::snake($key)] = $value;
         }
         return $out;
