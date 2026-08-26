@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\Article;
 use App\Models\User;
 use App\Support\Permissions\PermissionCatalog;
 use Database\Seeders\Permissions\PermissionsSeeder;
@@ -50,9 +51,14 @@ final class JodCompleteDemoSeeder extends Seeder
             $path = database_path(sprintf('data/jod_complete_demo_%02d.b64', $part));
             $encoded .= trim((string) file_get_contents($path));
         }
+
         $compressed = base64_decode($encoded, true);
         $json = $compressed === false ? false : gzdecode($compressed);
-        if ($json === false) throw new \RuntimeException('Unable to decode JOD complete demo seed dataset.');
+
+        if ($json === false) {
+            throw new \RuntimeException('Unable to decode JOD complete demo seed dataset.');
+        }
+
         return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
     }
 
@@ -62,9 +68,11 @@ final class JodCompleteDemoSeeder extends Seeder
             $key = $row['key'];
             $attributes = $this->snakeRow($row, ['key']);
             $attributes['id'] = $this->id($key);
+
             if (isset($attributes['social_media'])) {
                 $attributes['social_media'] = json_encode($attributes['social_media'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
+
             $this->upsert('organizations', ['id' => $attributes['id']], $attributes);
         }
     }
@@ -72,13 +80,17 @@ final class JodCompleteDemoSeeder extends Seeder
     private function seedUsers(array $data): void
     {
         $groups = ['admins', 'organization_owners', 'organization_staff', 'users'];
+
         foreach ($groups as $group) {
             foreach ($data[$group] as $row) {
                 $attributes = $this->snakeRow($row, ['key', 'organizationKey', 'passwordPlain', 'emailVerified', 'membershipStatus', 'roleTemplate', 'permissionSource']);
                 $attributes['id'] = $this->id($row['key']);
-                $attributes['organization_id'] = isset($row['organizationKey']) && $row['organizationKey'] !== null ? $this->id($row['organizationKey']) : null;
+                $attributes['organization_id'] = isset($row['organizationKey']) && $row['organizationKey'] !== null
+                    ? $this->id($row['organizationKey'])
+                    : null;
                 $attributes['password'] = Hash::make($row['passwordPlain']);
                 $attributes['email_verified_at'] = ($row['emailVerified'] ?? false) ? now() : null;
+
                 $this->upsert('users', ['id' => $attributes['id']], $attributes);
             }
         }
@@ -109,6 +121,7 @@ final class JodCompleteDemoSeeder extends Seeder
             $organizationId = $this->id($row['organizationKey']);
             $userId = $this->id($row['key']);
             $roleId = $this->id('role:'.$row['organizationKey'].':'.$row['roleTemplate']);
+
             $this->upsert('organization_staff', ['user_id' => $userId, 'organization_id' => $organizationId], [
                 'organization_id' => $organizationId,
                 'user_id' => $userId,
@@ -134,7 +147,10 @@ final class JodCompleteDemoSeeder extends Seeder
 
     private function permissionsForTemplate(string $template, array $catalog): array
     {
-        if ($template === 'owner') return $catalog;
+        if ($template === 'owner') {
+            return $catalog;
+        }
+
         $needles = match ($template) {
             'manager' => ['organization', 'dashboard', 'staff', 'campaign', 'post', 'article', 'media', 'donation', 'applicant'],
             'campaign_manager' => ['campaign', 'applicant', 'post'],
@@ -142,8 +158,14 @@ final class JodCompleteDemoSeeder extends Seeder
             'donations_manager' => ['donation', 'donor', 'campaign'],
             default => [],
         };
+
         return array_values(array_filter($catalog, static function (string $permission) use ($needles): bool {
-            foreach ($needles as $needle) if (str_contains($permission, $needle)) return true;
+            foreach ($needles as $needle) {
+                if (str_contains($permission, $needle)) {
+                    return true;
+                }
+            }
+
             return false;
         }));
     }
@@ -151,53 +173,114 @@ final class JodCompleteDemoSeeder extends Seeder
     private function seedSimpleEntities(array $data): void
     {
         foreach ($data['categories'] as $row) {
-            $this->upsert('categories', ['id' => $this->id($row['key'])], ['id' => $this->id($row['key']), 'name' => $row['name'], 'description' => $row['description'], 'status' => $row['status'], 'usage_count' => 0]);
+            $this->upsert('categories', ['id' => $this->id($row['key'])], [
+                'id' => $this->id($row['key']),
+                'name' => $row['name'],
+                'description' => $row['description'],
+                'status' => $row['status'],
+                'usage_count' => 0,
+            ]);
         }
+
         foreach ($data['campaigns'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','organizationKey','creatorKey','categoryKey','reviewedByKey']);
-            $attrs += ['id' => $this->id($row['key']), 'organization_id' => $this->id($row['organizationKey']), 'creator_id' => $this->id($row['creatorKey']), 'category_id' => $this->id($row['categoryKey']), 'reviewed_by' => $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null];
+            $attrs = $this->snakeRow($row, ['key', 'organizationKey', 'creatorKey', 'categoryKey', 'reviewedByKey']);
+            $attrs += [
+                'id' => $this->id($row['key']),
+                'organization_id' => $this->id($row['organizationKey']),
+                'creator_id' => $this->id($row['creatorKey']),
+                'category_id' => $this->id($row['categoryKey']),
+                'reviewed_by' => $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null,
+            ];
             $this->upsert('campaigns', ['id' => $attrs['id']], $attrs);
         }
+
         foreach ($data['posts'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','organizationKey','campaignKey','categoryKey','authorKey','reviewedByKey']);
-            $attrs += ['id' => $this->id($row['key']), 'organization_id' => $row['organizationKey'] ? $this->id($row['organizationKey']) : null, 'campaign_id' => $row['campaignKey'] ? $this->id($row['campaignKey']) : null, 'category_id' => $this->id($row['categoryKey']), 'author_id' => $this->id($row['authorKey']), 'reviewed_by' => $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null];
+            $attrs = $this->snakeRow($row, ['key', 'organizationKey', 'campaignKey', 'categoryKey', 'authorKey', 'reviewedByKey']);
+            $attrs += [
+                'id' => $this->id($row['key']),
+                'organization_id' => $row['organizationKey'] ? $this->id($row['organizationKey']) : null,
+                'campaign_id' => $row['campaignKey'] ? $this->id($row['campaignKey']) : null,
+                'category_id' => $this->id($row['categoryKey']),
+                'author_id' => $this->id($row['authorKey']),
+                'reviewed_by' => $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null,
+            ];
             $this->upsert('posts', ['id' => $attrs['id']], $attrs);
         }
+
         foreach ($data['articles'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','authorKey','hasVideo']);
-            $attrs += ['id' => $this->id($row['key']), 'author_id' => $this->id($row['authorKey'])];
-            $this->upsert('articles', ['id' => $attrs['id']], $attrs);
+            $attrs = $this->snakeRow($row, ['key', 'authorKey', 'hasVideo']);
+            $attrs += [
+                'id' => $this->id($row['key']),
+                'author_id' => $this->id($row['authorKey']),
+            ];
+
+            Article::query()->updateOrCreate(['id' => $attrs['id']], $attrs);
         }
+
         foreach ($data['help_offers'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','postKey','helperUserKey','postOwnerKey']);
-            $attrs += ['id' => $this->id($row['key']), 'post_id' => $this->id($row['postKey']), 'helper_user_id' => $this->id($row['helperUserKey']), 'post_owner_id' => $this->id($row['postOwnerKey'])];
+            $attrs = $this->snakeRow($row, ['key', 'postKey', 'helperUserKey', 'postOwnerKey']);
+            $attrs += [
+                'id' => $this->id($row['key']),
+                'post_id' => $this->id($row['postKey']),
+                'helper_user_id' => $this->id($row['helperUserKey']),
+                'post_owner_id' => $this->id($row['postOwnerKey']),
+            ];
             $this->upsert('help_offers', ['id' => $attrs['id']], $attrs);
         }
+
         foreach ($data['donations'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','organizationKey','campaignKey','createdByUserKey','confirmedByUserKey']);
-            $attrs += ['organization_id' => $this->id($row['organizationKey']), 'campaign_id' => $this->id($row['campaignKey']), 'created_by' => $this->id($row['createdByUserKey']), 'confirmed_by' => $row['confirmedByUserKey'] ? $this->id($row['confirmedByUserKey']) : null];
+            $attrs = $this->snakeRow($row, ['key', 'organizationKey', 'campaignKey', 'createdByUserKey', 'confirmedByUserKey']);
+            $attrs += [
+                'organization_id' => $this->id($row['organizationKey']),
+                'campaign_id' => $this->id($row['campaignKey']),
+                'created_by' => $this->id($row['createdByUserKey']),
+                'confirmed_by' => $row['confirmedByUserKey'] ? $this->id($row['confirmedByUserKey']) : null,
+            ];
             $this->upsert('donations', ['campaign_ref' => $row['campaignRef']], $attrs);
             $this->logicalIds[$row['key']] = (int) DB::table('donations')->where('campaign_ref', $row['campaignRef'])->value('id');
         }
+
         foreach ($data['campaign_applications'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','organizationKey','campaignKey','createdByUserKey','assignedToUserKey']);
-            $attrs += ['organization_id' => $this->id($row['organizationKey']), 'campaign_id' => $this->id($row['campaignKey']), 'created_by' => $this->id($row['createdByUserKey']), 'assigned_to' => $row['assignedToUserKey'] ? $this->id($row['assignedToUserKey']) : null];
+            $attrs = $this->snakeRow($row, ['key', 'organizationKey', 'campaignKey', 'createdByUserKey', 'assignedToUserKey']);
+            $attrs += [
+                'organization_id' => $this->id($row['organizationKey']),
+                'campaign_id' => $this->id($row['campaignKey']),
+                'created_by' => $this->id($row['createdByUserKey']),
+                'assigned_to' => $row['assignedToUserKey'] ? $this->id($row['assignedToUserKey']) : null,
+            ];
             $this->upsert('campaign_applications', ['campaign_id' => $attrs['campaign_id'], 'created_by' => $attrs['created_by']], $attrs);
-            $this->logicalIds[$row['key']] = (int) DB::table('campaign_applications')->where('campaign_id', $attrs['campaign_id'])->where('created_by', $attrs['created_by'])->value('id');
+            $this->logicalIds[$row['key']] = (int) DB::table('campaign_applications')
+                ->where('campaign_id', $attrs['campaign_id'])
+                ->where('created_by', $attrs['created_by'])
+                ->value('id');
         }
+
         foreach ($data['notifications'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','recipientUserKey','creatorUserKey','referenceKey']);
-            $attrs += ['id' => $this->id($row['key']), 'recipient_id' => $this->id($row['recipientUserKey']), 'creator_id' => $this->id($row['creatorUserKey']), 'reference_label' => $row['referenceKey'], 'reference_path' => $this->referencePath($row['referenceKey'])];
+            $attrs = $this->snakeRow($row, ['key', 'recipientUserKey', 'creatorUserKey', 'referenceKey']);
+            $attrs += [
+                'id' => $this->id($row['key']),
+                'recipient_id' => $this->id($row['recipientUserKey']),
+                'creator_id' => $this->id($row['creatorUserKey']),
+                'reference_label' => $row['referenceKey'],
+                'reference_path' => $this->referencePath($row['referenceKey']),
+            ];
             $this->upsert('notifications', ['id' => $attrs['id']], $attrs);
         }
+
         foreach ($data['reports'] as $row) {
-            $attrs = $this->snakeRow($row, ['key','reporterUserKey','assigneeUserKey','entityKey']);
-            $attrs += ['id' => $this->id($row['key']), 'reporter_id' => $this->id($row['reporterUserKey']), 'assignee_id' => $row['assigneeUserKey'] ? $this->id($row['assigneeUserKey']) : null, 'entity_id' => $this->id($row['entityKey'])];
+            $attrs = $this->snakeRow($row, ['key', 'reporterUserKey', 'assigneeUserKey', 'entityKey']);
+            $attrs += [
+                'id' => $this->id($row['key']),
+                'reporter_id' => $this->id($row['reporterUserKey']),
+                'assignee_id' => $row['assigneeUserKey'] ? $this->id($row['assigneeUserKey']) : null,
+                'entity_id' => $this->id($row['entityKey']),
+            ];
             $attrs['evidence'] = json_encode([], JSON_THROW_ON_ERROR);
             $attrs['timeline'] = json_encode([['note' => $row['timelineNote']]], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             unset($attrs['timeline_note']);
             $this->upsert('reports', ['id' => $attrs['id']], $attrs);
         }
+
         foreach ($data['badges'] as $row) {
             $attrs = $this->snakeRow($row, ['key']);
             $attrs['id'] = $this->id($row['key']);
@@ -208,60 +291,107 @@ final class JodCompleteDemoSeeder extends Seeder
     private function seedMedia(array $rows, bool $video): void
     {
         foreach ($rows as $row) {
-            if ($row['entityType'] === 'post' && $video && ! $this->postAllowsVideo($row['entityKey'])) continue;
+            if ($row['entityType'] === 'post' && $video && ! $this->postAllowsVideo($row['entityKey'])) {
+                continue;
+            }
+
             $source = $row['sourceUrl'];
             $extension = $video ? 'mp4' : 'jpg';
             $path = 'demo/'.$row['entityType'].'/'.$row['entityKey'].'/'.$row['key'].'.'.$extension;
             $size = 0;
             $mime = $row['mimeType'] ?? $row['mimeTypeExpected'] ?? ($video ? 'video/mp4' : 'image/jpeg');
+
             try {
                 if (! Storage::disk('public')->exists($path)) {
                     $response = Http::timeout(30)->retry(2, 250)->get($source);
-                    if ($response->successful()) Storage::disk('public')->put($path, $response->body());
+                    if ($response->successful()) {
+                        Storage::disk('public')->put($path, $response->body());
+                    }
                 }
-                if (Storage::disk('public')->exists($path)) $size = Storage::disk('public')->size($path);
+
+                if (Storage::disk('public')->exists($path)) {
+                    $size = Storage::disk('public')->size($path);
+                }
             } catch (Throwable $e) {
                 $this->command?->warn('Demo media download failed for '.$row['key'].': '.$e->getMessage());
                 continue;
             }
+
             $modelId = $this->id($row['entityKey']);
-            $this->upsert('media', ['id' => $this->id($row['key'])], ['id' => $this->id($row['key']), 'model_type' => $row['entityType'], 'model_id' => $modelId, 'post_id' => $row['entityType'] === 'post' ? $modelId : null, 'prop' => $row['prop'], 'disk' => 'public', 'path' => $path, 'original_name' => basename($path), 'description' => $row['altText'] ?? $row['semanticLabel'] ?? null, 'mime_type' => $mime, 'size' => $size, 'position' => $row['position']]);
+            $this->upsert('media', ['id' => $this->id($row['key'])], [
+                'id' => $this->id($row['key']),
+                'model_type' => $row['entityType'],
+                'model_id' => $modelId,
+                'post_id' => $row['entityType'] === 'post' ? $modelId : null,
+                'prop' => $row['prop'],
+                'disk' => 'public',
+                'path' => $path,
+                'original_name' => basename($path),
+                'description' => $row['altText'] ?? $row['semanticLabel'] ?? null,
+                'mime_type' => $mime,
+                'size' => $size,
+                'position' => $row['position'],
+            ]);
         }
     }
 
     private function postAllowsVideo(string $postKey): bool
     {
-        return in_array($postKey, ['post_laptop_repair_offer','post_donate_heart_campaign','post_update_heart_60'], true);
+        return in_array($postKey, ['post_laptop_repair_offer', 'post_donate_heart_campaign', 'post_update_heart_60'], true);
     }
 
     private function seedLikesAndSaves(array $data): void
     {
-        foreach ($data['post_likes'] as $row) $this->upsert('post_likes', ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])], ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])]);
-        foreach ($data['saved_posts'] as $row) $this->upsert('saved_posts', ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])], ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])]);
+        foreach ($data['post_likes'] as $row) {
+            $this->upsert('post_likes', ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])], [
+                'user_id' => $this->id($row['userKey']),
+                'post_id' => $this->id($row['postKey']),
+            ]);
+        }
+
+        foreach ($data['saved_posts'] as $row) {
+            $this->upsert('saved_posts', ['user_id' => $this->id($row['userKey']), 'post_id' => $this->id($row['postKey'])], [
+                'user_id' => $this->id($row['userKey']),
+                'post_id' => $this->id($row['postKey']),
+            ]);
+        }
     }
 
     private function recalculateDerivedFields(): void
     {
         foreach (DB::table('categories')->pluck('id') as $categoryId) {
-            $usage = DB::table('posts')->where('category_id', $categoryId)->count() + DB::table('campaigns')->where('category_id', $categoryId)->count();
+            $usage = DB::table('posts')->where('category_id', $categoryId)->count()
+                + DB::table('campaigns')->where('category_id', $categoryId)->count();
             DB::table('categories')->where('id', $categoryId)->update(['usage_count' => $usage]);
         }
+
         foreach (DB::table('campaigns')->pluck('id') as $campaignId) {
             $completed = DB::table('donations')->where('campaign_id', $campaignId)->where('status', 'completed')->get(['amount_or_type']);
             $raised = $completed->sum(fn ($row) => is_numeric($row->amount_or_type) ? (float) $row->amount_or_type : 0.0);
-            $applicants = DB::table('campaign_applications')->where('campaign_id', $campaignId)->whereNotIn('applicant_status', ['rejected','withdrawn'])->count();
-            DB::table('campaigns')->where('id', $campaignId)->update(['raised_amount' => $raised, 'donors_count' => $completed->count(), 'applicants_count' => $applicants]);
+            $applicants = DB::table('campaign_applications')
+                ->where('campaign_id', $campaignId)
+                ->whereNotIn('applicant_status', ['rejected', 'withdrawn'])
+                ->count();
+
+            DB::table('campaigns')->where('id', $campaignId)->update([
+                'raised_amount' => $raised,
+                'donors_count' => $completed->count(),
+                'applicants_count' => $applicants,
+            ]);
         }
     }
 
     private function grantAdminPermissions(array $admins): void
     {
-        foreach ($admins as $row) User::query()->find($this->id($row['key']))?->syncPermissions(PermissionCatalog::names());
+        foreach ($admins as $row) {
+            User::query()->find($this->id($row['key']))?->syncPermissions(PermissionCatalog::names());
+        }
     }
 
     private function referencePath(string $key): string
     {
         $id = $key === 'system' ? null : ($this->logicalIds[$key] ?? $this->id($key));
+
         return match (true) {
             str_starts_with($key, 'post_') => '/api/mobile/posts/'.$id,
             str_starts_with($key, 'campaign_') => '/api/mobile/campaigns/'.$id,
@@ -275,34 +405,56 @@ final class JodCompleteDemoSeeder extends Seeder
 
     private function upsert(string $table, array $where, array $attributes): void
     {
-        if (! Schema::hasTable($table)) return;
+        if (! Schema::hasTable($table)) {
+            return;
+        }
+
         $columns = $this->columns[$table] ??= Schema::getColumnListing($table);
         $attributes = array_intersect_key($attributes, array_flip($columns));
         $where = array_intersect_key($where, array_flip($columns));
-        if ($where === []) throw new \RuntimeException('No usable idempotency key for '.$table);
+
+        if ($where === []) {
+            throw new \RuntimeException('No usable idempotency key for '.$table);
+        }
+
         $now = now();
-        if (in_array('updated_at', $columns, true)) $attributes['updated_at'] = $now;
-        if (in_array('created_at', $columns, true) && ! DB::table($table)->where($where)->exists()) $attributes['created_at'] = $now;
+        if (in_array('updated_at', $columns, true)) {
+            $attributes['updated_at'] = $now;
+        }
+        if (in_array('created_at', $columns, true) && ! DB::table($table)->where($where)->exists()) {
+            $attributes['created_at'] = $now;
+        }
+
         DB::table($table)->updateOrInsert($where, $attributes);
     }
 
     private function snakeRow(array $row, array $exclude = []): array
     {
         $out = [];
+
         foreach ($row as $key => $value) {
-            if (in_array($key, $exclude, true)) continue;
-            if (is_array($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if (in_array($key, $exclude, true)) {
+                continue;
+            }
+
+            if (is_array($value)) {
+                $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+
             if (is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/', $value) === 1) {
                 $value = (new \DateTimeImmutable($value))->format('Y-m-d H:i:s');
             }
+
             $out[Str::snake($key)] = $value;
         }
+
         return $out;
     }
 
     private function id(string $key): string
     {
         $hex = substr(hash('sha256', 'jod-demo:'.$key), 0, 32);
-        return substr($hex,0,8).'-'.substr($hex,8,4).'-5'.substr($hex,13,3).'-a'.substr($hex,17,3).'-'.substr($hex,20,12);
+
+        return substr($hex, 0, 8).'-'.substr($hex, 8, 4).'-5'.substr($hex, 13, 3).'-a'.substr($hex, 17, 3).'-'.substr($hex, 20, 12);
     }
 }
