@@ -19,24 +19,75 @@ class MediaStreamController extends Controller
 {
     public function __invoke(Request $request, string $video): JsonResponse|Response|StreamedResponse
     {
-        $media = Media::query()
-            ->whereKey($video)
-            ->where('model_type', MediaModel::ORGANIZATION->value)
-            ->where('prop', 'videos')
-            ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
-            ->first();
+        $media = $this->publicVideo($video);
 
         if ($media === null) {
             return MobileApiResponse::error('not_found', 'The requested media could not be found.', null, 404);
         }
 
-        $disk = Storage::disk($media->disk);
+        return $this->streamAsset(
+            $request,
+            (string) $media->disk,
+            (string) $media->path,
+            $media->mime_type ?: 'application/octet-stream',
+            false,
+        );
+    }
 
-        if (! $disk->exists($media->path)) {
+    public function preview(Request $request, string $video): JsonResponse|Response|StreamedResponse
+    {
+        $media = $this->publicVideo($video);
+
+        if ($media === null) {
+            return MobileApiResponse::error('not_found', 'The requested media could not be found.', null, 404);
+        }
+
+        if (
+            $media->preview_status !== 'ready'
+            || blank($media->preview_disk)
+            || blank($media->preview_path)
+        ) {
+            return MobileApiResponse::error(
+                'preview_not_ready',
+                'The video preview is not available yet.',
+                null,
+                404,
+            );
+        }
+
+        return $this->streamAsset(
+            $request,
+            (string) $media->preview_disk,
+            (string) $media->preview_path,
+            $media->preview_mime_type ?: 'video/mp4',
+            true,
+        );
+    }
+
+    private function publicVideo(string $video): ?Media
+    {
+        return Media::query()
+            ->whereKey($video)
+            ->where('model_type', MediaModel::ORGANIZATION->value)
+            ->where('prop', 'videos')
+            ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
+            ->first();
+    }
+
+    private function streamAsset(
+        Request $request,
+        string $diskName,
+        string $path,
+        string $mimeType,
+        bool $cacheable,
+    ): JsonResponse|Response|StreamedResponse {
+        $disk = Storage::disk($diskName);
+
+        if (! $disk->exists($path)) {
             return MobileApiResponse::error('not_found', 'The requested video file could not be found.', null, 404);
         }
 
-        $size = (int) $disk->size($media->path);
+        $size = (int) $disk->size($path);
         $range = $this->resolveRange($request->header('Range'), $size);
 
         if (! $range['valid']) {
@@ -51,7 +102,7 @@ class MediaStreamController extends Controller
         $end = $range['end'];
         $length = $size === 0 ? 0 : ($end - $start + 1);
         $status = $range['requested'] ? Response::HTTP_PARTIAL_CONTENT : Response::HTTP_OK;
-        $stream = $disk->readStream($media->path);
+        $stream = $disk->readStream($path);
 
         if ($stream === false) {
             return MobileApiResponse::error('not_found', 'The requested video file could not be read.', null, 404);
@@ -59,10 +110,14 @@ class MediaStreamController extends Controller
 
         $headers = [
             'Accept-Ranges' => 'bytes',
-            'Content-Type' => $media->mime_type ?: 'application/octet-stream',
+            'Content-Type' => $mimeType,
             'Content-Length' => (string) $length,
             'X-Content-Type-Options' => 'nosniff',
         ];
+
+        if ($cacheable) {
+            $headers['Cache-Control'] = 'public, max-age=31536000, immutable';
+        }
 
         if ($range['requested']) {
             $headers['Content-Range'] = "bytes {$start}-{$end}/{$size}";
