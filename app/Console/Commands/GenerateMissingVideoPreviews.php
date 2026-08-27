@@ -33,8 +33,7 @@ class GenerateMissingVideoPreviews extends Command
                 $inner->whereNull('preview_status')
                     ->orWhereIn('preview_status', ['pending', 'failed']);
             }))
-            ->orderBy('id')
-            ->chunk(100, function ($videos) use (&$queued): void {
+            ->chunkById(100, function ($videos) use (&$queued): void {
                 foreach ($videos as $video) {
                     $video->update([
                         'preview_status' => 'pending',
