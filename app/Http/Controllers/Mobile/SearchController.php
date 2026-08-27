@@ -198,7 +198,7 @@ class SearchController extends Controller
     /** @return array<int|string, mixed> */
     private function postRelations(?User $viewer): array
     {
-        $relations = ['organization.logoMedia', 'campaign', 'author.avatarMedia', 'images'];
+        $relations = ['organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images'];
 
         if ($viewer === null) {
             return $relations;

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
 use App\Support\Mobile\MobileApiResponse;
+use App\Support\Mobile\SyrianGovernorates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,21 +15,7 @@ class LookupController extends Controller
 {
     public function cities(Request $request): JsonResponse
     {
-        return $this->lookup($request, [
-            ['id' => 'city_damascus', 'name' => 'دمشق', 'nameEn' => 'Damascus', 'slug' => 'damascus', 'sortOrder' => 1],
-            ['id' => 'city_aleppo', 'name' => 'حلب', 'nameEn' => 'Aleppo', 'slug' => 'aleppo', 'sortOrder' => 2],
-            ['id' => 'city_homs', 'name' => 'حمص', 'nameEn' => 'Homs', 'slug' => 'homs', 'sortOrder' => 3],
-            ['id' => 'city_hama', 'name' => 'حماة', 'nameEn' => 'Hama', 'slug' => 'hama', 'sortOrder' => 4],
-            ['id' => 'city_lattakia', 'name' => 'اللاذقية', 'nameEn' => 'Lattakia', 'slug' => 'lattakia', 'sortOrder' => 5],
-            ['id' => 'city_tartus', 'name' => 'طرطوس', 'nameEn' => 'Tartus', 'slug' => 'tartus', 'sortOrder' => 6],
-            ['id' => 'city_idlib', 'name' => 'إدلب', 'nameEn' => 'Idlib', 'slug' => 'idlib', 'sortOrder' => 7],
-            ['id' => 'city_daraa', 'name' => 'درعا', 'nameEn' => 'Daraa', 'slug' => 'daraa', 'sortOrder' => 8],
-            ['id' => 'city_suwayda', 'name' => 'السويداء', 'nameEn' => 'As-Suwayda', 'slug' => 'suwayda', 'sortOrder' => 9],
-            ['id' => 'city_quneitra', 'name' => 'القنيطرة', 'nameEn' => 'Quneitra', 'slug' => 'quneitra', 'sortOrder' => 10],
-            ['id' => 'city_deir_ez_zor', 'name' => 'دير الزور', 'nameEn' => 'Deir ez-Zor', 'slug' => 'deir-ez-zor', 'sortOrder' => 11],
-            ['id' => 'city_raqqa', 'name' => 'الرقة', 'nameEn' => 'Raqqa', 'slug' => 'raqqa', 'sortOrder' => 12],
-            ['id' => 'city_hasakah', 'name' => 'الحسكة', 'nameEn' => 'Al-Hasakah', 'slug' => 'hasakah', 'sortOrder' => 13],
-        ], 'Cities retrieved successfully.');
+        return $this->lookup($request, SyrianGovernorates::items(), 'Cities retrieved successfully.');
     }
 
     public function reportReasons(Request $request): JsonResponse

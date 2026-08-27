@@ -23,6 +23,7 @@ class MobileHomePostResource extends JsonResource
         $ctaState = $this->ctaState($ctaType);
         $publisher = $this->publisher();
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
+        $category = $this->relationLoaded('category') ? $this->category : null;
         $targetId = in_array($ctaType, ['apply', 'donate'], true) ? ($campaign?->id ? (string) $campaign->id : null) : (string) $this->id;
         $cta = ['type' => $ctaType, 'label' => $this->ctaLabel($ctaType)];
         if ($targetId !== null) $cta['targetId'] = $targetId;
@@ -54,6 +55,10 @@ class MobileHomePostResource extends JsonResource
             'status' => $this->status === 'approved' ? 'published' : $this->status,
             'campaignId' => $campaign?->id ? (string) $campaign->id : null,
             'location' => $this->location,
+            'category' => $category ? [
+                'id' => (string) $category->id,
+                'name' => (string) $category->name,
+            ] : null,
         ];
 
         if ($postType === 'help_request') $data = [...$data, ...$this->helpRequestState($request)];

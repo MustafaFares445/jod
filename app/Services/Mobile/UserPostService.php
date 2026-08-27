@@ -8,6 +8,7 @@ use App\Enums\NotificationEventType;
 use App\Models\Post;
 use App\Models\User;
 use App\Services\NotificationEventService;
+use App\Support\Mobile\SyrianGovernorates;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +118,8 @@ class UserPostService
                 ]);
             }
 
+            $this->validateForSubmission($lockedPost);
+
             $lockedPost->update([
                 'status' => 'pending',
                 'submitted_at' => now(),
@@ -196,6 +199,37 @@ class UserPostService
             '/admin/review/posts/'.$post->id,
             (string) $author->id,
         );
+    }
+
+    private function validateForSubmission(Post $post): void
+    {
+        $errors = [];
+
+        if (! filled($post->title) || mb_strlen(trim((string) $post->title)) < 4) {
+            $errors['title'] = ['عنوان المنشور مطلوب ويجب ألا يقل عن 4 أحرف.'];
+        }
+
+        if (! filled($post->content) || mb_strlen(trim((string) $post->content)) < 10) {
+            $errors['details'] = ['تفاصيل المنشور مطلوبة ويجب ألا تقل عن 10 أحرف.'];
+        }
+
+        if (! filled($post->location) || ! in_array((string) $post->location, SyrianGovernorates::names(), true)) {
+            $errors['city'] = ['اختر محافظة سورية صحيحة.'];
+        }
+
+        $hasActiveCategory = filled($post->category_id)
+            && DB::table('categories')
+                ->where('id', $post->category_id)
+                ->where('status', 'active')
+                ->exists();
+
+        if (! $hasActiveCategory) {
+            $errors['categoryId'] = ['تصنيف المنشور مطلوب ويجب أن يكون فعالاً.'];
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     /** @return array{0: string, 1: string} */
