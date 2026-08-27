@@ -22,6 +22,27 @@ class MediaResource extends JsonResource
                 $this->prop === 'videos',
                 fn (): string => route('mobile.discovery.media.stream', ['video' => $this->id]),
             ),
+            'previewUrl' => $this->when(
+                $this->prop === 'videos',
+                fn (): ?string => $this->preview_status === 'ready' && filled($this->preview_path)
+                    ? route('mobile.discovery.media.preview', [
+                        'video' => $this->id,
+                        'v' => substr(sha1((string) $this->preview_path), 0, 12),
+                    ])
+                    : null,
+            ),
+            'previewStatus' => $this->when(
+                $this->prop === 'videos',
+                fn (): ?string => $this->preview_status,
+            ),
+            'previewMimeType' => $this->when(
+                $this->prop === 'videos',
+                fn (): ?string => $this->preview_mime_type,
+            ),
+            'previewSize' => $this->when(
+                $this->prop === 'videos',
+                fn (): ?int => $this->preview_size !== null ? (int) $this->preview_size : null,
+            ),
             'originalName' => $this->original_name,
             'description' => $this->description,
             'mimeType' => $this->mime_type,
