@@ -6,17 +6,20 @@ namespace App\Jobs;
 
 use App\Models\Media;
 use App\Services\VideoPreviewGenerator;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
-class GenerateVideoPreview implements ShouldQueue
+class GenerateVideoPreview implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
 
     public int $tries = 3;
 
     public int $timeout = 60;
+
+    public int $uniqueFor = 300;
 
     /** @var list<int> */
     public array $backoff = [10, 60, 180];
@@ -25,6 +28,11 @@ class GenerateVideoPreview implements ShouldQueue
         public readonly string $mediaId,
         public readonly string $sourcePath,
     ) {}
+
+    public function uniqueId(): string
+    {
+        return $this->mediaId.':'.sha1($this->sourcePath);
+    }
 
     public function handle(VideoPreviewGenerator $generator): void
     {
