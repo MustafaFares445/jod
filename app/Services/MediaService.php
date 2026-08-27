@@ -83,6 +83,7 @@ class MediaService
         $oldPath = $media->path;
         $oldPreviewDisk = $media->preview_disk;
         $oldPreviewPath = $media->preview_path;
+        $oldGeneratedPreviewPath = $this->generatedPreviewPath($model, $modelId, $prop, $mediaId, $oldPath);
 
         try {
             $media->update([
@@ -109,6 +110,10 @@ class MediaService
             Storage::disk((string) $oldPreviewDisk)->delete((string) $oldPreviewPath);
         }
 
+        if (filled($oldGeneratedPreviewPath) && $oldGeneratedPreviewPath !== $oldPreviewPath) {
+            Storage::disk('public')->delete((string) $oldGeneratedPreviewPath);
+        }
+
         $media = $media->refresh();
         $this->queueVideoPreview($media);
 
@@ -123,6 +128,7 @@ class MediaService
         $path = $media->path;
         $previewDisk = $media->preview_disk;
         $previewPath = $media->preview_path;
+        $generatedPreviewPath = $this->generatedPreviewPath($model, $modelId, $prop, $mediaId, $path);
 
         DB::transaction(function () use ($media, $model, $modelId, $prop): void {
             $media->delete();
@@ -133,6 +139,10 @@ class MediaService
 
         if (filled($previewDisk) && filled($previewPath)) {
             Storage::disk((string) $previewDisk)->delete((string) $previewPath);
+        }
+
+        if (filled($generatedPreviewPath) && $generatedPreviewPath !== $previewPath) {
+            Storage::disk('public')->delete((string) $generatedPreviewPath);
         }
     }
 
@@ -188,6 +198,20 @@ class MediaService
         }
 
         return config('video.preview.enabled', true) ? 'pending' : 'disabled';
+    }
+
+    private function generatedPreviewPath(
+        MediaModel $model,
+        string $modelId,
+        string $prop,
+        string $mediaId,
+        string $sourcePath,
+    ): ?string {
+        if ($model !== MediaModel::ORGANIZATION || $prop !== 'videos') {
+            return null;
+        }
+
+        return VideoPreviewGenerator::previewPathFor($modelId, $mediaId, $sourcePath);
     }
 
     private function queueVideoPreview(Media $media): void
