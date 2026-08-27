@@ -61,6 +61,7 @@ class MediaService
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize() ?: 0,
                 'position' => $count,
+                'preview_status' => $this->initialPreviewStatus($prop),
             ]);
         } catch (\Throwable $exception) {
             Storage::disk('public')->delete($path);
@@ -75,6 +76,8 @@ class MediaService
         $newPath = $file->store($this->directory($model, $modelId, $prop), 'public');
         $oldDisk = $media->disk;
         $oldPath = $media->path;
+        $oldPreviewDisk = $media->preview_disk;
+        $oldPreviewPath = $media->preview_path;
 
         try {
             $media->update([
@@ -83,6 +86,12 @@ class MediaService
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize() ?: 0,
+                'preview_disk' => null,
+                'preview_path' => null,
+                'preview_mime_type' => null,
+                'preview_size' => null,
+                'preview_status' => $this->initialPreviewStatus($prop),
+                'preview_error' => null,
             ]);
         } catch (\Throwable $exception) {
             Storage::disk('public')->delete($newPath);
@@ -90,6 +99,10 @@ class MediaService
         }
 
         Storage::disk($oldDisk)->delete($oldPath);
+
+        if (filled($oldPreviewDisk) && filled($oldPreviewPath)) {
+            Storage::disk((string) $oldPreviewDisk)->delete((string) $oldPreviewPath);
+        }
 
         return $media->refresh();
     }
@@ -100,6 +113,8 @@ class MediaService
         $media = $this->findScoped($model, $modelId, $prop, $mediaId);
         $disk = $media->disk;
         $path = $media->path;
+        $previewDisk = $media->preview_disk;
+        $previewPath = $media->preview_path;
 
         DB::transaction(function () use ($media, $model, $modelId, $prop): void {
             $media->delete();
@@ -107,6 +122,10 @@ class MediaService
         });
 
         Storage::disk($disk)->delete($path);
+
+        if (filled($previewDisk) && filled($previewPath)) {
+            Storage::disk((string) $previewDisk)->delete((string) $previewPath);
+        }
     }
 
     /** @return Collection<int, Media> */
@@ -152,5 +171,14 @@ class MediaService
     private function directory(MediaModel $model, string $modelId, string $prop): string
     {
         return "media/{$model->value}/{$modelId}/{$prop}";
+    }
+
+    private function initialPreviewStatus(string $prop): ?string
+    {
+        if ($prop !== 'videos') {
+            return null;
+        }
+
+        return config('video.preview.enabled', true) ? 'pending' : 'disabled';
     }
 }
