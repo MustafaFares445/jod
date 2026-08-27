@@ -228,6 +228,6 @@ class MediaService
             return;
         }
 
-        GenerateVideoPreview::dispatch((string) $media->id, (string) $media->path);
+        GenerateVideoPreview::dispatch((string) $media->id, (string) $media->path)->afterCommit();
     }
 }
