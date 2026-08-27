@@ -39,6 +39,11 @@ export type OrganizationVideo = {
   modelId: string;
   prop: "videos";
   url: string;
+  streamUrl: string;
+  previewUrl: string | null;
+  previewStatus: "pending" | "processing" | "ready" | "failed" | "disabled" | null;
+  previewMimeType: string | null;
+  previewSize: number | null;
   originalName: string;
   mimeType: string | null;
   size: number;
@@ -48,7 +53,7 @@ export type OrganizationVideo = {
 };
 ```
 
-The player must use `video.url` as returned. Do not construct a storage path in the app.
+For feed cards, use `previewUrl` when `previewStatus === "ready"`. For the full video screen, use `streamUrl`. Do not construct storage paths or calculate byte ranges in the app.
 
 ---
 
@@ -78,6 +83,11 @@ Response shape:
       "modelId": "organization-uuid",
       "prop": "videos",
       "url": "https://.../company-intro.mp4",
+      "streamUrl": "https://.../api/mobile/discovery/media/video-uuid/stream",
+      "previewUrl": "https://.../api/mobile/discovery/media/video-uuid/preview?v=...",
+      "previewStatus": "ready",
+      "previewMimeType": "video/mp4",
+      "previewSize": 245760,
       "originalName": "company-intro.mp4",
       "mimeType": "video/mp4",
       "size": 20971520,
@@ -123,6 +133,11 @@ Response:
     "modelId": "organization-uuid",
     "prop": "videos",
     "url": "https://.../company-intro.mp4",
+    "streamUrl": "https://.../api/mobile/discovery/media/video-uuid/stream",
+    "previewUrl": "https://.../api/mobile/discovery/media/video-uuid/preview?v=...",
+    "previewStatus": "ready",
+    "previewMimeType": "video/mp4",
+    "previewSize": 245760,
     "originalName": "company-intro.mp4",
     "mimeType": "video/mp4",
     "size": 20971520,
@@ -183,7 +198,8 @@ Recommended behavior:
 3. If `data` is empty, show an empty state such as **No videos yet**.
 4. Keep pagination independent from posts/campaign pagination.
 5. Cache by `organizationId` and page.
-6. When a video is selected, pass the returned URL directly to the platform video player.
+6. In scrolling feeds, autoplay `previewUrl` muted only while the card is visible.
+7. When a video is selected, open the full player using `streamUrl`.
 
 ---
 
@@ -214,13 +230,20 @@ async function getOrganizationVideos(organizationId: string, page = 1) {
 
 # Playback guidance
 
-The backend currently returns the original uploaded video URL. The frontend should:
+The backend returns two playback surfaces:
+
+- `previewUrl`: generated first few seconds for feed/autoplay cards
+- `streamUrl`: full original video with HTTP byte-range support
+
+The frontend should:
 
 - use native/platform controls unless the product has a custom player
 - support MP4, MOV, and WebM according to the target platform capabilities
 - show a loading indicator while the player buffers
 - handle playback errors without breaking the whole organization profile
-- avoid downloading every video eagerly; load video bytes when playback/preview requires them
+- avoid downloading every video eagerly; load the preview only when the card approaches/enters the viewport
+- loop the muted short preview in the feed
+- use the full `streamUrl` only when the user opens the video
 
 There is currently no guaranteed poster/thumbnail field. Use a neutral video placeholder until thumbnail generation is added later.
 
