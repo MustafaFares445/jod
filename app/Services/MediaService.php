@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\MediaModel;
+use App\Jobs\GenerateVideoPreview;
 use App\Models\Media;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -51,7 +52,7 @@ class MediaService
         $path = $file->store($this->directory($model, $modelId, $prop), 'public');
 
         try {
-            return Media::query()->create([
+            $media = Media::query()->create([
                 'model_type' => $model,
                 'model_id' => $modelId,
                 'prop' => $prop,
@@ -67,6 +68,10 @@ class MediaService
             Storage::disk('public')->delete($path);
             throw $exception;
         }
+
+        $this->queueVideoPreview($media);
+
+        return $media;
     }
 
     public function replace(MediaModel $model, string $modelId, string $prop, string $mediaId, UploadedFile $file): Media
@@ -104,7 +109,10 @@ class MediaService
             Storage::disk((string) $oldPreviewDisk)->delete((string) $oldPreviewPath);
         }
 
-        return $media->refresh();
+        $media = $media->refresh();
+        $this->queueVideoPreview($media);
+
+        return $media;
     }
 
     public function delete(MediaModel $model, string $modelId, string $prop, string $mediaId): void
@@ -180,5 +188,14 @@ class MediaService
         }
 
         return config('video.preview.enabled', true) ? 'pending' : 'disabled';
+    }
+
+    private function queueVideoPreview(Media $media): void
+    {
+        if ($media->prop !== 'videos' || $media->preview_status !== 'pending') {
+            return;
+        }
+
+        GenerateVideoPreview::dispatch((string) $media->id, (string) $media->path);
     }
 }
