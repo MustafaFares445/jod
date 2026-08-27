@@ -42,6 +42,7 @@ class ReportResource extends JsonResource
             'campaign' => $this->relationLoaded('reportedCampaign') ? $this->reportedCampaign : null,
             'user' => $this->relationLoaded('reportedUser') ? $this->reportedUser : null,
             'organization' => $this->relationLoaded('reportedOrganization') ? $this->reportedOrganization : null,
+            'media' => $this->relationLoaded('reportedMedia') ? $this->reportedMedia : null,
             default => null,
         };
 
@@ -54,6 +55,7 @@ class ReportResource extends JsonResource
             'campaign' => CampaignResource::make($entity)->resolve($request),
             'user' => UserResource::make($entity)->resolve($request),
             'organization' => OrganizationResource::make($entity)->resolve($request),
+            'media' => MediaResource::make($entity)->resolve($request),
             default => [],
         };
 
@@ -85,6 +87,9 @@ class ReportResource extends JsonResource
                 : null,
             'organization' => $this->relationLoaded('reportedOrganization')
                 ? $this->organizationSummary($this->reportedOrganization)
+                : null,
+            'media' => $this->relationLoaded('reportedMedia')
+                ? $this->organizationSummary($this->reportedMedia?->organization)
                 : null,
             default => null,
         };

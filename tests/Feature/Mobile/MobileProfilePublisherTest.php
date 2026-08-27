@@ -161,6 +161,34 @@ class MobileProfilePublisherTest extends TestCase
         $response->assertJsonMissing(['title' => 'Organization-backed post']);
     }
 
+    public function test_authenticated_viewer_can_list_individual_publisher_posts_without_relation_type_error(): void
+    {
+        $publisher = User::factory()->create([
+            'name' => 'Authenticated Publisher',
+            'email' => 'authenticated.publisher@example.test',
+        ]);
+        $viewer = User::factory()->create();
+        $post = Post::factory()->published()->create([
+            'author_id' => $publisher->id,
+            'organization_id' => null,
+            'title' => 'Authenticated viewer post',
+        ]);
+        SavedPost::factory()->create([
+            'user_id' => $viewer->id,
+            'post_id' => $post->id,
+        ]);
+
+        Sanctum::actingAs($viewer);
+
+        $this->getJson("/api/mobile/discovery/publishers/{$publisher->id}/posts?perPage=20&page=1")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', $post->id)
+            ->assertJsonPath('data.0.publisher.id', $publisher->id)
+            ->assertJsonPath('data.0.isSaved', true)
+            ->assertJsonPath('data.0.saved', true);
+    }
+
     public function test_inactive_publishers_are_not_public(): void
     {
         $user = User::factory()->create(['status' => 'inactive']);

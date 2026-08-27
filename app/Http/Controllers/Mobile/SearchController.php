@@ -65,6 +65,7 @@ class SearchController extends Controller
         $location = trim((string) ($params['location'] ?? ''));
 
         $organizations = Organization::query()
+            ->with('logoMedia')
             ->where('status', 'active')
             ->whereHas('posts', fn (Builder $post) => $post->whereIn('status', ['published', 'approved']))
             ->when($search !== '', function (Builder $builder) use ($search): void {
@@ -162,7 +163,7 @@ class SearchController extends Controller
 
         $query = Campaign::query()
             ->with([
-                'organization',
+                'organization.logoMedia',
                 'creator',
                 'imageMedia',
                 'posts' => static fn (Relation $relation) => $relation
@@ -197,7 +198,7 @@ class SearchController extends Controller
     /** @return array<int|string, mixed> */
     private function postRelations(?User $viewer): array
     {
-        $relations = ['organization', 'campaign', 'author', 'images'];
+        $relations = ['organization.logoMedia', 'campaign', 'author', 'images'];
 
         if ($viewer === null) {
             return $relations;

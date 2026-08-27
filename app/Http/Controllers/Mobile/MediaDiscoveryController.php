@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MediaResource;
 use App\Models\Media;
 use App\Models\Organization;
+use App\Models\User;
 use App\Support\Mobile\MobileApiResponse;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,9 +21,10 @@ class MediaDiscoveryController extends Controller
     {
         $perPage = max(1, min((int) $request->query('perPage', 20), 100));
         $search = trim((string) $request->query('search', ''));
+        $viewer = $this->viewer($request);
 
         $paginator = Media::query()
-            ->with('organization.logoMedia')
+            ->with($this->relations($viewer))
             ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('prop', 'videos')
             ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
@@ -42,8 +45,9 @@ class MediaDiscoveryController extends Controller
 
     public function show(Request $request, string $video): JsonResponse
     {
+        $viewer = $this->viewer($request);
         $media = Media::query()
-            ->with('organization.logoMedia')
+            ->with($this->relations($viewer))
             ->whereKey($video)
             ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('prop', 'videos')
@@ -58,5 +62,27 @@ class MediaDiscoveryController extends Controller
             MediaResource::make($media)->resolve($request),
             'Media retrieved successfully.',
         );
+    }
+
+    private function viewer(Request $request): ?User
+    {
+        $user = $request->user('sanctum');
+
+        return $user instanceof User ? $user : null;
+    }
+
+    /** @return array<int|string, mixed> */
+    private function relations(?User $viewer): array
+    {
+        $relations = ['organization.logoMedia'];
+
+        if ($viewer === null) {
+            return $relations;
+        }
+
+        $relations['likes'] = static fn (Relation $relation) => $relation->where('user_id', $viewer->id);
+        $relations['saves'] = static fn (Relation $relation) => $relation->where('user_id', $viewer->id);
+
+        return $relations;
     }
 }

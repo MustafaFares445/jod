@@ -94,7 +94,7 @@ class MobileHomePostResource extends JsonResource
             'publisherType' => $organization !== null ? 'organization' : 'user',
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
-            'avatarUrl' => null,
+            'avatarUrl' => $organization?->logoMedia?->publicUrl(),
             'verified' => $organization !== null ? $organization->verification_status === 'verified' : $author?->email_verified_at !== null,
         ];
         if (filled($bio)) $publisher['bio'] = $bio;

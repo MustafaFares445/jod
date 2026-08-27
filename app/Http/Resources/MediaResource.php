@@ -23,6 +23,10 @@ class MediaResource extends JsonResource
             'mimeType' => $this->mime_type,
             'size' => (int) $this->size,
             'position' => (int) $this->position,
+            'likesCount' => (int) ($this->reactions_count ?? 0),
+            'savesCount' => (int) ($this->saves_count ?? 0),
+            'isLiked' => $this->relationLoaded('likes') && $this->likes->isNotEmpty(),
+            'isSaved' => $this->relationLoaded('saves') && $this->saves->isNotEmpty(),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
             'organization' => $this->whenLoaded('organization', function () use ($request): ?array {

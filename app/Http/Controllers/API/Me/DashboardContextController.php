@@ -21,7 +21,7 @@ class DashboardContextController extends Controller
         PermissionCatalogService $permissionCatalogService,
     ): array {
         $user = $request->user();
-        $user->loadMissing('organization');
+        $user->loadMissing('organization.logoMedia');
 
         if ($user->user_type !== 'admin' && $user->organization_id === null) {
             throw ValidationException::withMessages([
@@ -52,6 +52,7 @@ class DashboardContextController extends Controller
                     'name' => $user->organization->name,
                     'status' => $user->organization->status,
                     'verificationStatus' => $user->organization->verification_status,
+                    'image' => $user->organization->logoMedia?->publicUrl(),
                 ],
                 'staffRole' => $membership?->role === null ? null : [
                     'id' => $membership->role->id,

@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class PublisherService
@@ -16,6 +17,7 @@ class PublisherService
     public function findPublic(string $id): Organization|User|null
     {
         $organization = Organization::query()
+            ->with('logoMedia')
             ->whereKey($id)
             ->where('status', 'active')
             ->first();
@@ -81,14 +83,15 @@ class PublisherService
     /** @return array<int|string, mixed> */
     private function postRelations(?User $viewer): array
     {
-        $relations = ['organization', 'campaign', 'author', 'images'];
+        $relations = ['organization.logoMedia', 'campaign', 'author', 'images'];
 
         if ($viewer === null) {
             return $relations;
         }
 
-        $relations['saves'] = static fn (Builder $builder) => $builder->where('user_id', $viewer->id);
-        $relations['campaignApplications'] = static fn (Builder $builder) => $builder->where('created_by', $viewer->id);
+        $relations['likes'] = static fn (Relation $relation) => $relation->where('user_id', $viewer->id);
+        $relations['saves'] = static fn (Relation $relation) => $relation->where('user_id', $viewer->id);
+        $relations['campaignApplications'] = static fn (Relation $relation) => $relation->where('created_by', $viewer->id);
 
         return $relations;
     }

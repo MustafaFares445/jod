@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Models;
+
+use App\Models\Concerns\HasStringPrimaryKey;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable(['id', 'user_id', 'media_id'])]
+class SavedMedia extends Model
+{
+    use HasStringPrimaryKey;
+
+    protected $table = 'saved_media';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function media(): BelongsTo
+    {
+        return $this->belongsTo(Media::class);
+    }
+}

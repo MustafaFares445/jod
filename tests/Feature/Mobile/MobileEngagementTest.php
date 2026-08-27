@@ -37,6 +37,40 @@ test('like and unlike are idempotent for published and approved posts', function
     }
 });
 
+test('like preserves the existing reactions counter and changes it by one only', function () {
+    $user = User::factory()->create();
+    $post = mobile_engagement_test_createPost(['reactions_count' => 46]);
+    Sanctum::actingAs($user);
+
+    $this->postJson("/api/mobile/posts/{$post->id}/like")
+        ->assertOk()
+        ->assertJsonPath('data.isLiked', true)
+        ->assertJsonPath('data.likesCount', 47);
+
+    $this->postJson("/api/mobile/posts/{$post->id}/like")
+        ->assertOk()
+        ->assertJsonPath('data.likesCount', 47);
+
+    $this->assertDatabaseHas('posts', [
+        'id' => $post->id,
+        'reactions_count' => 47,
+    ]);
+
+    $this->deleteJson("/api/mobile/posts/{$post->id}/like")
+        ->assertOk()
+        ->assertJsonPath('data.isLiked', false)
+        ->assertJsonPath('data.likesCount', 46);
+
+    $this->deleteJson("/api/mobile/posts/{$post->id}/like")
+        ->assertOk()
+        ->assertJsonPath('data.likesCount', 46);
+
+    $this->assertDatabaseHas('posts', [
+        'id' => $post->id,
+        'reactions_count' => 46,
+    ]);
+});
+
 test('save unsave and saved list work for approved posts', function () {
     $user = User::factory()->create();
     $approvedPost = mobile_engagement_test_createPost([

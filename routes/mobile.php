@@ -10,6 +10,7 @@ use App\Http\Controllers\Mobile\HelpOfferController;
 use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\MediaDiscoveryController;
+use App\Http\Controllers\Mobile\MediaEngagementController;
 use App\Http\Controllers\Mobile\MobileDeviceController;
 use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\OrganizationVideoController;
@@ -104,6 +105,14 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::patch('{offer}/cancel', [HelpOfferController::class, 'cancel'])->name('cancel');
         Route::patch('{offer}/confirm-provided', [HelpOfferController::class, 'confirmProvided'])->name('confirm-provided');
         Route::patch('{offer}/confirm-received', [HelpOfferController::class, 'confirmReceived'])->name('confirm-received');
+    });
+
+    Route::prefix('media')->name('media.')->group(function (): void {
+        Route::post('{media}/like', [MediaEngagementController::class, 'like'])->name('like');
+        Route::delete('{media}/like', [MediaEngagementController::class, 'unlike'])->name('unlike');
+        Route::post('{media}/save', [MediaEngagementController::class, 'save'])->name('save');
+        Route::delete('{media}/save', [MediaEngagementController::class, 'unsave'])->name('unsave');
+        Route::post('{media}/reports', [MediaEngagementController::class, 'report'])->name('reports.store');
     });
 
     Route::prefix('posts')->name('posts.')->group(function (): void {

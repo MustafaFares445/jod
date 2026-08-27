@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
@@ -25,6 +26,8 @@ use Illuminate\Support\Facades\Storage;
     'mime_type',
     'size',
     'position',
+    'reactions_count',
+    'saves_count',
 ])]
 class Media extends Model
 {
@@ -50,12 +53,24 @@ class Media extends Model
             'model_type' => MediaModel::class,
             'size' => 'integer',
             'position' => 'integer',
+            'reactions_count' => 'integer',
+            'saves_count' => 'integer',
         ];
     }
 
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'model_id');
+    }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(MediaLike::class);
+    }
+
+    public function saves(): HasMany
+    {
+        return $this->hasMany(SavedMedia::class);
     }
 
     public function publicUrl(): string

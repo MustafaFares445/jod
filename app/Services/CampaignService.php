@@ -146,7 +146,7 @@ class CampaignService
 
     private function mobileDiscoveryRelations(): array
     {
-        return ['organization', 'creator', 'category', 'imageMedia', 'posts' => static fn ($relation) => $relation
+        return ['organization.logoMedia', 'creator', 'category', 'imageMedia', 'posts' => static fn ($relation) => $relation
             ->whereIn('status', ['published', 'approved'])->orderByDesc('published_at')->orderByDesc('created_at')->with('images')];
     }
 

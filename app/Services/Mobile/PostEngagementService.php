@@ -23,10 +23,15 @@ class PostEngagementService
         return DB::transaction(function () use ($user, $postId): array {
             $post = $this->findPublicPostForUpdate($postId);
 
-            PostLike::query()->firstOrCreate([
+            $like = PostLike::query()->firstOrCreate([
                 'user_id' => $user->id,
                 'post_id' => $post->id,
             ]);
+
+            if ($like->wasRecentlyCreated) {
+                $post->increment('reactions_count');
+                $post->refresh();
+            }
 
             return $this->likeState($post, true);
         });
@@ -38,10 +43,15 @@ class PostEngagementService
         return DB::transaction(function () use ($user, $postId): array {
             $post = $this->findPublicPostForUpdate($postId);
 
-            PostLike::query()
+            $deleted = PostLike::query()
                 ->where('user_id', $user->id)
                 ->where('post_id', $post->id)
                 ->delete();
+
+            if ($deleted > 0 && (int) $post->reactions_count > 0) {
+                $post->decrement('reactions_count');
+                $post->refresh();
+            }
 
             return $this->likeState($post, false);
         });
@@ -152,13 +162,10 @@ class PostEngagementService
     /** @return array{postId: string, isLiked: bool, likesCount: int} */
     private function likeState(Post $post, bool $isLiked): array
     {
-        $likesCount = PostLike::query()->where('post_id', $post->id)->count();
-        $post->update(['reactions_count' => $likesCount]);
-
         return [
             'postId' => (string) $post->id,
             'isLiked' => $isLiked,
-            'likesCount' => $likesCount,
+            'likesCount' => max(0, (int) $post->reactions_count),
         ];
     }
 

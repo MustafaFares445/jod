@@ -223,7 +223,7 @@ class PostService
 
     private function mobileRelations(?User $viewer): array
     {
-        $relations = ['organization', 'campaign', 'author', 'images', 'videos'];
+        $relations = ['organization.logoMedia', 'campaign', 'author', 'images', 'videos'];
         if ($viewer === null) return $relations;
         $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);

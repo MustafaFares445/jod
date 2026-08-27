@@ -37,7 +37,7 @@ class MobilePublisherResource extends JsonResource
             'publisherType' => 'organization',
             'name' => (string) $organization->name,
             'username' => $this->username($organization->email, (string) $organization->name),
-            'avatarUrl' => null,
+            'avatarUrl' => $organization->logoMedia?->publicUrl(),
             'verified' => $organization->verification_status === 'verified',
         ];
 

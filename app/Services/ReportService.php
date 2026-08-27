@@ -35,6 +35,7 @@ class ReportService
             'reportedCampaign.imageMedia',
             'reportedUser',
             'reportedOrganization',
+            'reportedMedia.organization.logoMedia',
         ];
     }
 

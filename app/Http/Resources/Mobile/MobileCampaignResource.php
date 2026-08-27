@@ -68,7 +68,7 @@ class MobileCampaignResource extends JsonResource
             'id' => (string) $publisherId,
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
-            'avatarUrl' => null,
+            'avatarUrl' => $organization?->logoMedia?->publicUrl(),
             'verified' => $organization !== null ? $organization->verification_status === 'verified' : $manager?->email_verified_at !== null,
         ];
         if (filled($bio)) $publisher['bio'] = $bio;

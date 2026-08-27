@@ -74,6 +74,11 @@ class Report extends Model
         return $this->belongsTo(User::class, 'entity_id');
     }
 
+    public function reportedMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'entity_id');
+    }
+
     public function reportedOrganization(): BelongsTo
     {
         return $this->belongsTo(Organization::class, 'entity_id')->withTrashed();
