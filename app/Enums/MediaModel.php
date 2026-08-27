@@ -8,6 +8,7 @@ use App\Models\Article;
 use App\Models\Campaign;
 use App\Models\Organization;
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -19,6 +20,7 @@ enum MediaModel: string
     case CAMPAIGN = 'campaign';
     case POST = 'post';
     case ARTICLE = 'article';
+    case USER = 'user';
 
     /** @return class-string<Model> */
     public function modelClass(): string
@@ -28,6 +30,7 @@ enum MediaModel: string
             self::CAMPAIGN => Campaign::class,
             self::POST => Post::class,
             self::ARTICLE => Article::class,
+            self::USER => User::class,
         };
     }
 
@@ -44,6 +47,7 @@ enum MediaModel: string
                 'images' => 10,
                 'videos' => 10,
             ],
+            self::USER => ['avatar' => 1],
         };
     }
 

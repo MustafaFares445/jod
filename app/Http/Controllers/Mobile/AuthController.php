@@ -36,7 +36,7 @@ class AuthController extends Controller
      *
      * @bodyParam name string required The user's display name.
      * @bodyParam email string required The user's email address.
-     * @bodyParam phone string optional The user's phone number.
+     * @bodyParam phone string required Syrian mobile number in +9639XXXXXXXX format.
      * @bodyParam password string required The password.
      * @bodyParam password_confirmation string required Confirmation of the password.
      *
@@ -54,7 +54,7 @@ class AuthController extends Controller
             'password' => $validated['password'],
             'status' => 'active',
             'user_type' => 'general',
-        ])->loadMissing('organization');
+        ])->loadMissing(['organization', 'avatarMedia']);
 
         return MobileApiResponse::success([
             ...$this->tokenService->issueTokenPair($user),
@@ -91,7 +91,7 @@ class AuthController extends Controller
                     $builder->orWhere('phone', $validated['phone']);
                 }
             })
-            ->with('organization')
+            ->with(['organization', 'avatarMedia'])
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {

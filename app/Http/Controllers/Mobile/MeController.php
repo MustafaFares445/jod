@@ -109,7 +109,7 @@ class MeController extends Controller
     private function profileUser(User $user): User
     {
         return $user
-            ->loadMissing('organization')
+            ->loadMissing(['organization', 'avatarMedia'])
             ->loadCount(['posts', 'savedPosts', 'donations']);
     }
 }

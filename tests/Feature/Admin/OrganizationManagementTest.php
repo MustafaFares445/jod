@@ -3,6 +3,8 @@
 declare(strict_types=1);
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
+use App\Models\Campaign;
+use App\Models\Post;
 use App\Models\Organization;
 use App\Models\User;
 use Laravel\Sanctum\Sanctum;
@@ -21,7 +23,34 @@ beforeEach(function () {
 
     Sanctum::actingAs($this->user);
 });
+test('lists organizations with live campaign and post counts', function () {
+    $organization = Organization::query()->create([
+        'name' => 'Counted Org',
+        'email' => 'counted@example.com',
+        'status' => 'active',
+    ]);
+
+    Campaign::query()->create([
+        'title' => 'Counted campaign',
+        'organization_id' => $organization->id,
+        'status' => 'active',
+    ]);
+    Post::query()->create([
+        'title' => 'Counted post',
+        'organization_id' => $organization->id,
+        'status' => 'published',
+        'type' => 'general',
+    ]);
+
+    $response = $this->getJson('/api/v1/admin/organizations?filter.search=Counted');
+
+    $response->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.campaignsCount', 1)
+        ->assertJsonPath('data.0.postsCount', 1);
+});
 test('lists organizations with filters', function () {
+
     Organization::query()->create([
         'name' => 'Alpha Org',
         'email' => 'alpha@example.com',

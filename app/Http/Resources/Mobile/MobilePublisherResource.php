@@ -67,7 +67,7 @@ class MobilePublisherResource extends JsonResource
             'publisherType' => 'user',
             'name' => (string) $user->name,
             'username' => $this->username($user->email, (string) $user->name),
-            'avatarUrl' => null,
+            'avatarUrl' => $this->relationLoaded('avatarMedia') ? $this->avatarMedia?->publicUrl() : null,
             'verified' => $user->email_verified_at !== null,
         ];
 

@@ -9,11 +9,22 @@ use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\PersonalAccessToken;
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
+test('mobile registration rejects non Syrian mobile numbers', function () {
+    $this->postJson('/api/mobile/auth/register', [
+        'name' => 'Invalid Phone User',
+        'email' => 'invalid-phone@example.com',
+        'phone' => '0991000100',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['phone'], 'error.details');
+});
+
 test('mobile registration issues rotating token pair with mobile envelope', function () {
     $response = $this->postJson('/api/mobile/auth/register', [
         'name' => 'Mobile Register User',
         'email' => 'register@example.com',
-        'phone' => '+962790000111',
+        'phone' => '+963991000111',
         'password' => 'password',
         'password_confirmation' => 'password',
     ]);

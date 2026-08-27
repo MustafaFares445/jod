@@ -31,6 +31,10 @@ class OrganizationController extends Controller
         $sortBy = (string) ($request->query('sortBy') ?? '');
 
         $query = Organization::query()
+            ->withCount([
+                'campaigns as actual_campaigns_count',
+                'posts as actual_posts_count',
+            ])
             ->when($this->queryParam($request, 'filter.verificationStatus') && $this->queryParam($request, 'filter.verificationStatus') !== 'all', fn (Builder $builder) => $builder->where('verification_status', $this->queryParam($request, 'filter.verificationStatus')))
             ->when($this->queryParam($request, 'filter.status') && $this->queryParam($request, 'filter.status') !== 'all', fn (Builder $builder) => $builder->where('status', $this->queryParam($request, 'filter.status')))
             ->when($this->queryParam($request, 'filter.location') && $this->queryParam($request, 'filter.location') !== 'all', fn (Builder $builder) => $builder->where('location', 'like', '%'.$this->queryParam($request, 'filter.location').'%'))
@@ -122,6 +126,10 @@ class OrganizationController extends Controller
     public function show(Organization $organization): OrganizationResource
     {
         $this->authorize('view', $organization);
+        $organization->loadCount([
+            'campaigns as actual_campaigns_count',
+            'posts as actual_posts_count',
+        ]);
 
         return OrganizationResource::make($organization);
     }

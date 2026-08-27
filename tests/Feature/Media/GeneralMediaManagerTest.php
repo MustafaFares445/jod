@@ -137,7 +137,7 @@ function media_test_owner(): \App\Models\User
         'registrationNumber' => 'REG-'.$suffix,
         'bankAccountNumber' => 'BANK-'.$suffix,
         'companyEmail' => "media-{$suffix}@example.test",
-        'companyPhone' => '0999999999',
+        'companyPhone' => '+963999999999',
         'location' => 'Damascus',
         'website' => null,
         'password' => 'password123',

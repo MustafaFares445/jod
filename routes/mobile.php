@@ -20,6 +20,7 @@ use App\Http\Controllers\Mobile\PostReportController;
 use App\Http\Controllers\Mobile\SavedPostController;
 use App\Http\Controllers\Mobile\SearchController;
 use App\Http\Controllers\Mobile\UserPostController;
+use App\Http\Controllers\Mobile\UserAvatarController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->name('auth.')->group(function (): void {
@@ -90,6 +91,8 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         });
 
         Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
+        Route::post('avatar', [UserAvatarController::class, 'store'])->name('avatar.store');
+        Route::delete('avatar', [UserAvatarController::class, 'destroy'])->name('avatar.destroy');
         Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
         Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
     });

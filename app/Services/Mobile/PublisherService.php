@@ -27,6 +27,7 @@ class PublisherService
         }
 
         return User::query()
+            ->with('avatarMedia')
             ->whereKey($id)
             ->where('status', 'active')
             ->whereHas('posts', function (Builder $post): void {
@@ -83,7 +84,7 @@ class PublisherService
     /** @return array<int|string, mixed> */
     private function postRelations(?User $viewer): array
     {
-        $relations = ['organization.logoMedia', 'campaign', 'author', 'images'];
+        $relations = ['organization.logoMedia', 'campaign', 'author.avatarMedia', 'images'];
 
         if ($viewer === null) {
             return $relations;

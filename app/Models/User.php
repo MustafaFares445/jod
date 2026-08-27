@@ -38,6 +38,12 @@ class User extends Authenticatable
     }
 
     public function organization(): BelongsTo { return $this->belongsTo(Organization::class); }
+    public function avatarMedia(): HasOne
+    {
+        return $this->hasOne(Media::class, 'model_id')
+            ->where('model_type', 'user')
+            ->where('prop', 'avatar');
+    }
     public function organizationStaffMembership(): HasOne { return $this->hasOne(OrganizationStaff::class); }
 
     public function activeOrganizationStaffMembership(): HasOne

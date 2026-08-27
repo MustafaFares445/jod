@@ -23,10 +23,18 @@ class CompanyRegisterRequest extends FormRequest
             'registrationNumber' => ['required', 'string', 'max:100', 'unique:organizations,registration_number'],
             'bankAccountNumber' => ['required', 'string', 'max:100'],
             'companyEmail' => ['required', 'email', 'max:255', 'unique:organizations,email', 'unique:users,email'],
-            'companyPhone' => ['required', 'string', 'max:30'],
+            'companyPhone' => ['required', 'string', 'regex:/^\\+9639\\d{8}$/'],
             'location' => ['required', 'string', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
             'password' => ['required', 'confirmed', Password::min(8)],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'companyPhone.required' => 'رقم الموبايل الرسمي مطلوب.',
+            'companyPhone.regex' => 'رقم الموبايل الرسمي يجب أن يكون رقماً سورياً بصيغة +9639XXXXXXXX.',
         ];
     }
 }
