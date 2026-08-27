@@ -133,8 +133,6 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::delete('{post}/save', [PostEngagementController::class, 'unsave'])->name('unsave');
         Route::post('{post}/reports', [PostReportController::class, 'store'])->name('reports.store');
         Route::post('{post}/submit', [UserPostController::class, 'submit'])->name('submit');
-        Route::post('{post}/archive', [UserPostController::class, 'archive'])->name('archive');
-        Route::post('{post}/repost', [UserPostController::class, 'repost'])->name('repost');
         Route::delete('{post}', [UserPostController::class, 'destroy'])->name('destroy');
     });
 });

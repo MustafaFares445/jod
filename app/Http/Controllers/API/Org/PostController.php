@@ -45,32 +45,25 @@ class PostController extends Controller
     {
         $this->authorize('updateOrganization', $post);
         $validated = $request->validated();
-
         if ($validated !== []) {
-            $post = $this->service->update(
-                $post,
-                PostData::from([
-                    'title' => $validated['title'] ?? $post->title,
-                    'summary' => $validated['summary'] ?? $post->summary,
-                    'type' => $validated['type'] ?? $post->type,
-                    'location' => $validated['location'] ?? $post->location,
-                    'campaignTitle' => array_key_exists('campaignTitle', $validated) ? $validated['campaignTitle'] : $post->campaign?->title,
-                    'status' => $post->status,
-                    'audience' => $validated['audience'] ?? $post->audience ?? 'general',
-                ]),
-                $this->organizationId(),
-            );
+            $post = $this->service->update($post, PostData::from([
+                'title' => $validated['title'] ?? $post->title,
+                'summary' => $validated['summary'] ?? $post->summary,
+                'type' => $validated['type'] ?? $post->type,
+                'location' => $validated['location'] ?? $post->location,
+                'campaignTitle' => array_key_exists('campaignTitle', $validated) ? $validated['campaignTitle'] : $post->campaign?->title,
+                'status' => $post->status,
+                'audience' => $validated['audience'] ?? $post->audience ?? 'general',
+            ]), $this->organizationId());
             $post->update(['updated_by' => auth()->id()]);
         }
-
         return PostResource::make($post->refresh()->load(['campaign', 'images', 'videos', 'author', 'updatedBy']));
     }
 
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
     {
         $status = (string) $request->validated('status');
-        $ability = match ($status) { 'published' => 'publishOrganization', 'archived' => 'archiveOrganization', 'draft' => 'restoreOrganization' };
-        $this->authorize($ability, $post);
+        $this->authorize($status === 'published' ? 'publishOrganization' : 'updateOrganization', $post);
         $post = $this->service->updateStatus($post, $status);
         return PostResource::make($post->refresh()->loadMissing(['images', 'author', 'updatedBy']));
     }
@@ -79,18 +72,6 @@ class PostController extends Controller
     {
         $this->authorize('publishOrganization', $post);
         return PostResource::make($this->service->publish($post)->loadMissing(['images', 'author', 'updatedBy']));
-    }
-
-    public function archive(Post $post): PostResource
-    {
-        $this->authorize('archiveOrganization', $post);
-        return PostResource::make($this->service->archive($post)->loadMissing(['images', 'author', 'updatedBy']));
-    }
-
-    public function restore(Post $post): PostResource
-    {
-        $this->authorize('restoreOrganization', $post);
-        return PostResource::make($this->service->restore($post)->loadMissing(['images', 'author', 'updatedBy']));
     }
 
     public function destroy(Post $post): Response
@@ -108,9 +89,7 @@ class PostController extends Controller
     private function organizationId(): string
     {
         $organizationId = (string) auth()->user()?->organization_id;
-        if ($organizationId === '') {
-            throw ValidationException::withMessages(['organizationId' => ['Authenticated user is not linked to an organization.']]);
-        }
+        if ($organizationId === '') throw ValidationException::withMessages(['organizationId' => ['Authenticated user is not linked to an organization.']]);
         return $organizationId;
     }
 }

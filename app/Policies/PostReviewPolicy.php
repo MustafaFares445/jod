@@ -20,15 +20,11 @@ class PostReviewPolicy
         return PermissionGroup::POST_REVIEW;
     }
 
-    public function viewAny(User $user): bool
-    {
-        return $this->authorizeAction($user, PermissionAction::VIEW);
-    }
+    public function viewAny(User $user): bool { return $this->authorizeAction($user, PermissionAction::VIEW); }
 
     public function view(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::VIEW)
-            && $this->isReviewableUserPost($model);
+        return $this->authorizeAction($user, PermissionAction::VIEW) && $this->isReviewableUserPost($model);
     }
 
     public function viewAdmin(User $user, Post $model): bool
@@ -41,8 +37,7 @@ class PostReviewPolicy
 
     public function createAdmin(User $user): bool
     {
-        return $user->user_type === 'admin'
-            && $this->authorizeAction($user, PermissionAction::APPROVE);
+        return $user->user_type === 'admin' && $this->authorizeAction($user, PermissionAction::APPROVE);
     }
 
     public function updateAdmin(User $user, Post $model): bool
@@ -53,114 +48,64 @@ class PostReviewPolicy
             && $this->isAdminPost($model);
     }
 
-    public function deleteAdmin(User $user, Post $model): bool
-    {
-        return $this->updateAdmin($user, $model);
-    }
+    public function deleteAdmin(User $user, Post $model): bool { return $this->updateAdmin($user, $model); }
 
     public function viewAnyOrganization(User $user): bool
     {
-        return $user->organization_id !== null
-            && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
+        return $user->organization_id !== null && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
     }
 
     public function viewOrganization(User $user, Post $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
+        return $this->sameOrganization($user, $model) && $this->authorizeOrganizationAction($user, PermissionAction::VIEW);
     }
 
-    public function approve(User $user, Post $model): bool
+    public function publishUserPost(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::APPROVE)
-            && $this->isReviewableUserPost($model);
+        return $this->authorizeAction($user, PermissionAction::APPROVE) && $this->isReviewableUserPost($model);
     }
 
-    public function reject(User $user, Post $model): bool
+    public function blockUserPost(User $user, Post $model): bool
     {
-        return $this->authorizeAction($user, PermissionAction::REJECT)
-            && $this->isReviewableUserPost($model);
+        return $this->authorizeAction($user, PermissionAction::REJECT) && $this->isReviewableUserPost($model);
     }
 
     public function createOrganization(User $user): bool
     {
-        return $user->organization_id !== null
-            && $this->authorizeOrganizationAction($user, PermissionAction::CREATE);
+        return $user->organization_id !== null && $this->authorizeOrganizationAction($user, PermissionAction::CREATE);
     }
 
     public function updateOrganization(User $user, Post $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE);
+        return $this->sameOrganization($user, $model) && $this->authorizeOrganizationAction($user, PermissionAction::UPDATE);
     }
 
     public function deleteOrganization(User $user, Post $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::DELETE);
+        return $this->sameOrganization($user, $model) && $this->authorizeOrganizationAction($user, PermissionAction::DELETE);
     }
 
     public function publishOrganization(User $user, Post $model): bool
     {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::PUBLISH);
+        return $this->sameOrganization($user, $model) && $this->authorizeOrganizationAction($user, PermissionAction::PUBLISH);
     }
 
-    public function archiveOrganization(User $user, Post $model): bool
-    {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::ARCHIVE);
-    }
-
-    public function restoreOrganization(User $user, Post $model): bool
-    {
-        return $this->sameOrganization($user, $model)
-            && $this->authorizeOrganizationAction($user, PermissionAction::RESTORE);
-    }
-
-    public function viewOwn(User $user, Post $model): bool
-    {
-        return $this->ownsPost($user, $model);
-    }
-
-    public function createOwn(User $user): bool
-    {
-        return $user->id !== null;
-    }
+    public function viewOwn(User $user, Post $model): bool { return $this->ownsPost($user, $model); }
+    public function createOwn(User $user): bool { return $user->id !== null; }
 
     public function updateOwn(User $user, Post $model): bool
     {
-        return $this->ownsPost($user, $model)
-            && in_array($model->status, ['draft', 'rejected'], true);
+        return $this->ownsPost($user, $model) && in_array($model->status, ['draft', 'blocked'], true);
     }
 
-    public function manageOwnMedia(User $user, Post $model): bool
-    {
-        return $this->updateOwn($user, $model);
-    }
+    public function manageOwnMedia(User $user, Post $model): bool { return $this->updateOwn($user, $model); }
 
     public function submitOwn(User $user, Post $model): bool
     {
-        return $this->ownsPost($user, $model)
-            && in_array($model->status, ['draft', 'rejected'], true);
+        return $this->ownsPost($user, $model) && in_array($model->status, ['draft', 'blocked'], true);
     }
 
-    public function archiveOwn(User $user, Post $model): bool
-    {
-        return $this->ownsPost($user, $model)
-            && in_array($model->status, ['published', 'approved'], true);
-    }
-
-    public function repostOwn(User $user, Post $model): bool
-    {
-        return $this->ownsPost($user, $model)
-            && $model->status === 'archived';
-    }
-
-    public function deleteOwn(User $user, Post $model): bool
-    {
-        return $this->ownsPost($user, $model);
-    }
+    public function deleteOwn(User $user, Post $model): bool { return $this->ownsPost($user, $model); }
 
     private function authorizeOrganizationAction(User $user, PermissionAction $action): bool
     {
@@ -170,31 +115,23 @@ class PostReviewPolicy
 
     private function sameOrganization(User $user, Post $model): bool
     {
-        return $user->organization_id !== null
-            && (string) $user->organization_id === (string) $model->organization_id;
+        return $user->organization_id !== null && (string) $user->organization_id === (string) $model->organization_id;
     }
 
     private function ownsPost(User $user, Post $model): bool
     {
-        return $model->author_id !== null
-            && (string) $user->id === (string) $model->author_id;
+        return $model->author_id !== null && (string) $user->id === (string) $model->author_id;
     }
 
     private function isReviewableUserPost(Post $model): bool
     {
-        if ($model->organization_id !== null || $model->author_id === null) {
-            return false;
-        }
-
+        if ($model->organization_id !== null || $model->author_id === null) return false;
         return $model->author()->where('user_type', '!=', 'admin')->exists();
     }
 
     private function isAdminPost(Post $model): bool
     {
-        if ($model->organization_id !== null || $model->author_id === null) {
-            return false;
-        }
-
+        if ($model->organization_id !== null || $model->author_id === null) return false;
         return $model->author()->where('user_type', 'admin')->exists();
     }
 }

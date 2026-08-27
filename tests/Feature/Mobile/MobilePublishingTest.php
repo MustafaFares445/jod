@@ -138,11 +138,11 @@ test('create rejects non empty images until uploads are supported', function () 
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['images'], 'error.details');
 });
-test('owner can update draft or rejected post without changing status', function () {
+test('owner can update draft or blocked post without changing status', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
     $draftPost = mobile_publishing_test_createPost($user, ['status' => 'draft']);
-    $rejectedPost = mobile_publishing_test_createPost($user, ['status' => 'rejected', 'rejection_reason' => 'Too short']);
+    $blockedPost = mobile_publishing_test_createPost($user, ['status' => 'blocked', 'block_reason' => 'Too short']);
 
     $this->patchJson("/api/mobile/posts/{$draftPost->id}", [
         'type' => 'volunteer_opportunity',
@@ -154,7 +154,7 @@ test('owner can update draft or rejected post without changing status', function
         ->assertJsonPath('data.status', 'draft')
         ->assertJsonPath('data.title', 'Updated draft title');
 
-    $this->patchJson("/api/mobile/posts/{$rejectedPost->id}", [
+    $this->patchJson("/api/mobile/posts/{$blockedPost->id}", [
         'type' => 'help_request',
         'title' => 'Rejected post updated',
         'details' => 'Updated details for rejected content.',
@@ -168,12 +168,12 @@ test('owner can update draft or rejected post without changing status', function
         'title' => 'Updated draft title',
     ]);
 });
-test('update denies pending active archived and non owned posts', function () {
+test('update denies pending published and non owned posts', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     Sanctum::actingAs($user);
 
-    foreach (['pending', 'published', 'archived'] as $status) {
+    foreach (['pending', 'published'] as $status) {
         $post = mobile_publishing_test_createPost($user, ['status' => $status]);
 
         $this->patchJson("/api/mobile/posts/{$post->id}", validPayload())
@@ -189,20 +189,20 @@ test('owner can submit draft and resubmit rejected post', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
     $draftPost = mobile_publishing_test_createPost($user, ['status' => 'draft']);
-    $rejectedPost = mobile_publishing_test_createPost($user, ['status' => 'rejected', 'rejection_reason' => 'Needs details']);
+    $blockedPost = mobile_publishing_test_createPost($user, ['status' => 'rejected', 'rejection_reason' => 'Needs details']);
 
     $this->postJson("/api/mobile/posts/{$draftPost->id}/submit")
         ->assertOk()
         ->assertJsonPath('data.status', 'pending')
         ->assertJsonPath('data.rejectionReason', null);
 
-    $this->postJson("/api/mobile/posts/{$rejectedPost->id}/submit")
+    $this->postJson("/api/mobile/posts/{$blockedPost->id}/submit")
         ->assertOk()
         ->assertJsonPath('data.status', 'pending')
         ->assertJsonPath('data.rejectionReason', null);
 
     $this->assertDatabaseHas('posts', [
-        'id' => $rejectedPost->id,
+        'id' => $blockedPost->id,
         'status' => 'pending',
         'rejection_reason' => null,
     ]);

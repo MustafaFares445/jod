@@ -59,34 +59,20 @@ test('mobile user can update contact city and bio separately from password', fun
     ]);
 });
 
-test('my posts expose draft pending active rejected and archived states', function () {
+test('my posts expose draft pending published and blocked states', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
     mobile_user_flow_post($user, ['title' => 'Draft item', 'status' => 'draft']);
     mobile_user_flow_post($user, ['title' => 'Pending item', 'status' => 'pending']);
-    mobile_user_flow_post($user, ['title' => 'Published item', 'status' => 'published', 'published_at' => now()->subDay()]);
-    mobile_user_flow_post($user, ['title' => 'Approved item', 'status' => 'approved', 'published_at' => now()]);
-    mobile_user_flow_post($user, ['title' => 'Rejected item', 'status' => 'rejected', 'rejection_reason' => 'Needs more details']);
-    mobile_user_flow_post($user, ['title' => 'Archived item', 'status' => 'archived']);
+    mobile_user_flow_post($user, ['title' => 'Published item', 'status' => 'published', 'published_at' => now()]);
+    mobile_user_flow_post($user, ['title' => 'Blocked item', 'status' => 'blocked', 'block_reason' => 'Needs more details']);
 
-    $expectations = [
-        'draft' => 1,
-        'pending' => 1,
-        'active' => 2,
-        'rejected' => 1,
-        'archived' => 1,
-    ];
-
-    foreach ($expectations as $status => $total) {
-        $response = $this->getJson('/api/mobile/me/posts?filter[status]='.$status.'&perPage=20');
-        $response->assertOk()->assertJsonPath('meta.total', $total);
-
-        if ($status === 'active') {
-            foreach ($response->json('data') as $item) {
-                expect($item['status'])->toBe('active');
-            }
-        }
+    foreach (['draft', 'pending', 'published', 'blocked'] as $status) {
+        $this->getJson('/api/mobile/me/posts?filter[status]='.$status.'&perPage=20')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.status', $status);
     }
 });
 
@@ -136,7 +122,7 @@ test('global search returns accounts posts and campaigns with requested filters'
     ]);
     $newerPost = mobile_user_flow_post($publisher, [
         'title' => 'Newer Health Post',
-        'status' => 'approved',
+        'status' => 'published',
         'location' => 'Damascus',
         'category_id' => $category->id,
         'published_at' => now()->subDay(),

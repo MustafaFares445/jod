@@ -108,7 +108,7 @@ test('admin can create ordinary post without media then upload images and videos
         'description' => 'General announcement created by an administrator.',
     ])->assertOk()
         ->assertJsonPath('data.type', 'general')
-        ->assertJsonPath('data.status', 'approved')
+        ->assertJsonPath('data.status', 'published')
         ->assertJsonPath('data.author.id', $this->admin->id)
         ->assertJsonPath('data.images', [])
         ->assertJsonPath('data.videos', []);

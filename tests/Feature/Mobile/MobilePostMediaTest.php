@@ -136,10 +136,10 @@ test('general media manager enforces personal post ownership and editable status
     $otherUser = User::factory()->create();
     $otherPost = mobile_post_media_test_createPost($otherUser);
     $pendingPost = mobile_post_media_test_createPost($user, ['status' => 'pending']);
-    $approvedPost = mobile_post_media_test_createPost($user, ['status' => 'approved', 'published_at' => now()]);
+    $publishedPost = mobile_post_media_test_createPost($user, ['status' => 'published', 'published_at' => now()]);
     Sanctum::actingAs($user);
 
-    foreach ([$otherPost, $pendingPost, $approvedPost] as $post) {
+    foreach ([$otherPost, $pendingPost, $publishedPost] as $post) {
         $this->post("/api/v1/media/post/{$post->id}/images", [
             'file' => UploadedFile::fake()->image('blocked.jpg'),
         ], ['Accept' => 'application/json'])->assertForbidden();

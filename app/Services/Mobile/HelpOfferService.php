@@ -30,7 +30,7 @@ class HelpOfferService
         $offer = DB::transaction(function () use ($helper, $postId, $attributes): HelpOffer {
             $post = Post::query()->whereKey($postId)->lockForUpdate()->first();
 
-            if ($post === null || $post->type !== 'help_request' || ! in_array($post->status, ['published', 'approved'], true)) {
+            if ($post === null || $post->type !== 'help_request' || $post->status !== 'published') {
                 throw ValidationException::withMessages([
                     'post' => ['Help offers can only be created for public help requests.'],
                 ]);

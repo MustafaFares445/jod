@@ -157,8 +157,6 @@ enum PermissionGroup: string
                     PermissionAction::UPDATE,
                     PermissionAction::DELETE,
                     PermissionAction::PUBLISH,
-                    PermissionAction::ARCHIVE,
-                    PermissionAction::RESTORE,
                 ],
             ),
             self::ORG_DONOR => new PermissionGroupDefinition(

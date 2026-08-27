@@ -88,11 +88,7 @@ test('post publish archive restore transitions', function () {
         ->assertOk()
         ->assertJsonPath('data.status', 'published');
 
-    $this->postJson("/api/v1/org/posts/{$post->id}/archive")
-        ->assertOk()
-        ->assertJsonPath('data.status', 'archived');
-
-    $this->postJson("/api/v1/org/posts/{$post->id}/restore")
+    $this->patchJson("/api/v1/org/posts/{$post->id}/status", ['status' => 'draft'])
         ->assertOk()
         ->assertJsonPath('data.status', 'draft');
 });

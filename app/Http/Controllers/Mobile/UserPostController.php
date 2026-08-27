@@ -23,7 +23,6 @@ class UserPostController extends Controller
     public function index(MyPostRequest $request): JsonResponse
     {
         $paginator = $this->service->paginate($request->user(), $request->validated());
-
         return MobileApiResponse::paginated(
             $paginator->through(fn (Post $post) => UserPostResource::make($post)->resolve($request)),
             'User posts retrieved successfully.',
@@ -33,72 +32,42 @@ class UserPostController extends Controller
     public function show(Request $request, Post $post): JsonResponse
     {
         Gate::authorize('viewOwn', $post);
-
-        return MobileApiResponse::success(
-            UserPostResource::make($post->loadMissing('images'))->resolve($request),
-            'User post retrieved successfully.',
-        );
+        return MobileApiResponse::success(UserPostResource::make($post->loadMissing('images'))->resolve($request), 'User post retrieved successfully.');
     }
 
     public function store(PostRequest $request): JsonResponse
     {
         Gate::authorize('createOwn', Post::class);
-
         $validated = $request->validated();
         $post = $this->service->create($request->user(), $validated);
         if (array_key_exists('audience', $validated)) {
             $post->update(['audience' => $validated['audience']]);
             $post->refresh()->loadMissing('images');
         }
-        $message = $request->savesAsDraft() ? 'Draft saved successfully.' : 'Post submitted for review.';
-
-        return MobileApiResponse::success(UserPostResource::make($post)->resolve($request), $message);
+        return MobileApiResponse::success(
+            UserPostResource::make($post)->resolve($request),
+            $request->savesAsDraft() ? 'Draft saved successfully.' : 'Post submitted for review.',
+        );
     }
 
     public function update(PostRequest $request, Post $post): JsonResponse
     {
         Gate::authorize('updateOwn', $post);
-
         $validated = $request->validated();
         $post = $this->service->update($post, $validated);
         if (array_key_exists('audience', $validated)) {
             $post->update(['audience' => $validated['audience']]);
             $post->refresh()->loadMissing('images');
         }
-
-        return MobileApiResponse::success(
-            UserPostResource::make($post)->resolve($request),
-            'Post updated successfully.',
-        );
+        return MobileApiResponse::success(UserPostResource::make($post)->resolve($request), 'Post updated successfully.');
     }
 
     public function submit(PostSubmitRequest $request, Post $post): JsonResponse
     {
         Gate::authorize('submitOwn', $post);
-
         return MobileApiResponse::success(
             UserPostResource::make($this->service->submit($post))->resolve($request),
             'Post submitted for review.',
-        );
-    }
-
-    public function archive(Request $request, Post $post): JsonResponse
-    {
-        Gate::authorize('archiveOwn', $post);
-
-        return MobileApiResponse::success(
-            UserPostResource::make($this->service->archive($post))->resolve($request),
-            'Post archived successfully.',
-        );
-    }
-
-    public function repost(Request $request, Post $post): JsonResponse
-    {
-        Gate::authorize('repostOwn', $post);
-
-        return MobileApiResponse::success(
-            UserPostResource::make($this->service->repost($post))->resolve($request),
-            'Post reposted successfully.',
         );
     }
 
@@ -106,7 +75,6 @@ class UserPostController extends Controller
     {
         Gate::authorize('deleteOwn', $post);
         $this->service->delete($post);
-
         return MobileApiResponse::success(null, 'Post deleted successfully.');
     }
 }

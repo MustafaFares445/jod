@@ -35,8 +35,8 @@ enum NotificationEventType: string
     case ApplicationWithdrawn = 'application.withdrawn';
 
     case PostSubmitted = 'post.submitted';
-    case PostApproved = 'post.approved';
-    case PostRejected = 'post.rejected';
+    case PostPublished = 'post.published';
+    case PostBlocked = 'post.blocked';
 
     case ReportSubmitted = 'report.submitted';
     case ReportInProgress = 'report.in_progress';
@@ -64,7 +64,7 @@ enum NotificationEventType: string
             self::HelpRequestFulfilled, self::HelpRequestReopened => 'help',
             self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed => 'campaign',
             self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
-            self::PostSubmitted, self::PostApproved, self::PostRejected => 'post',
+            self::PostSubmitted, self::PostPublished, self::PostBlocked => 'post',
             self::ReportSubmitted, self::ReportInProgress, self::ReportClosed => 'report',
             self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',
             self::StaffInvited, self::StaffRoleChanged, self::StaffRemoved => 'staff',

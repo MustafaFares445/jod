@@ -64,7 +64,7 @@ class CampaignApplicationService
                 ->whereKey($campaignId)
                 ->where('status', 'active')
                 ->whereHas('posts', function (Builder $post): void {
-                    $post->whereIn('status', ['published', 'approved'])
+                    $post->where('status', 'published')
                         ->where('type', 'volunteer_opportunity');
                 })
                 ->lockForUpdate()

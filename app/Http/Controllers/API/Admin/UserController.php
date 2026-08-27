@@ -89,8 +89,7 @@ class UserController extends Controller
                 'author',
                 'updatedBy',
                 'reviewedBy',
-                'approvedBy',
-                'rejectedBy',
+                'blockedBy',
             ])
             ->latest('created_at')
             ->paginate($perPage);

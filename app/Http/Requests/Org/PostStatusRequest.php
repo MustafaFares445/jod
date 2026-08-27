@@ -11,8 +11,6 @@ class PostStatusRequest extends FormRequest
 {
     public function rules(): array
     {
-        return [
-            'status' => ['required', 'string', Rule::in(['draft', 'published', 'archived'])],
-        ];
+        return ['status' => ['required', 'string', Rule::in(['draft', 'published'])]];
     }
 }

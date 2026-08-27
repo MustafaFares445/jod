@@ -13,8 +13,16 @@ return new class extends Migration
         if (Schema::hasTable('posts')) {
             DB::table('posts')
                 ->whereNotNull('organization_id')
-                ->whereIn('status', ['pending', 'approved'])
-                ->update(['status' => 'published']);
+                ->whereIn('status', ['pending', 'blocked'])
+                ->update([
+                    'status' => 'draft',
+                    'published_at' => null,
+                    'reviewed_at' => null,
+                    'reviewed_by' => null,
+                    'block_reason' => null,
+                    'blocked_at' => null,
+                    'blocked_by' => null,
+                ]);
 
             DB::table('posts')
                 ->whereNotNull('organization_id')
@@ -22,52 +30,33 @@ return new class extends Migration
                 ->whereNull('published_at')
                 ->update(['published_at' => now()]);
 
-            DB::table('posts')
-                ->whereNotNull('organization_id')
-                ->where('status', 'rejected')
-                ->update([
-                    'status' => 'draft',
-                    'rejection_reason' => null,
-                    'reviewed_at' => null,
-                    'reviewed_by' => null,
-                    'approved_at' => null,
-                    'approved_by' => null,
-                    'rejected_at' => null,
-                    'rejected_by' => null,
-                ]);
-
             if (Schema::hasTable('users')) {
                 $adminIds = DB::table('users')->where('user_type', 'admin')->pluck('id');
-
                 if ($adminIds->isNotEmpty()) {
                     DB::table('posts')
                         ->whereNull('organization_id')
                         ->whereIn('author_id', $adminIds)
-                        ->where('status', 'approved')
-                        ->update(['status' => 'published']);
-
-                    DB::table('posts')
-                        ->whereNull('organization_id')
-                        ->whereIn('author_id', $adminIds)
-                        ->where('status', 'published')
-                        ->whereNull('published_at')
-                        ->update(['published_at' => now()]);
+                        ->whereIn('status', ['pending', 'blocked'])
+                        ->update([
+                            'status' => 'draft',
+                            'published_at' => null,
+                            'reviewed_at' => null,
+                            'reviewed_by' => null,
+                            'block_reason' => null,
+                            'blocked_at' => null,
+                            'blocked_by' => null,
+                        ]);
                 }
             }
         }
 
         if (Schema::hasTable('campaigns')) {
-            DB::table('campaigns')
-                ->whereIn('status', ['pending', 'approved'])
-                ->update(['status' => 'active']);
-
-            DB::table('campaigns')
-                ->where('status', 'rejected')
-                ->update([
-                    'status' => 'draft',
-                    'rejection_reason' => null,
-                    'reviewed_by' => null,
-                ]);
+            DB::table('campaigns')->whereIn('status', ['pending', 'approved'])->update(['status' => 'active']);
+            DB::table('campaigns')->where('status', 'rejected')->update([
+                'status' => 'draft',
+                'rejection_reason' => null,
+                'reviewed_by' => null,
+            ]);
 
             if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
                 DB::statement("ALTER TABLE campaigns MODIFY status ENUM('draft','active','closed') NOT NULL DEFAULT 'active'");

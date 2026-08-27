@@ -13,11 +13,11 @@ use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('like and unlike are idempotent for published and approved posts', function () {
+test('like and unlike are idempotent for published posts', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
-    foreach (['published', 'approved'] as $status) {
+    foreach (['published'] as $status) {
         $post = mobile_engagement_test_createPost(['status' => $status]);
 
         $this->postJson("/api/mobile/posts/{$post->id}/like")
@@ -71,15 +71,15 @@ test('like preserves the existing reactions counter and changes it by one only',
     ]);
 });
 
-test('save unsave and saved list work for approved posts', function () {
+test('save unsave and saved list work for published posts', function () {
     $user = User::factory()->create();
-    $approvedPost = mobile_engagement_test_createPost([
-        'title' => 'Approved saved post',
-        'status' => 'approved',
+    $publishedPost = mobile_engagement_test_createPost([
+        'title' => 'Published saved post',
+        'status' => 'published',
     ]);
     Sanctum::actingAs($user);
 
-    $this->postJson("/api/mobile/posts/{$approvedPost->id}/save")
+    $this->postJson("/api/mobile/posts/{$publishedPost->id}/save")
         ->assertOk()
         ->assertJsonPath('data.isSaved', true)
         ->assertJsonPath('data.savesCount', 1);
@@ -87,28 +87,28 @@ test('save unsave and saved list work for approved posts', function () {
     $this->getJson('/api/mobile/me/saved-posts')
         ->assertOk()
         ->assertJsonPath('meta.total', 1)
-        ->assertJsonPath('data.0.id', $approvedPost->id)
+        ->assertJsonPath('data.0.id', $publishedPost->id)
         ->assertJsonPath('data.0.status', 'published')
         ->assertJsonPath('data.0.isSaved', true);
 
-    $this->deleteJson("/api/mobile/posts/{$approvedPost->id}/save")
+    $this->deleteJson("/api/mobile/posts/{$publishedPost->id}/save")
         ->assertOk()
         ->assertJsonPath('data.isSaved', false)
         ->assertJsonPath('data.savesCount', 0);
 
-    expect(SavedPost::query()->where('user_id', $user->id)->where('post_id', $approvedPost->id)->exists())->toBeFalse();
+    expect(SavedPost::query()->where('user_id', $user->id)->where('post_id', $publishedPost->id)->exists())->toBeFalse();
 });
 
 test('saved posts are scoped to the authenticated user and hide non public posts', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $published = mobile_engagement_test_createPost(['title' => 'Published saved']);
-    $approved = mobile_engagement_test_createPost(['title' => 'Approved saved', 'status' => 'approved']);
+    $secondPublished = mobile_engagement_test_createPost(['title' => 'Second published saved', 'status' => 'published']);
     $draft = mobile_engagement_test_createPost(['title' => 'Draft saved', 'status' => 'draft']);
     $other = mobile_engagement_test_createPost(['title' => 'Other saved']);
 
     SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $published->id]);
-    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $approved->id]);
+    SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $secondPublished->id]);
     SavedPost::factory()->create(['user_id' => $user->id, 'post_id' => $draft->id]);
     SavedPost::factory()->create(['user_id' => $otherUser->id, 'post_id' => $other->id]);
     Sanctum::actingAs($user);
@@ -153,7 +153,7 @@ test('report creates moderation record with reason code label and post context',
     $organization = Organization::factory()->create();
     $post = mobile_engagement_test_createPost([
         'organization_id' => $organization->id,
-        'status' => 'approved',
+        'status' => 'published',
     ]);
     Sanctum::actingAs($user);
 

@@ -52,7 +52,7 @@ class MobileHomePostResource extends JsonResource
             'isLiked' => $isLiked,
             'isSaved' => $isSaved,
             'saved' => $isSaved,
-            'status' => $this->status === 'approved' ? 'published' : $this->status,
+            'status' => $this->status,
             'campaignId' => $campaign?->id ? (string) $campaign->id : null,
             'location' => $this->location,
             'category' => $category ? [

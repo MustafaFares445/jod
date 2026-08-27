@@ -9,27 +9,13 @@ use Illuminate\Validation\Rule;
 
 class AdminPostRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
-        $isUpdate = $this->route('post') !== null;
-
-        if (! $isUpdate) {
-            return [
-                'title' => ['required', 'string', 'max:255'],
-                'description' => ['required', 'string'],
-            ];
-        }
-
         return [
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
-            'status' => ['sometimes', Rule::in(['draft', 'pending', 'approved', 'rejected', 'published', 'archived'])],
-            'rejectionReason' => ['required_if:status,rejected', 'nullable', 'string', 'min:3', 'max:1000'],
+            'status' => ['sometimes', Rule::in(['draft', 'pending', 'published', 'blocked'])],
+            'blockReason' => ['required_if:status,blocked', 'nullable', 'string', 'min:3', 'max:1000'],
         ];
     }
 }

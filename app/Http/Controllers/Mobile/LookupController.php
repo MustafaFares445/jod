@@ -44,11 +44,10 @@ class LookupController extends Controller
     public function postStatuses(Request $request): JsonResponse
     {
         return $this->lookup($request, [
-            ['code' => 'draft', 'label' => 'مسودة', 'sortOrder' => 1],
+            ['code' => 'published', 'label' => 'منشور', 'sortOrder' => 1],
             ['code' => 'pending', 'label' => 'قيد المراجعة', 'sortOrder' => 2],
-            ['code' => 'active', 'label' => 'منشور', 'apiValue' => 'published', 'sortOrder' => 3],
-            ['code' => 'rejected', 'label' => 'مرفوض', 'sortOrder' => 4],
-            ['code' => 'archived', 'label' => 'مؤرشف', 'sortOrder' => 5],
+            ['code' => 'blocked', 'label' => 'مرفوض', 'sortOrder' => 3],
+            ['code' => 'draft', 'label' => 'مسودة', 'sortOrder' => 4],
         ], 'Post statuses retrieved successfully.');
     }
 

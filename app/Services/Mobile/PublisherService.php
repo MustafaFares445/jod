@@ -31,7 +31,7 @@ class PublisherService
             ->whereKey($id)
             ->where('status', 'active')
             ->whereHas('posts', function (Builder $post): void {
-                $post->whereIn('status', ['published', 'approved'])
+                $post->where('status', 'published')
                     ->whereNull('organization_id');
             })
             ->first();
@@ -47,7 +47,7 @@ class PublisherService
 
         $query = Post::query()
             ->with($this->postRelations($viewer))
-            ->whereIn('status', ['published', 'approved']);
+            ->where('status', 'published');
 
         if ($publisher instanceof Organization) {
             $query->where('organization_id', $publisher->id);

@@ -80,13 +80,13 @@ test('admin review queue contains only normal user posts', function () {
         ->assertJsonPath('data.0.author.name', 'Post Owner');
 
     $this->patchJson("/api/posts/{$organizationPost->id}", [
-        'status' => 'rejected',
-        'rejectionReason' => 'Not reviewable.',
+        'status' => 'blocked',
+        'blockReason' => 'Not reviewable.',
     ])->assertForbidden();
 
     $this->patchJson("/api/posts/{$adminPost->id}", [
-        'status' => 'rejected',
-        'rejectionReason' => 'Not reviewable.',
+        'status' => 'blocked',
+        'blockReason' => 'Not reviewable.',
     ])->assertForbidden();
 });
 
@@ -105,11 +105,11 @@ test('rejected user post can be edited resubmitted and reviewed again', function
     ]);
 
     $this->patchJson("/api/posts/{$post->id}", [
-        'status' => 'rejected',
-        'rejectionReason' => 'Please clarify the details.',
+        'status' => 'blocked',
+        'blockReason' => 'Please clarify the details.',
     ])->assertOk()
-        ->assertJsonPath('data.status', 'rejected')
-        ->assertJsonPath('data.rejectionReason', 'Please clarify the details.');
+        ->assertJsonPath('data.status', 'blocked')
+        ->assertJsonPath('data.blockReason', 'Please clarify the details.');
 
     Sanctum::actingAs($owner);
 
@@ -120,16 +120,16 @@ test('rejected user post can be edited resubmitted and reviewed again', function
     $this->postJson("/api/mobile/posts/{$post->id}/submit")
         ->assertOk()
         ->assertJsonPath('data.status', 'pending')
-        ->assertJsonPath('data.rejectionReason', null);
+        ->assertJsonPath('data.blockReason', null);
 
     Sanctum::actingAs($this->user);
 
     $this->patchJson("/api/posts/{$post->id}", [
-        'status' => 'approved',
+        'status' => 'published',
     ])->assertOk()
-        ->assertJsonPath('data.status', 'approved')
-        ->assertJsonPath('data.approvedBy.id', $this->user->id)
-        ->assertJsonStructure(['data' => ['approvedAt', 'publishedAt']]);
+        ->assertJsonPath('data.status', 'published')
+        ->assertJsonPath('data.reviewedByUser.id', $this->user->id)
+        ->assertJsonStructure(['data' => ['reviewedAt', 'publishedAt']]);
 });
 
 test('campaign admin review routes are not registered', function () {

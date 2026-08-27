@@ -120,8 +120,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::apiResource('posts', PostController::class);
         Route::patch('posts/{post}/status', PostController::class.'@updateStatus');
         Route::post('posts/{post}/publish', PostController::class.'@publish');
-        Route::post('posts/{post}/archive', PostController::class.'@archive');
-        Route::post('posts/{post}/restore', PostController::class.'@restore');
 
         Route::get('videos', [App\Http\Controllers\API\Org\OrganizationVideoController::class, 'index']);
         Route::get('videos/{video}', [App\Http\Controllers\API\Org\OrganizationVideoController::class, 'show']);

@@ -18,9 +18,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'location',
     'organization_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
-    'rejection_reason', 'views_count', 'reactions_count', 'applications_count',
-    'published_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'approved_at',
-    'approved_by', 'rejected_at', 'rejected_by',
+    'block_reason', 'views_count', 'reactions_count', 'applications_count',
+    'published_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'blocked_at', 'blocked_by',
 ])]
 class Post extends Model
 {
@@ -49,8 +48,7 @@ class Post extends Model
             'published_at' => 'datetime',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
-            'approved_at' => 'datetime',
-            'rejected_at' => 'datetime',
+            'blocked_at' => 'datetime',
         ];
     }
 
@@ -60,8 +58,7 @@ class Post extends Model
     public function author(): BelongsTo { return $this->belongsTo(User::class, 'author_id'); }
     public function updatedBy(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
     public function reviewedBy(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
-    public function approvedBy(): BelongsTo { return $this->belongsTo(User::class, 'approved_by'); }
-    public function rejectedBy(): BelongsTo { return $this->belongsTo(User::class, 'rejected_by'); }
+    public function blockedBy(): BelongsTo { return $this->belongsTo(User::class, 'blocked_by'); }
 
     public function media(): HasMany
     {

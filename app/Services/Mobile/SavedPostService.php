@@ -28,7 +28,7 @@ class SavedPostService
                 'post.campaignApplications' => static fn (HasMany $relation) => $relation->where('created_by', $user->id),
             ])
             ->where('user_id', $user->id)
-            ->whereHas('post', fn (Builder $query) => $query->whereIn('status', ['published', 'approved']))
+            ->whereHas('post', fn (Builder $query) => $query->where('status', 'published'))
             ->orderByDesc('created_at')
             ->orderBy('id')
             ->paginate($perPage);

@@ -154,7 +154,7 @@ class PostEngagementService
     {
         return Post::query()
             ->whereKey($postId)
-            ->whereIn('status', ['published', 'approved'])
+            ->where('status', 'published')
             ->lockForUpdate()
             ->firstOrFail();
     }

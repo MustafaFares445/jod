@@ -141,10 +141,6 @@ test('post status contract endpoint uses existing transition rules', function ()
         ->assertOk()
         ->assertJsonPath('item.status', 'published');
 
-    $this->patchJson("/api/v1/org/posts/{$post->id}/status", ['status' => 'archived'])
-        ->assertOk()
-        ->assertJsonPath('item.status', 'archived');
-
     $this->patchJson("/api/v1/org/posts/{$post->id}/status", ['status' => 'draft'])
         ->assertOk()
         ->assertJsonPath('item.status', 'draft');

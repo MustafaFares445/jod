@@ -18,13 +18,13 @@ return new class extends Migration
                 $table->string('summary')->nullable();
                 $table->text('content')->nullable();
                 $table->string('type')->default('general');
-                $table->enum('status', ['draft', 'pending', 'published', 'archived', 'approved', 'rejected'])->default('published');
+                $table->enum('status', ['draft', 'pending', 'published', 'blocked'])->default('draft');
                 $table->string('location')->nullable();
                 $table->string('organization_id')->nullable();
                 $table->string('campaign_id')->nullable();
                 $table->string('category_id')->nullable();
                 $table->string('author_id')->nullable();
-                $table->text('rejection_reason')->nullable();
+                $table->text('block_reason')->nullable();
                 $table->unsignedBigInteger('views_count')->default(0);
                 $table->unsignedBigInteger('reactions_count')->default(0);
                 $table->unsignedBigInteger('applications_count')->default(0);

@@ -211,26 +211,49 @@ final class JodCompleteDemoSeeder extends Seeder
                 'author_id' => $this->id($row['authorKey']),
             ];
 
-            if ($attrs['organization_id'] !== null) {
-                $attrs['status'] = match ($attrs['status'] ?? 'draft') {
-                    'pending', 'approved' => 'published',
-                    'rejected' => 'draft',
-                    default => $attrs['status'] ?? 'draft',
+            $legacyStatus = (string) ($attrs['status'] ?? 'draft');
+            $isOrganizationPost = $attrs['organization_id'] !== null;
+            $isAdminPost = DB::table('users')->where('id', $attrs['author_id'])->value('user_type') === 'admin';
+
+            if ($isOrganizationPost || $isAdminPost) {
+                $attrs['status'] = match ($legacyStatus) {
+                    'published', 'approved' => 'published',
+                    default => 'draft',
                 };
                 $attrs['reviewed_by'] = null;
                 $attrs['reviewed_at'] = null;
-                $attrs['approved_by'] = null;
-                $attrs['approved_at'] = null;
-                $attrs['rejected_by'] = null;
-                $attrs['rejected_at'] = null;
-                $attrs['rejection_reason'] = null;
-
-                if ($attrs['status'] === 'published' && empty($attrs['published_at'])) {
-                    $attrs['published_at'] = now();
-                }
+                $attrs['block_reason'] = null;
+                $attrs['blocked_at'] = null;
+                $attrs['blocked_by'] = null;
             } else {
+                $attrs['status'] = match ($legacyStatus) {
+                    'published', 'approved', 'active' => 'published',
+                    'rejected', 'blocked' => 'blocked',
+                    'pending' => 'pending',
+                    default => 'draft',
+                };
                 $attrs['reviewed_by'] = $row['reviewedByKey'] ? $this->id($row['reviewedByKey']) : null;
+                $attrs['block_reason'] = $attrs['block_reason'] ?? $attrs['rejection_reason'] ?? null;
+                $attrs['blocked_at'] = $attrs['blocked_at'] ?? $attrs['rejected_at'] ?? null;
+                $attrs['blocked_by'] = $attrs['blocked_by'] ?? $attrs['rejected_by'] ?? null;
             }
+
+            if ($attrs['status'] === 'published') {
+                $attrs['published_at'] = $attrs['published_at'] ?? now();
+                $attrs['block_reason'] = null;
+                $attrs['blocked_at'] = null;
+                $attrs['blocked_by'] = null;
+            } else {
+                $attrs['published_at'] = null;
+            }
+
+            unset(
+                $attrs['approved_at'],
+                $attrs['approved_by'],
+                $attrs['rejected_at'],
+                $attrs['rejected_by'],
+                $attrs['rejection_reason'],
+            );
 
             $this->upsert('posts', ['id' => $attrs['id']], $attrs);
         }

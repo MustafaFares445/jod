@@ -67,7 +67,7 @@ class SearchController extends Controller
         $organizations = Organization::query()
             ->with('logoMedia')
             ->where('status', 'active')
-            ->whereHas('posts', fn (Builder $post) => $post->whereIn('status', ['published', 'approved']))
+            ->whereHas('posts', fn (Builder $post) => $post->where('status', 'published'))
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")
@@ -80,7 +80,7 @@ class SearchController extends Controller
         $users = User::query()
             ->where('status', 'active')
             ->whereHas('posts', function (Builder $post): void {
-                $post->whereIn('status', ['published', 'approved'])
+                $post->where('status', 'published')
                     ->whereNull('organization_id');
             })
             ->when($search !== '', function (Builder $builder) use ($search): void {
@@ -123,7 +123,7 @@ class SearchController extends Controller
 
         $query = Post::query()
             ->with($this->postRelations($viewer))
-            ->whereIn('status', ['published', 'approved'])
+            ->where('status', 'published')
             ->when($location !== '', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
             ->when($category !== '', function (Builder $builder) use ($category): void {
                 $builder->where(function (Builder $inner) use ($category): void {
@@ -167,7 +167,7 @@ class SearchController extends Controller
                 'creator',
                 'imageMedia',
                 'posts' => static fn (Relation $relation) => $relation
-                    ->whereIn('status', ['published', 'approved'])
+                    ->where('status', 'published')
                     ->orderByDesc('published_at')
                     ->orderByDesc('created_at')
                     ->with('images'),

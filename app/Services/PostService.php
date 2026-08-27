@@ -25,7 +25,7 @@ class PostService
 
         $query = Post::query()
             ->with($this->mobileRelations($viewer))
-            ->whereIn('status', ['published', 'approved'])
+            ->where('status', 'published')
             ->when(filled($params['type'] ?? null), fn (Builder $builder) => $builder->where('type', $params['type']))
             ->when(filled($params['audience'] ?? null), fn (Builder $builder) => $builder->where('audience', $params['audience']))
             ->when(filled($params['location'] ?? null), fn (Builder $builder) => $builder->where('location', 'like', '%'.$params['location'].'%'))
@@ -80,7 +80,7 @@ class PostService
         return Post::query()
             ->with($this->mobileRelations($viewer))
             ->whereKey($id)
-            ->whereIn('status', ['published', 'approved'])
+            ->where('status', 'published')
             ->first();
     }
 
@@ -159,8 +159,7 @@ class PostService
 
         return match ("{$post->status}:{$status}") {
             'draft:published' => $this->publish($post),
-            'published:archived' => $this->archive($post),
-            'archived:draft' => $this->restore($post),
+            'published:draft' => $this->unpublish($post),
             default => throw ValidationException::withMessages(['status' => ["Post status cannot transition from {$post->status} to {$status}."]]),
         };
     }
@@ -170,14 +169,9 @@ class PostService
         return $this->transitionStatus($post, 'draft', ['status' => 'published', 'published_at' => now()], 'Only draft posts can be published.');
     }
 
-    public function archive(Post $post): Post
+    public function unpublish(Post $post): Post
     {
-        return $this->transitionStatus($post, 'published', ['status' => 'archived'], 'Only published posts can be archived.');
-    }
-
-    public function restore(Post $post): Post
-    {
-        return $this->transitionStatus($post, 'archived', ['status' => 'draft', 'published_at' => null], 'Only archived posts can be restored.');
+        return $this->transitionStatus($post, 'published', ['status' => 'draft', 'published_at' => null], 'Only published posts can be moved back to draft.');
     }
 
     public function delete(Post $post): void { $post->delete(); }
