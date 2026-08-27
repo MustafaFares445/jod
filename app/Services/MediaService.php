@@ -62,7 +62,7 @@ class MediaService
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize() ?: 0,
                 'position' => $count,
-                'preview_status' => $this->initialPreviewStatus($prop),
+                'preview_status' => $this->initialPreviewStatus($model, $prop),
             ]);
         } catch (\Throwable $exception) {
             Storage::disk('public')->delete($path);
@@ -95,7 +95,7 @@ class MediaService
                 'preview_path' => null,
                 'preview_mime_type' => null,
                 'preview_size' => null,
-                'preview_status' => $this->initialPreviewStatus($prop),
+                'preview_status' => $this->initialPreviewStatus($model, $prop),
                 'preview_error' => null,
             ]);
         } catch (\Throwable $exception) {
@@ -181,9 +181,9 @@ class MediaService
         return "media/{$model->value}/{$modelId}/{$prop}";
     }
 
-    private function initialPreviewStatus(string $prop): ?string
+    private function initialPreviewStatus(MediaModel $model, string $prop): ?string
     {
-        if ($prop !== 'videos') {
+        if ($model !== MediaModel::ORGANIZATION || $prop !== 'videos') {
             return null;
         }
 
@@ -192,7 +192,15 @@ class MediaService
 
     private function queueVideoPreview(Media $media): void
     {
-        if ($media->prop !== 'videos' || $media->preview_status !== 'pending') {
+        $modelType = $media->model_type instanceof MediaModel
+            ? $media->model_type
+            : MediaModel::tryFrom((string) $media->model_type);
+
+        if (
+            $modelType !== MediaModel::ORGANIZATION
+            || $media->prop !== 'videos'
+            || $media->preview_status !== 'pending'
+        ) {
             return;
         }
 
