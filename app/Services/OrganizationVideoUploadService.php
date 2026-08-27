@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\MediaModel;
-use App\Jobs\GenerateVideoPreview;
 use App\Models\Media;
 use App\Models\MediaUpload;
 use App\Models\Organization;
@@ -258,10 +257,6 @@ class OrganizationVideoUploadService
                 'status' => 'completed',
                 'completed_at' => now(),
             ]);
-
-            if ($video->preview_status === 'pending') {
-                GenerateVideoPreview::dispatch((string) $video->id, (string) $video->path);
-            }
 
             $disk->deleteDirectory("media-uploads/{$locked->id}");
 
