@@ -18,6 +18,9 @@ class MediaResource extends JsonResource
             'modelId' => $this->model_id,
             'prop' => $this->prop,
             'url' => $this->publicUrl(),
+            'streamUrl' => $this->prop === 'videos'
+                ? route('mobile.discovery.media.stream', ['video' => $this->id])
+                : null,
             'originalName' => $this->original_name,
             'description' => $this->description,
             'mimeType' => $this->mime_type,
