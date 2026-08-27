@@ -54,6 +54,7 @@ Each media item contains the owning organization and that organization's logo me
   "modelId": "organization-uuid",
   "prop": "videos",
   "url": "https://...",
+  "streamUrl": "https://api.example.com/api/mobile/discovery/media/uuid/stream",
   "originalName": "campaign-story.mp4",
   "description": "Short description shown with the video in the app.",
   "mimeType": "video/mp4",
@@ -87,6 +88,22 @@ Each media item contains the owning organization and that organization's logo me
 ### GET `/api/mobile/discovery/media/{video}`
 
 Returns one public video media item with the same `organization` and `organization.logo` relationship. Returns `404` when the video does not exist or belongs to an inactive organization.
+
+### GET `/api/mobile/discovery/media/{video}/stream`
+
+Streams the stored video bytes for playback. Use the `streamUrl` returned on video media resources instead of constructing this URL in the frontend.
+
+The endpoint supports standard single HTTP byte ranges for seeking and progressive playback:
+
+- no `Range` header: `200 OK` with the complete video
+- valid `Range: bytes=start-end`: `206 Partial Content`
+- open-ended ranges such as `bytes=1048576-`
+- suffix ranges such as `bytes=-1048576`
+- invalid or unsatisfiable ranges: `416 Range Not Satisfiable`
+
+Successful responses include `Accept-Ranges: bytes`, the stored video MIME type, and an exact `Content-Length`. Partial responses also include `Content-Range`.
+
+Only organization media with `prop = videos` belonging to active organizations can be streamed publicly.
 
 ### Video description input
 
