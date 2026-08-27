@@ -41,6 +41,7 @@ Route::prefix('discovery')->name('discovery.')->middleware('throttle:60,1')->gro
     Route::get('media', [MediaDiscoveryController::class, 'index'])->name('media');
     Route::get('media/{video}', [MediaDiscoveryController::class, 'show'])->name('media.show');
     Route::get('media/{video}/stream', MediaStreamController::class)->name('media.stream');
+    Route::get('media/{video}/preview', [MediaStreamController::class, 'preview'])->name('media.preview');
     Route::get('publishers/{publisher}', [DiscoveryController::class, 'showPublisher'])->name('publishers.show');
     Route::get('publishers/{publisher}/posts', [DiscoveryController::class, 'publisherPosts'])->name('publishers.posts');
     Route::get('organizations/{organization}/videos', [OrganizationVideoController::class, 'index'])->name('organizations.videos.index');
