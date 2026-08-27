@@ -55,6 +55,10 @@ Each media item contains the owning organization and that organization's logo me
   "prop": "videos",
   "url": "https://...",
   "streamUrl": "https://api.example.com/api/mobile/discovery/media/uuid/stream",
+  "previewUrl": "https://api.example.com/api/mobile/discovery/media/uuid/preview?v=...",
+  "previewStatus": "ready",
+  "previewMimeType": "video/mp4",
+  "previewSize": 245760,
   "originalName": "campaign-story.mp4",
   "description": "Short description shown with the video in the app.",
   "mimeType": "video/mp4",
@@ -104,6 +108,32 @@ The endpoint supports standard single HTTP byte ranges for seeking and progressi
 Successful responses include `Accept-Ranges: bytes`, the stored video MIME type, and an exact `Content-Length`. Partial responses also include `Content-Range`.
 
 Only organization media with `prop = videos` belonging to active organizations can be streamed publicly.
+
+### GET `/api/mobile/discovery/media/{video}/preview`
+
+Streams the generated short feed preview. The backend generates a muted MP4 teaser from the beginning of the original video after upload completion. The default preview is the first **3 seconds** at **480p**, configurable through environment settings.
+
+Use `previewUrl` for Facebook/Reels-style feed cards. Use `streamUrl` only after the user opens the video for full playback.
+
+Preview responses support the same single HTTP byte-range behavior as the full stream and include a long-lived immutable cache header. The `previewUrl` includes a version query parameter so replacing a video produces a fresh cache key.
+
+Preview state is exposed as `previewStatus`:
+
+- `pending`: queued for processing
+- `processing`: FFmpeg is generating the teaser
+- `ready`: `previewUrl` is available
+- `failed`: generation exhausted its retries
+- `disabled`: server-side preview generation is disabled
+
+When the preview is not ready, `previewUrl` is `null`. A direct request to the preview endpoint returns `404` with error code `preview_not_ready`.
+
+Recommended feed behavior:
+
+1. Render a poster/placeholder while `previewStatus !== "ready"`.
+2. When ready and the card enters the viewport, autoplay `previewUrl` muted and loop it.
+3. Stop/pause the preview when the card leaves the viewport.
+4. On tap, open the full player and use `streamUrl`.
+5. Do not calculate time-to-byte ranges in the frontend.
 
 ### Video description input
 
