@@ -80,6 +80,52 @@ test('mobile media video stream rejects unsatisfiable byte ranges', function ():
         ->assertHeader('Content-Range', 'bytes */10');
 });
 
+test('mobile media preview streams the generated teaser and supports ranges', function (): void {
+    [$video] = media_stream_test_video();
+    $previewContents = 'abcdefghij';
+    $previewPath = "organizations/{$video->model_id}/preview.mp4";
+
+    Storage::disk('public')->put($previewPath, $previewContents);
+    $video->update([
+        'preview_disk' => 'public',
+        'preview_path' => $previewPath,
+        'preview_mime_type' => 'video/mp4',
+        'preview_size' => strlen($previewContents),
+        'preview_status' => 'ready',
+    ]);
+
+    $full = $this->get("/api/mobile/discovery/media/{$video->id}/preview");
+
+    $full
+        ->assertOk()
+        ->assertHeader('Accept-Ranges', 'bytes')
+        ->assertHeader('Content-Type', 'video/mp4')
+        ->assertHeader('Content-Length', '10')
+        ->assertHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    expect($full->streamedContent())->toBe($previewContents);
+
+    $partial = $this
+        ->withHeader('Range', 'bytes=2-5')
+        ->get("/api/mobile/discovery/media/{$video->id}/preview");
+
+    $partial
+        ->assertStatus(206)
+        ->assertHeader('Content-Range', 'bytes 2-5/10')
+        ->assertHeader('Content-Length', '4');
+
+    expect($partial->streamedContent())->toBe('cdef');
+});
+
+test('mobile media preview returns not ready until preview generation completes', function (): void {
+    [$video] = media_stream_test_video();
+    $video->update(['preview_status' => 'pending']);
+
+    $this->getJson("/api/mobile/discovery/media/{$video->id}/preview")
+        ->assertNotFound()
+        ->assertJsonPath('error.code', 'preview_not_ready');
+});
+
 test('mobile media video stream only exposes videos from active organizations', function (): void {
     [$video] = media_stream_test_video('inactive');
 
