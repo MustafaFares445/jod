@@ -48,6 +48,7 @@ test('organization media discovery includes the organization and its logo relati
     $this->getJson('/api/mobile/discovery/media')
         ->assertOk()
         ->assertJsonPath('data.0.id', $video->id)
+        ->assertJsonPath('data.0.streamUrl', route('mobile.discovery.media.stream', ['video' => $video->id]))
         ->assertJsonPath('data.0.organization.id', $organization->id)
         ->assertJsonPath('data.0.organization.name', $organization->name)
         ->assertJsonPath('data.0.organization.logo.id', $logo->id)
@@ -56,6 +57,7 @@ test('organization media discovery includes the organization and its logo relati
 
     $this->getJson("/api/mobile/discovery/media/{$video->id}")
         ->assertOk()
+        ->assertJsonPath('data.streamUrl', route('mobile.discovery.media.stream', ['video' => $video->id]))
         ->assertJsonPath('data.organization.id', $organization->id)
         ->assertJsonPath('data.organization.logo.id', $logo->id)
         ->assertJsonPath('data.organization.logo.prop', 'logo');
