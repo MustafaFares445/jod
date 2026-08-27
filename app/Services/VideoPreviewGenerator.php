@@ -65,7 +65,11 @@ class VideoPreviewGenerator
             }
 
             $previewDisk = 'public';
-            $previewPath = $this->previewPath($current, $expectedSourcePath);
+            $previewPath = self::previewPathFor(
+                (string) $current->model_id,
+                (string) $current->id,
+                $expectedSourcePath,
+            );
             $output = fopen($outputPath, 'rb');
 
             if ($output === false) {
@@ -79,25 +83,26 @@ class VideoPreviewGenerator
             }
 
             $storedSize = (int) Storage::disk($previewDisk)->size($previewPath);
-            $fresh = Media::query()->find($media->id);
+            $oldPreviewDisk = $current->preview_disk;
+            $oldPreviewPath = $current->preview_path;
 
-            if ($fresh === null || $fresh->path !== $expectedSourcePath) {
+            $updated = Media::query()
+                ->whereKey($media->id)
+                ->where('path', $expectedSourcePath)
+                ->update([
+                    'preview_disk' => $previewDisk,
+                    'preview_path' => $previewPath,
+                    'preview_mime_type' => 'video/mp4',
+                    'preview_size' => $storedSize,
+                    'preview_status' => 'ready',
+                    'preview_error' => null,
+                ]);
+
+            if ($updated === 0) {
                 Storage::disk($previewDisk)->delete($previewPath);
 
                 return;
             }
-
-            $oldPreviewDisk = $fresh->preview_disk;
-            $oldPreviewPath = $fresh->preview_path;
-
-            $fresh->update([
-                'preview_disk' => $previewDisk,
-                'preview_path' => $previewPath,
-                'preview_mime_type' => 'video/mp4',
-                'preview_size' => $storedSize,
-                'preview_status' => 'ready',
-                'preview_error' => null,
-            ]);
 
             if (
                 filled($oldPreviewDisk)
@@ -152,11 +157,11 @@ class VideoPreviewGenerator
         ]);
     }
 
-    private function previewPath(Media $media, string $sourcePath): string
+    public static function previewPathFor(string $modelId, string $mediaId, string $sourcePath): string
     {
         $version = substr(sha1($sourcePath), 0, 16);
 
-        return "media/organization/{$media->model_id}/videos/previews/{$media->id}-{$version}.mp4";
+        return "media/organization/{$modelId}/videos/previews/{$mediaId}-{$version}.mp4";
     }
 
     private function isOrganizationVideo(Media $media): bool
