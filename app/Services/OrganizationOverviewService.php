@@ -34,6 +34,16 @@ class OrganizationOverviewService
         $organizationId = (string) $organization->id;
         $stats = collect();
 
+        $stats->push([
+            'id' => 'followers',
+            'label' => 'Followers',
+            'value' => PublisherFollow::query()
+                ->where('target_type', PublisherFollow::TARGET_ORGANIZATION)
+                ->where('target_id', $organizationId)
+                ->count(),
+            'hint' => 'Publisher followers',
+        ]);
+
         if ($this->canView($user, PermissionGroup::ORG_CAMPAIGN)) {
             $stats->push([
                 'id' => 'campaigns',
