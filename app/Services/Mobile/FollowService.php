@@ -97,18 +97,20 @@ class FollowService
         $follows = collect($paginator->items());
         $users = $this->targets($follows, PublisherFollow::TARGET_USER, User::class, 'avatarMedia');
         $organizations = $this->targets($follows, PublisherFollow::TARGET_ORGANIZATION, Organization::class, 'logoMedia');
-        $counts = PublisherFollow::query()
-            ->selectRaw('target_type, target_id, COUNT(*) as aggregate')
-            ->where(function ($query) use ($follows): void {
-                foreach ($follows->groupBy('target_type') as $targetType => $group) {
-                    $query->orWhere(function ($targetQuery) use ($targetType, $group): void {
-                        $targetQuery->where('target_type', $targetType)->whereIn('target_id', $group->pluck('target_id'));
-                    });
-                }
-            })
-            ->groupBy('target_type', 'target_id')
-            ->get()
-            ->keyBy(fn ($row) => $row->target_type.':'.$row->target_id);
+        $counts = $follows->isEmpty()
+            ? collect()
+            : PublisherFollow::query()
+                ->selectRaw('target_type, target_id, COUNT(*) as aggregate')
+                ->where(function ($query) use ($follows): void {
+                    foreach ($follows->groupBy('target_type') as $targetType => $group) {
+                        $query->orWhere(function ($targetQuery) use ($targetType, $group): void {
+                            $targetQuery->where('target_type', $targetType)->whereIn('target_id', $group->pluck('target_id'));
+                        });
+                    }
+                })
+                ->groupBy('target_type', 'target_id')
+                ->get()
+                ->keyBy(fn ($row) => $row->target_type.':'.$row->target_id);
 
         $paginator->setCollection($follows->map(function (PublisherFollow $follow) use ($users, $organizations, $counts) {
             $target = $follow->target_type === PublisherFollow::TARGET_USER
