@@ -18,6 +18,7 @@ class DonationRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:20'],
             'city' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'isAnonymous' => ['sometimes', 'boolean'],
         ];
     }
 }

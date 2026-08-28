@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'amount_or_type', 'donated_at', 'city', 'source', 'payment_method', 'status',
     'contact_method', 'notes', 'cancel_reason', 'contacted_at', 'agreed_at',
     'completed_at', 'cancelled_at', 'campaign_ref', 'assigned_to', 'internal_notes',
-    'created_by', 'confirmed_by',
+    'created_by', 'confirmed_by', 'is_anonymous',
 ])]
 class Donation extends Model
 {
@@ -31,6 +31,7 @@ class Donation extends Model
             'agreed_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'is_anonymous' => 'boolean',
         ];
     }
 

@@ -36,7 +36,8 @@ test('user creates pending donation intent without changing campaign totals', fu
         ->assertJsonPath('data.campaignId', $campaign->id)
         ->assertJsonPath('data.amount', 25.5)
         ->assertJsonPath('data.status', 'pending')
-        ->assertJsonPath('data.contactMethod', 'whatsapp');
+        ->assertJsonPath('data.contactMethod', 'whatsapp')
+        ->assertJsonPath('data.isAnonymous', false);
 
     $this->assertDatabaseHas('donations', [
         'id' => $response->json('data.id'),
@@ -46,11 +47,54 @@ test('user creates pending donation intent without changing campaign totals', fu
         'status' => 'pending',
         'contact_method' => 'whatsapp',
         'created_by' => $user->id,
+        'is_anonymous' => false,
     ]);
 
     $campaign->refresh();
     expect($campaign->raised_amount)->toBe('100.00');
     expect($campaign->donors_count)->toBe(3);
+});
+
+test('user can create anonymous donation intent without changing campaign totals', function () {
+    $user = User::factory()->create();
+    $campaign = mobile_donation_test_createCampaign([
+        'raised_amount' => 75,
+        'donors_count' => 2,
+    ]);
+    Sanctum::actingAs($user);
+
+    $response = $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
+        'amount' => 50,
+        'contactMethod' => 'phone',
+        'isAnonymous' => true,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.isAnonymous', true)
+        ->assertJsonPath('data.status', 'pending');
+
+    $this->assertDatabaseHas('donations', [
+        'id' => $response->json('data.id'),
+        'created_by' => $user->id,
+        'is_anonymous' => true,
+    ]);
+
+    $campaign->refresh();
+    expect($campaign->raised_amount)->toBe('75.00');
+    expect($campaign->donors_count)->toBe(2);
+});
+
+test('donation intent validates anonymous flag as boolean', function () {
+    $user = User::factory()->create();
+    $campaign = mobile_donation_test_createCampaign();
+    Sanctum::actingAs($user);
+
+    $this->postJson("/api/mobile/campaigns/{$campaign->id}/donations", [
+        'amount' => 25,
+        'contactMethod' => 'phone',
+        'isAnonymous' => 'yes',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['isAnonymous'], 'error.details');
 });
 
 test('donation intent requires active campaign and valid payload', function () {
