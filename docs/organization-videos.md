@@ -47,6 +47,34 @@ Sessions expire after 24 hours without successful continuation. Upload/chunk act
 
 The generic `/api/v1/media/.../videos` upload path no longer accepts video files. Organization videos must use the resumable API.
 
+## Short feed preview processing
+
+After the final video is stored, the backend queues `GenerateVideoPreview`. The job generates a separate lightweight MP4 asset intended for feed/autoplay previews; it does not truncate the HTTP stream by guessing byte counts.
+
+Default processing:
+
+- first **3 seconds**
+- video only / muted preview (audio removed)
+- H.264 MP4
+- 480px output height
+- `+faststart` MP4 layout for quick playback
+- CRF 28 / `veryfast` preset
+- 3 queue attempts
+
+The media record tracks `preview_status`, `preview_disk`, `preview_path`, `preview_mime_type`, `preview_size`, and the last final `preview_error`.
+
+Replacing a video deletes its previous preview and queues a new version. Deleting a video also deletes its preview. Preview paths include a source-version hash so stale jobs cannot overwrite a newer replacement.
+
+Existing videos can be queued with:
+
+```bash
+php artisan videos:generate-previews
+```
+
+Use `--force` to regenerate all organization video previews.
+
+The queue worker must be running, and the server must have the FFmpeg binary installed. Relevant environment values are `VIDEO_FFMPEG_BINARY`, `VIDEO_PREVIEW_ENABLED`, `VIDEO_PREVIEW_DURATION_SECONDS`, `VIDEO_PREVIEW_HEIGHT`, `VIDEO_PREVIEW_CRF`, `VIDEO_PREVIEW_PRESET`, and `VIDEO_PREVIEW_PROCESS_TIMEOUT_SECONDS`.
+
 ## Company API
 
 Completed videos:
@@ -103,6 +131,8 @@ These endpoints do not require authentication and are covered by the mobile disc
 | --- | --- | --- |
 | GET | `/api/mobile/discovery/organizations/{organization}/videos` | Paginated videos for an active organization |
 | GET | `/api/mobile/discovery/organizations/{organization}/videos/{video}` | Public video details |
+| GET | `/api/mobile/discovery/media/{video}/preview` | Short generated feed preview |
+| GET | `/api/mobile/discovery/media/{video}/stream` | Full byte-range video stream |
 
 The list endpoint accepts `page` and `perPage` and returns the standard mobile response envelope and pagination metadata.
 
@@ -148,6 +178,7 @@ Detailed implementation contracts are maintained separately per platform:
 ## Current implementation notes
 
 - Final videos use the existing public media storage and `MediaResource`.
+- Media video resources expose separate `previewUrl` and `streamUrl` fields.
 - Temporary chunks use the local filesystem until completion or cancellation.
 - The API verifies exact chunk byte sizes before marking chunks as received.
 - Re-sending an already accepted chunk index is idempotent from the upload session perspective.

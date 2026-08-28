@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\MediaModel;
+use App\Jobs\GenerateVideoPreview;
 use App\Models\Media;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -51,7 +52,7 @@ class MediaService
         $path = $file->store($this->directory($model, $modelId, $prop), 'public');
 
         try {
-            return Media::query()->create([
+            $media = Media::query()->create([
                 'model_type' => $model,
                 'model_id' => $modelId,
                 'prop' => $prop,
@@ -61,11 +62,16 @@ class MediaService
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize() ?: 0,
                 'position' => $count,
+                'preview_status' => $this->initialPreviewStatus($model, $prop),
             ]);
         } catch (\Throwable $exception) {
             Storage::disk('public')->delete($path);
             throw $exception;
         }
+
+        $this->queueVideoPreview($media);
+
+        return $media;
     }
 
     public function replace(MediaModel $model, string $modelId, string $prop, string $mediaId, UploadedFile $file): Media
@@ -75,6 +81,9 @@ class MediaService
         $newPath = $file->store($this->directory($model, $modelId, $prop), 'public');
         $oldDisk = $media->disk;
         $oldPath = $media->path;
+        $oldPreviewDisk = $media->preview_disk;
+        $oldPreviewPath = $media->preview_path;
+        $oldGeneratedPreviewPath = $this->generatedPreviewPath($model, $modelId, $prop, $mediaId, $oldPath);
 
         try {
             $media->update([
@@ -83,6 +92,12 @@ class MediaService
                 'original_name' => $file->getClientOriginalName(),
                 'mime_type' => $file->getMimeType(),
                 'size' => $file->getSize() ?: 0,
+                'preview_disk' => null,
+                'preview_path' => null,
+                'preview_mime_type' => null,
+                'preview_size' => null,
+                'preview_status' => $this->initialPreviewStatus($model, $prop),
+                'preview_error' => null,
             ]);
         } catch (\Throwable $exception) {
             Storage::disk('public')->delete($newPath);
@@ -91,7 +106,18 @@ class MediaService
 
         Storage::disk($oldDisk)->delete($oldPath);
 
-        return $media->refresh();
+        if (filled($oldPreviewDisk) && filled($oldPreviewPath)) {
+            Storage::disk((string) $oldPreviewDisk)->delete((string) $oldPreviewPath);
+        }
+
+        if (filled($oldGeneratedPreviewPath) && $oldGeneratedPreviewPath !== $oldPreviewPath) {
+            Storage::disk('public')->delete((string) $oldGeneratedPreviewPath);
+        }
+
+        $media = $media->refresh();
+        $this->queueVideoPreview($media);
+
+        return $media;
     }
 
     public function delete(MediaModel $model, string $modelId, string $prop, string $mediaId): void
@@ -100,6 +126,9 @@ class MediaService
         $media = $this->findScoped($model, $modelId, $prop, $mediaId);
         $disk = $media->disk;
         $path = $media->path;
+        $previewDisk = $media->preview_disk;
+        $previewPath = $media->preview_path;
+        $generatedPreviewPath = $this->generatedPreviewPath($model, $modelId, $prop, $mediaId, $path);
 
         DB::transaction(function () use ($media, $model, $modelId, $prop): void {
             $media->delete();
@@ -107,6 +136,14 @@ class MediaService
         });
 
         Storage::disk($disk)->delete($path);
+
+        if (filled($previewDisk) && filled($previewPath)) {
+            Storage::disk((string) $previewDisk)->delete((string) $previewPath);
+        }
+
+        if (filled($generatedPreviewPath) && $generatedPreviewPath !== $previewPath) {
+            Storage::disk('public')->delete((string) $generatedPreviewPath);
+        }
     }
 
     /** @return Collection<int, Media> */
@@ -152,5 +189,45 @@ class MediaService
     private function directory(MediaModel $model, string $modelId, string $prop): string
     {
         return "media/{$model->value}/{$modelId}/{$prop}";
+    }
+
+    private function initialPreviewStatus(MediaModel $model, string $prop): ?string
+    {
+        if ($model !== MediaModel::ORGANIZATION || $prop !== 'videos') {
+            return null;
+        }
+
+        return config('video.preview.enabled', true) ? 'pending' : 'disabled';
+    }
+
+    private function generatedPreviewPath(
+        MediaModel $model,
+        string $modelId,
+        string $prop,
+        string $mediaId,
+        string $sourcePath,
+    ): ?string {
+        if ($model !== MediaModel::ORGANIZATION || $prop !== 'videos') {
+            return null;
+        }
+
+        return VideoPreviewGenerator::previewPathFor($modelId, $mediaId, $sourcePath);
+    }
+
+    private function queueVideoPreview(Media $media): void
+    {
+        $modelType = $media->model_type instanceof MediaModel
+            ? $media->model_type
+            : MediaModel::tryFrom((string) $media->model_type);
+
+        if (
+            $modelType !== MediaModel::ORGANIZATION
+            || $media->prop !== 'videos'
+            || $media->preview_status !== 'pending'
+        ) {
+            return;
+        }
+
+        GenerateVideoPreview::dispatch((string) $media->id, (string) $media->path)->afterCommit();
     }
 }
