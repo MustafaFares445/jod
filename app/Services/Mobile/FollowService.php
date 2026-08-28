@@ -37,10 +37,21 @@ class FollowService
             throw ValidationException::withMessages(['targetId' => ['You cannot follow yourself.']]);
         }
 
-        return PublisherFollow::query()->firstOrCreate(
-            ['follower_user_id' => (string) $actor->id, 'target_type' => $type, 'target_id' => $id],
-            ['id' => (string) Str::uuid(), 'notification_level' => PublisherFollow::NOTIFICATION_ALL],
-        );
+        $attributes = [
+            'follower_user_id' => (string) $actor->id,
+            'target_type' => $type,
+            'target_id' => $id,
+        ];
+
+        PublisherFollow::query()->insertOrIgnore([[
+            'id' => (string) Str::uuid(),
+            ...$attributes,
+            'notification_level' => PublisherFollow::NOTIFICATION_ALL,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]]);
+
+        return PublisherFollow::query()->where($attributes)->firstOrFail();
     }
 
     public function unfollow(User $actor, string $type, string $id): void
@@ -86,8 +97,20 @@ class FollowService
         $follows = collect($paginator->items());
         $users = $this->targets($follows, PublisherFollow::TARGET_USER, User::class, 'avatarMedia');
         $organizations = $this->targets($follows, PublisherFollow::TARGET_ORGANIZATION, Organization::class, 'logoMedia');
+        $counts = PublisherFollow::query()
+            ->selectRaw('target_type, target_id, COUNT(*) as aggregate')
+            ->where(function ($query) use ($follows): void {
+                foreach ($follows->groupBy('target_type') as $targetType => $group) {
+                    $query->orWhere(function ($targetQuery) use ($targetType, $group): void {
+                        $targetQuery->where('target_type', $targetType)->whereIn('target_id', $group->pluck('target_id'));
+                    });
+                }
+            })
+            ->groupBy('target_type', 'target_id')
+            ->get()
+            ->keyBy(fn ($row) => $row->target_type.':'.$row->target_id);
 
-        $paginator->setCollection($follows->map(function (PublisherFollow $follow) use ($users, $organizations) {
+        $paginator->setCollection($follows->map(function (PublisherFollow $follow) use ($users, $organizations, $counts) {
             $target = $follow->target_type === PublisherFollow::TARGET_USER
                 ? $users->get((string) $follow->target_id)
                 : $organizations->get((string) $follow->target_id);
@@ -96,7 +119,8 @@ class FollowService
                 return null;
             }
 
-            $target->setAttribute('followers_count', $this->followersCount($follow->target_type, (string) $follow->target_id));
+            $count = $counts->get($follow->target_type.':'.$follow->target_id);
+            $target->setAttribute('followers_count', (int) ($count?->aggregate ?? 0));
             $target->setAttribute('is_following', true);
 
             return $target;
