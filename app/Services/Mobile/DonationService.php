@@ -62,7 +62,7 @@ class DonationService
     /**
      * Creates a donation intent only. No campaign accounting is changed until complete().
      *
-     * @param array{amount:int|float|string, contactMethod:string, paymentMethod?:string|null, phone?:string|null, city?:string|null, notes?:string|null} $attributes
+     * @param array{amount:int|float|string, contactMethod:string, paymentMethod?:string|null, phone?:string|null, city?:string|null, notes?:string|null, isAnonymous?:bool} $attributes
      */
     public function createIntent(User $user, string $campaignId, array $attributes): Donation
     {
@@ -100,6 +100,7 @@ class DonationService
                 'assigned_to' => null,
                 'internal_notes' => null,
                 'created_by' => $user->id,
+                'is_anonymous' => (bool) ($attributes['isAnonymous'] ?? false),
             ]);
         });
 
