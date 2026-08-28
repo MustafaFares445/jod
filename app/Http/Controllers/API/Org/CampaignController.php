@@ -34,6 +34,8 @@ class CampaignController extends Controller
             CampaignData::from(collect($request->validated())->merge(['status' => $request->validated('status', 'active')])->all()),
             $this->organizationId(),
         );
+        if ($campaign->status === 'active') $this->notifyCampaignPublished($campaign);
+
         return CampaignResource::make($campaign->refresh()->load(['imageMedia', 'category']));
     }
 
@@ -80,6 +82,24 @@ class CampaignController extends Controller
         }
         $this->service->delete($campaign);
         return response()->noContent();
+    }
+
+    private function notifyCampaignPublished(Campaign $campaign): void
+    {
+        $creatorId = auth()->id() !== null ? (string) auth()->id() : null;
+        $this->notifications->notifyPublisherFollowers(
+            'organization',
+            (string) $campaign->organization_id,
+            NotificationEventType::CampaignPublished,
+            'حملة جديدة من منظمة تتابعها',
+            "أطلقت منظمة تتابعها حملة «{$campaign->title}».",
+            'campaign',
+            'normal',
+            $campaign->title,
+            '/campaigns/'.$campaign->id,
+            (string) $campaign->organization_id,
+            $creatorId,
+        );
     }
 
     private function notifyCampaignClosed(Campaign $campaign): void
