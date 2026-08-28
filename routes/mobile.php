@@ -71,6 +71,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
         Route::get('posts/{post}', [UserPostController::class, 'show'])->name('posts.show');
         Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
+        Route::get('following', [FollowController::class, 'following'])->name('following.index');
         Route::get('donations', [DonationController::class, 'index'])->name('donations.index');
         Route::get('donations/{donation}', [DonationController::class, 'show'])->name('donations.show');
         Route::get('help-offers', [HelpOfferController::class, 'index'])->name('help-offers.index');
@@ -96,6 +97,10 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
         Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
     });
+
+    Route::get('discovery/following', [FollowController::class, 'feed'])->name('discovery.following');
+    Route::put('publishers/{targetType}/{targetId}/follow', [FollowController::class, 'follow'])->name('publishers.follow');
+    Route::delete('publishers/{targetType}/{targetId}/follow', [FollowController::class, 'unfollow'])->name('publishers.unfollow');
 
     Route::post('campaigns/{campaign}/applications', [CampaignApplicationController::class, 'store'])->name('campaigns.applications.store');
     Route::post('campaigns/{campaign}/donations', [DonationController::class, 'store'])->name('campaigns.donations.store');
