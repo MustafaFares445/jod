@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class PostService
 {
+    public function __construct(private readonly NotificationEventService $notifications) {}
+
     public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? $params['perPAge'] ?? 20), 100));
@@ -124,7 +126,7 @@ class PostService
     {
         $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
 
-        return Post::create([
+        $post = Post::create([
             'title' => $data->title,
             'summary' => $data->summary,
             'type' => $data->type,
@@ -135,6 +137,10 @@ class PostService
             'campaign_id' => $campaignId,
             'published_at' => $data->status === 'published' ? now() : null,
         ]);
+
+        if ($post->status === 'published') $this->notifyFollowersForPublishedPost($post);
+
+        return $post;
     }
 
     public function update(Post $post, PostData $data, string $organizationId): Post
@@ -166,7 +172,10 @@ class PostService
 
     public function publish(Post $post): Post
     {
-        return $this->transitionStatus($post, 'draft', ['status' => 'published', 'published_at' => now()], 'Only draft posts can be published.');
+        $published = $this->transitionStatus($post, 'draft', ['status' => 'published', 'published_at' => now()], 'Only draft posts can be published.');
+        $this->notifyFollowersForPublishedPost($published);
+
+        return $published;
     }
 
     public function unpublish(Post $post): Post
@@ -175,6 +184,26 @@ class PostService
     }
 
     public function delete(Post $post): void { $post->delete(); }
+
+    private function notifyFollowersForPublishedPost(Post $post): void
+    {
+        if (! filled($post->organization_id)) return;
+
+        $title = filled($post->title) ? (string) $post->title : 'منشور جديد';
+        $this->notifications->notifyPublisherFollowers(
+            'organization',
+            (string) $post->organization_id,
+            \App\Enums\NotificationEventType::PostPublished,
+            'منشور جديد من منظمة تتابعها',
+            "نشرت منظمة تتابعها «{$title}».",
+            'post',
+            'normal',
+            $title,
+            '/posts/'.$post->id,
+            (string) $post->organization_id,
+            auth()->id() !== null ? (string) auth()->id() : null,
+        );
+    }
 
     private function normalizeSort(array $params): string
     {
