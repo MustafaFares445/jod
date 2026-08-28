@@ -53,6 +53,7 @@ class DonationFactory extends Factory
             'assigned_to' => null,
             'internal_notes' => null,
             'created_by' => User::factory(),
+            'is_anonymous' => false,
         ];
     }
 }
