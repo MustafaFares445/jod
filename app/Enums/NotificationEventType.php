@@ -28,6 +28,7 @@ enum NotificationEventType: string
     case CampaignGoalReached = 'campaign.goal_reached';
     case CampaignClosingSoon = 'campaign.closing_soon';
     case CampaignClosed = 'campaign.closed';
+    case CampaignPublished = 'campaign.published';
 
     case ApplicationSubmitted = 'application.submitted';
     case ApplicationAccepted = 'application.accepted';
@@ -37,6 +38,7 @@ enum NotificationEventType: string
     case PostSubmitted = 'post.submitted';
     case PostPublished = 'post.published';
     case PostBlocked = 'post.blocked';
+    case MediaPublished = 'media.published';
 
     case ReportSubmitted = 'report.submitted';
     case ReportInProgress = 'report.in_progress';
@@ -62,13 +64,13 @@ enum NotificationEventType: string
             self::HelpOfferContactStarted, self::HelpOfferAgreed, self::HelpOfferHelperConfirmed,
             self::HelpOfferReceiverConfirmed, self::HelpOfferCompleted, self::HelpOfferCancelled,
             self::HelpRequestFulfilled, self::HelpRequestReopened => 'help',
-            self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed => 'campaign',
+            self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed, self::CampaignPublished => 'campaign',
             self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
             self::PostSubmitted, self::PostPublished, self::PostBlocked => 'post',
             self::ReportSubmitted, self::ReportInProgress, self::ReportClosed => 'report',
             self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',
             self::StaffInvited, self::StaffRoleChanged, self::StaffRemoved => 'staff',
-            self::SystemAnnouncement, self::SystemMaintenance => 'system',
+            self::SystemAnnouncement, self::SystemMaintenance, self::MediaPublished => 'system',
         };
     }
 }
