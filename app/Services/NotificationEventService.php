@@ -156,6 +156,42 @@ class NotificationEventService
         );
     }
 
+    public function notifyPublisherFollowers(
+        string $targetType,
+        string $targetId,
+        NotificationEventType $eventType,
+        string $title,
+        string $body,
+        string $category,
+        string $priority = 'normal',
+        ?string $referenceLabel = null,
+        ?string $referencePath = null,
+        ?string $organizationId = null,
+        ?string $creatorId = null,
+    ): int {
+        $userIds = PublisherFollow::query()
+            ->where('target_type', $targetType)
+            ->where('target_id', $targetId)
+            ->where('notification_level', '!=', PublisherFollow::NOTIFICATION_MUTED)
+            ->when(filled($creatorId), fn (Builder $query) => $query->where('follower_user_id', '!=', $creatorId))
+            ->pluck('follower_user_id')
+            ->unique()
+            ->values();
+
+        return $this->notifyUserIds(
+            $userIds,
+            $eventType,
+            $title,
+            $body,
+            $category,
+            $priority,
+            $referenceLabel,
+            $referencePath,
+            $organizationId,
+            $creatorId,
+        );
+    }
+
     /** @param Collection<int, string|int> $userIds */
     public function notifyUserIds(
         Collection $userIds,
