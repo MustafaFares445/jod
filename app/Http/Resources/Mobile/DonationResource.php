@@ -26,6 +26,7 @@ class DonationResource extends JsonResource
             'phone' => $this->phone,
             'city' => $this->city,
             'notes' => $this->notes,
+            'isAnonymous' => (bool) $this->is_anonymous,
             'cancelReason' => $this->cancel_reason,
             'source' => $this->source,
             'createdAt' => $this->created_at?->toIso8601String(),
