@@ -24,6 +24,7 @@ class DonorResource extends JsonResource
             'contactMethod' => $this->contact_method,
             'paymentMethod' => $this->payment_method,
             'notes' => $this->notes,
+            'isAnonymous' => (bool) $this->is_anonymous,
             'cancelReason' => $this->cancel_reason,
             'createdAt' => $this->created_at?->toIso8601String(),
             'contactedAt' => $this->contacted_at?->toIso8601String(),
