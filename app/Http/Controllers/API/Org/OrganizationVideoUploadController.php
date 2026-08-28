@@ -18,7 +18,10 @@ use Illuminate\Validation\Rule;
 
 class OrganizationVideoUploadController extends Controller
 {
-    public function __construct(private readonly OrganizationVideoUploadService $uploads) {}
+    public function __construct(
+        private readonly OrganizationVideoUploadService $uploads,
+        private readonly NotificationEventService $notifications,
+    ) {}
 
     public function initiate(Request $request): JsonResponse
     {
@@ -84,6 +87,20 @@ class OrganizationVideoUploadController extends Controller
         $this->authorize('updateSettings', $organization);
         $result = $this->uploads->complete($this->upload($organization, $upload));
         $result['video']->update(['description' => $result['upload']->description]);
+        $creatorId = auth()->id() !== null ? (string) auth()->id() : null;
+        $this->notifications->notifyPublisherFollowers(
+            'organization',
+            (string) $organization->id,
+            NotificationEventType::MediaPublished,
+            'فيديو جديد من منظمة تتابعها',
+            "نشرت {$organization->name} فيديو جديدًا.",
+            'system',
+            'normal',
+            $result['video']->original_name,
+            '/media/'.$result['video']->id,
+            (string) $organization->id,
+            $creatorId,
+        );
 
         return response()->json([
             'data' => [

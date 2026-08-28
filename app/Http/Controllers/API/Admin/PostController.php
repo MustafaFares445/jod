@@ -210,6 +210,14 @@ class PostController extends Controller
                 "تمت مراجعة «{$title}» ونشره على المنصة.",
                 'post', 'high', $title, '/posts/'.$post->id, null, $actorId,
             );
+            $this->notifications->notifyPublisherFollowers(
+                'user',
+                (string) $post->author_id,
+                NotificationEventType::PostPublished,
+                'منشور جديد من حساب تتابعه',
+                "نشر {$post->author?->name} «{$title}».",
+                'post', 'normal', $title, '/posts/'.$post->id, null, $actorId,
+            );
             return;
         }
 

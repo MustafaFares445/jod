@@ -39,6 +39,8 @@ class MobilePublisherResource extends JsonResource
             'username' => $this->username($organization->email, (string) $organization->name),
             'avatarUrl' => $organization->logoMedia?->publicUrl(),
             'verified' => $organization->verification_status === 'verified',
+            'followersCount' => $this->followersCount('organization', (string) $organization->id),
+            'isFollowing' => $this->isFollowing('organization', (string) $organization->id),
         ];
 
         if (filled($organization->description)) {
@@ -69,6 +71,8 @@ class MobilePublisherResource extends JsonResource
             'username' => $this->username($user->email, (string) $user->name),
             'avatarUrl' => $this->relationLoaded('avatarMedia') ? $this->avatarMedia?->publicUrl() : null,
             'verified' => $user->email_verified_at !== null,
+            'followersCount' => $this->followersCount('user', (string) $user->id),
+            'isFollowing' => $this->isFollowing('user', (string) $user->id),
         ];
 
         if (filled($user->bio)) {
@@ -85,6 +89,31 @@ class MobilePublisherResource extends JsonResource
         }
 
         return $data;
+    }
+
+    private function followersCount(string $type, string $id): int
+    {
+        if ($this->resource->getAttribute('followers_count') !== null) {
+            return (int) $this->resource->getAttribute('followers_count');
+        }
+
+        return PublisherFollow::query()->where('target_type', $type)->where('target_id', $id)->count();
+    }
+
+    private function isFollowing(string $type, string $id): bool
+    {
+        if ($this->resource->getAttribute('is_following') !== null) {
+            return (bool) $this->resource->getAttribute('is_following');
+        }
+
+        $viewer = request()->user('sanctum');
+        if (! $viewer instanceof User) return false;
+
+        return PublisherFollow::query()
+            ->where('follower_user_id', $viewer->id)
+            ->where('target_type', $type)
+            ->where('target_id', $id)
+            ->exists();
     }
 
     private function username(?string $email, string $name): string
