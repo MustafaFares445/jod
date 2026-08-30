@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources\Mobile;
 
 use App\Models\Organization;
+use App\Models\PublisherFollow;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
