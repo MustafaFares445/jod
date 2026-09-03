@@ -6,6 +6,7 @@ use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
+use App\Http\Controllers\Mobile\FollowController;
 use App\Http\Controllers\Mobile\HelpOfferController;
 use App\Http\Controllers\Mobile\GroupController;
 use App\Http\Controllers\Mobile\LookupController;
