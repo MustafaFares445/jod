@@ -12,6 +12,7 @@ use App\Models\CampaignApplication;
 use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\Post;
+use App\Models\PublisherFollow;
 use App\Models\Report;
 use App\Models\User;
 use App\Support\Permissions\PermissionNameResolver;
