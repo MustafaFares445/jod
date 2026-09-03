@@ -5,6 +5,7 @@ use App\Http\Controllers\API\Admin\ArticleController;
 use App\Http\Controllers\API\Admin\AuditLogController;
 use App\Http\Controllers\API\Admin\BadgeController;
 use App\Http\Controllers\API\Admin\CategoryController;
+use App\Http\Controllers\API\Admin\GroupController as AdminGroupController;
 use App\Http\Controllers\API\Admin\NotificationController;
 use App\Http\Controllers\API\Admin\OrganizationController;
 use App\Http\Controllers\API\Admin\OverviewController;
@@ -61,6 +62,12 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::get('users/{user}/donations', [UserController::class, 'donations']);
         Route::patch('users/{user}/status', UserController::class.'@updateStatus');
         Route::patch('users/{user}/password', UserController::class.'@updatePassword');
+
+        Route::get('groups', [AdminGroupController::class, 'index']);
+        Route::get('groups/{group}', [AdminGroupController::class, 'show']);
+        Route::post('groups/{group}/approve', [AdminGroupController::class, 'approve']);
+        Route::post('groups/{group}/reject', [AdminGroupController::class, 'reject']);
+        Route::delete('groups/{group}', [AdminGroupController::class, 'destroy']);
 
         Route::apiResource('organizations', OrganizationController::class);
         Route::patch('organizations/{organization}/status', OrganizationController::class.'@updateStatus');

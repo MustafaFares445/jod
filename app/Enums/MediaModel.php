@@ -6,6 +6,7 @@ namespace App\Enums;
 
 use App\Models\Article;
 use App\Models\Campaign;
+use App\Models\Group;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
@@ -18,6 +19,7 @@ enum MediaModel: string
 {
     case ORGANIZATION = 'organization';
     case CAMPAIGN = 'campaign';
+    case GROUP = 'group';
     case POST = 'post';
     case ARTICLE = 'article';
     case USER = 'user';
@@ -28,6 +30,7 @@ enum MediaModel: string
         return match ($this) {
             self::ORGANIZATION => Organization::class,
             self::CAMPAIGN => Campaign::class,
+            self::GROUP => Group::class,
             self::POST => Post::class,
             self::ARTICLE => Article::class,
             self::USER => User::class,
@@ -43,6 +46,7 @@ enum MediaModel: string
                 'videos' => 10,
             ],
             self::CAMPAIGN => ['images' => 10],
+            self::GROUP => ['avatar' => 1, 'cover' => 1],
             self::POST, self::ARTICLE => [
                 'images' => 10,
                 'videos' => 10,

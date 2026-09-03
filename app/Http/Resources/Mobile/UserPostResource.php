@@ -26,6 +26,7 @@ class UserPostResource extends JsonResource
             'ownerId' => $this->author_id ? (string) $this->author_id : null,
             'title' => $this->title,
             'details' => $this->content,
+            'cityId' => \App\Support\Mobile\SyrianGovernorates::idForName($this->location),
             'city' => $this->location,
             'type' => $this->type,
             'audience' => $this->audience ?? 'general',

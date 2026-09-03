@@ -32,4 +32,32 @@ final class SyrianGovernorates
     {
         return array_values(array_column(self::items(), 'name'));
     }
+
+    /** @return list<string> */
+    public static function ids(): array
+    {
+        return array_values(array_column(self::items(), 'id'));
+    }
+
+    public static function nameForId(?string $id): ?string
+    {
+        if (! filled($id)) return null;
+
+        foreach (self::items() as $item) {
+            if ($item['id'] === $id) return $item['name'];
+        }
+
+        return null;
+    }
+
+    public static function idForName(?string $name): ?string
+    {
+        if (! filled($name)) return null;
+
+        foreach (self::items() as $item) {
+            if ($item['name'] === $name) return $item['id'];
+        }
+
+        return null;
+    }
 }

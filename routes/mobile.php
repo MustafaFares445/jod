@@ -7,6 +7,7 @@ use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\HelpOfferController;
+use App\Http\Controllers\Mobile\GroupController;
 use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\MediaDiscoveryController;
@@ -53,6 +54,16 @@ Route::prefix('discovery')->name('discovery.')->middleware('throttle:60,1')->gro
     Route::get('categories', [DiscoveryController::class, 'categories'])->name('categories');
 });
 
+Route::prefix('groups')->name('groups.')->middleware('throttle:60,1')->group(function (): void {
+    Route::get('/', [GroupController::class, 'index'])->name('index');
+    Route::get('suggested', [GroupController::class, 'suggested'])->name('suggested');
+    Route::get('{group}', [GroupController::class, 'show'])->whereUuid('group')->name('show');
+    Route::get('{group}/members', [GroupController::class, 'members'])->whereUuid('group')->name('members');
+    Route::get('{group}/posts', [GroupController::class, 'posts'])->whereUuid('group')->name('posts.index');
+    Route::get('{group}/recommendations', [GroupController::class, 'recommendations'])->whereUuid('group')->name('recommendations');
+});
+Route::get('groups/posts/{post}/comments', [GroupController::class, 'comments'])->whereUuid('post')->middleware('throttle:60,1')->name('groups.posts.comments.index');
+
 Route::prefix('lookups')->name('lookups.')->middleware('throttle:60,1')->group(function (): void {
     Route::get('cities', [LookupController::class, 'cities'])->name('cities');
     Route::get('report-reasons', [LookupController::class, 'reportReasons'])->name('report-reasons');
@@ -72,6 +83,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
     Route::prefix('me')->name('me.')->group(function (): void {
         Route::get('/', [MeController::class, 'profile'])->name('profile');
         Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
+        Route::get('groups', [GroupController::class, 'mine'])->name('groups.index');
         Route::get('posts/{post}', [UserPostController::class, 'show'])->name('posts.show');
         Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
         Route::get('following', [FollowController::class, 'following'])->name('following.index');
@@ -100,6 +112,17 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
         Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
     });
+
+    Route::get('groups/admin-candidates', [GroupController::class, 'adminCandidates'])->name('groups.admin-candidates');
+    Route::post('groups', [GroupController::class, 'store'])->name('groups.store');
+    Route::post('groups/{group}/join', [GroupController::class, 'join'])->whereUuid('group')->name('groups.join');
+    Route::delete('groups/{group}/join', [GroupController::class, 'leave'])->whereUuid('group')->name('groups.leave');
+    Route::post('groups/{group}/posts', [GroupController::class, 'createPost'])->whereUuid('group')->name('groups.posts.store');
+    Route::post('groups/posts/{post}/comments', [GroupController::class, 'createComment'])->whereUuid('post')->name('groups.posts.comments.store');
+    Route::post('groups/posts/{post}/like', [GroupController::class, 'likePost'])->whereUuid('post')->name('groups.posts.like');
+    Route::delete('groups/posts/{post}/like', [GroupController::class, 'unlikePost'])->whereUuid('post')->name('groups.posts.unlike');
+    Route::post('groups/comments/{comment}/like', [GroupController::class, 'likeComment'])->whereUuid('comment')->name('groups.comments.like');
+    Route::delete('groups/comments/{comment}/like', [GroupController::class, 'unlikeComment'])->whereUuid('comment')->name('groups.comments.unlike');
 
     Route::get('discovery/following', [FollowController::class, 'feed'])->name('discovery.following');
     Route::put('publishers/{targetType}/{targetId}/follow', [FollowController::class, 'follow'])->name('publishers.follow');

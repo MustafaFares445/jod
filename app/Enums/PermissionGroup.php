@@ -12,6 +12,7 @@ enum PermissionGroup: string
     case USER = 'users';
     case ORGANIZATION = 'organizations';
     case POST_REVIEW = 'posts.review';
+    case GROUP = 'groups';
     case REPORT = 'reports';
     case NOTIFICATION = 'notifications';
     case BADGE = 'badges';
@@ -74,6 +75,19 @@ enum PermissionGroup: string
                 order: 40,
                 sectionLabel: 'المراجعة',
                 actions: [PermissionAction::VIEW, PermissionAction::APPROVE, PermissionAction::REJECT],
+            ),
+            self::GROUP => new PermissionGroupDefinition(
+                label: 'الفرق التطوعية',
+                module: PermissionModule::ADMIN,
+                description: 'مراجعة وإدارة المجموعات والفرق التطوعية العامة.',
+                order: 50,
+                sectionLabel: 'المراجعة',
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::APPROVE,
+                    PermissionAction::REJECT,
+                    PermissionAction::DELETE,
+                ],
             ),
             self::REPORT => new PermissionGroupDefinition(
                 label: 'البلاغات',

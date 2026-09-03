@@ -40,7 +40,7 @@ class UserPostService
                 'content' => $data['details'] ?? null,
                 'type' => $data['type'],
                 'status' => $isDraft ? 'draft' : 'pending',
-                'location' => $data['city'] ?? null,
+                'location' => $this->locationFromData($data),
                 'category_id' => $data['categoryId'] ?? null,
                 'author_id' => $user->id,
                 'updated_by' => $user->id,
@@ -61,7 +61,7 @@ class UserPostService
             $attributes['content'] = $data['details'];
         }
         if (array_key_exists('type', $data)) $attributes['type'] = $data['type'];
-        if (array_key_exists('city', $data)) $attributes['location'] = $data['city'];
+        if (array_key_exists('cityId', $data) || array_key_exists('city', $data)) $attributes['location'] = $this->locationFromData($data);
         if (array_key_exists('categoryId', $data)) $attributes['category_id'] = $data['categoryId'];
 
         if ($attributes !== []) {
@@ -126,6 +126,16 @@ class UserPostService
             && DB::table('categories')->where('id', $post->category_id)->where('status', 'active')->exists();
         if (! $hasActiveCategory) $errors['categoryId'] = ['تصنيف المنشور مطلوب ويجب أن يكون فعالاً.'];
         if ($errors !== []) throw ValidationException::withMessages($errors);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function locationFromData(array $data): ?string
+    {
+        if (array_key_exists('cityId', $data)) {
+            return SyrianGovernorates::nameForId($data['cityId']);
+        }
+
+        return $data['city'] ?? null;
     }
 
     private function normalizeSort(string $sort): array
