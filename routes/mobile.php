@@ -49,6 +49,7 @@ Route::prefix('discovery')->name('discovery.')->middleware('throttle:60,1')->gro
     Route::get('organizations/{organization}/videos', [OrganizationVideoController::class, 'index'])->name('organizations.videos.index');
     Route::get('organizations/{organization}/videos/{video}', [OrganizationVideoController::class, 'show'])->name('organizations.videos.show');
     Route::get('campaigns', [DiscoveryController::class, 'campaigns'])->name('campaigns');
+    Route::get('campaigns/{campaign}/donors', [DonationController::class, 'campaignDonors'])->name('campaigns.donors');
     Route::get('campaigns/{campaign}', [DiscoveryController::class, 'showCampaign'])->name('campaigns.show');
     Route::get('articles', [DiscoveryController::class, 'articles'])->name('articles');
     Route::get('articles/{article}', [DiscoveryController::class, 'showArticle'])->name('articles.show');

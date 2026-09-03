@@ -20,6 +20,19 @@ class DonationService
 {
     public function __construct(private readonly NotificationEventService $notifications) {}
 
+    public function paginatePublicForCampaign(Campaign $campaign, int $perPage = 20): LengthAwarePaginator
+    {
+        $perPage = max(1, min($perPage, 100));
+
+        return Donation::query()
+            ->with('creator.avatarMedia')
+            ->where('campaign_id', $campaign->id)
+            ->where('status', DonationStatus::Completed->value)
+            ->orderByDesc('completed_at')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+    }
+
     /** @param array{perPage?: int, campaignId?: string, flow?: 'contributed'|'received', status?: string} $params */
     public function paginateForUser(User $user, array $params): LengthAwarePaginator
     {

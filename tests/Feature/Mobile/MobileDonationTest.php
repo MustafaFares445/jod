@@ -162,6 +162,66 @@ test('donation history includes lifecycle status and remains scoped to user', fu
         ->assertJsonPath('error.code', 'not_found');
 });
 
+test('public campaign donors expose completed donations and protect anonymous identity', function () {
+    $campaign = mobile_donation_test_createCampaign();
+    $visibleUser = User::factory()->create(['name' => 'Visible Donor']);
+    $anonymousUser = User::factory()->create(['name' => 'Secret Donor', 'email' => 'secret@example.com']);
+
+    Donation::factory()->create([
+        'organization_id' => $campaign->organization_id,
+        'campaign_id' => $campaign->id,
+        'campaign_title' => $campaign->title,
+        'created_by' => $visibleUser->id,
+        'name' => $visibleUser->name,
+        'amount_or_type' => '30.00',
+        'status' => 'completed',
+        'is_anonymous' => false,
+        'completed_at' => now()->subDay(),
+    ]);
+    Donation::factory()->create([
+        'organization_id' => $campaign->organization_id,
+        'campaign_id' => $campaign->id,
+        'campaign_title' => $campaign->title,
+        'created_by' => $anonymousUser->id,
+        'name' => $anonymousUser->name,
+        'email' => $anonymousUser->email,
+        'amount_or_type' => '45.00',
+        'status' => 'completed',
+        'is_anonymous' => true,
+        'completed_at' => now(),
+    ]);
+    Donation::factory()->create([
+        'organization_id' => $campaign->organization_id,
+        'campaign_id' => $campaign->id,
+        'campaign_title' => $campaign->title,
+        'created_by' => $visibleUser->id,
+        'amount_or_type' => '99.00',
+        'status' => 'pending',
+    ]);
+
+    $response = $this->getJson("/api/mobile/discovery/campaigns/{$campaign->id}/donors?perPage=10");
+
+    $response->assertOk()
+        ->assertJsonPath('meta.total', 2)
+        ->assertJsonPath('data.0.name', 'مجهول')
+        ->assertJsonPath('data.0.isAnonymous', true)
+        ->assertJsonPath('data.0.avatarUrl', null)
+        ->assertJsonPath('data.0.amount', 45)
+        ->assertJsonPath('data.1.name', 'Visible Donor')
+        ->assertJsonPath('data.1.isAnonymous', false)
+        ->assertJsonPath('data.1.amount', 30)
+        ->assertJsonMissing(['name' => 'Secret Donor'])
+        ->assertJsonMissing(['email' => 'secret@example.com']);
+});
+
+test('public campaign donors are unavailable for non public campaigns', function () {
+    $campaign = mobile_donation_test_createCampaign(['status' => 'closed']);
+
+    $this->getJson("/api/mobile/discovery/campaigns/{$campaign->id}/donors")
+        ->assertNotFound()
+        ->assertJsonPath('error.code', 'not_found');
+});
+
 test('donation endpoints require authentication', function () {
     $campaign = mobile_donation_test_createCampaign();
 

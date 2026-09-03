@@ -8,6 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\DonationHistoryRequest;
 use App\Http\Requests\Mobile\DonationRequest;
 use App\Http\Resources\Mobile\DonationResource;
+use App\Http\Resources\Mobile\PublicCampaignDonorResource;
+use App\Models\Campaign;
+use App\Models\Donation;
 use App\Models\User;
 use App\Services\Mobile\DonationService;
 use App\Support\Mobile\MobileApiResponse;
@@ -17,6 +20,33 @@ use Illuminate\Http\Request;
 class DonationController extends Controller
 {
     public function __construct(private readonly DonationService $service) {}
+
+    public function campaignDonors(Request $request, string $campaign): JsonResponse
+    {
+        $validated = validator($request->query(), [
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ])->validate();
+
+        $campaignModel = Campaign::query()
+            ->whereKey($campaign)
+            ->where('status', 'active')
+            ->first();
+
+        if ($campaignModel === null) {
+            return MobileApiResponse::error('not_found', 'The requested campaign could not be found.', null, 404);
+        }
+
+        $paginator = $this->service->paginatePublicForCampaign(
+            $campaignModel,
+            (int) ($validated['perPage'] ?? 20),
+        );
+
+        return MobileApiResponse::paginated(
+            $paginator->through(fn (Donation $donation) => PublicCampaignDonorResource::make($donation)->resolve($request)),
+            'Campaign donors retrieved successfully.',
+        );
+    }
 
     public function store(DonationRequest $request, string $campaign): JsonResponse
     {
