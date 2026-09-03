@@ -77,6 +77,16 @@ class User extends Authenticatable
     public function createdNotifications(): HasMany { return $this->hasMany(Notification::class, 'created_by'); }
     public function donations(): HasMany { return $this->hasMany(Donation::class, 'created_by'); }
     public function campaignApplications(): HasMany { return $this->hasMany(CampaignApplication::class, 'created_by'); }
+    public function preference(): HasOne { return $this->hasOne(UserPreference::class); }
+    public function categoryInterests(): HasMany { return $this->hasMany(UserCategoryInterest::class); }
+    public function interactions(): HasMany { return $this->hasMany(UserInteraction::class); }
+    public function postFeedback(): HasMany { return $this->hasMany(PostFeedback::class); }
+    public function hiddenPublishers(): HasMany { return $this->hasMany(HiddenPublisher::class); }
+
+    public function capabilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Capability::class, 'user_capabilities')->withTimestamps();
+    }
 
     public function helpOffersMade(): HasMany
     {
