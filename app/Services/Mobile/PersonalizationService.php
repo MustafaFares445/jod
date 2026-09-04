@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
-use App\Enums\AvailabilityStatus;
 use App\Enums\UserIntent;
 use App\Models\Capability;
 use App\Models\Category;
@@ -20,10 +19,6 @@ class PersonalizationService
     public function options(): array
     {
         return [
-            'onboarding' => [
-                'skippable' => true,
-                'questionsRequired' => false,
-            ],
             'intents' => collect(UserIntent::cases())->map(fn (UserIntent $intent): array => [
                 'value' => $intent->value,
                 'label' => match ($intent) {
@@ -48,16 +43,6 @@ class PersonalizationService
                 ->get()
                 ->map(fn (Capability $capability): array => $this->capabilityData($capability))
                 ->values()->all(),
-            'availabilityStatuses' => collect(AvailabilityStatus::cases())->map(fn (AvailabilityStatus $status): array => [
-                'value' => $status->value,
-                'label' => match ($status) {
-                    AvailabilityStatus::Available => 'متاح',
-                    AvailabilityStatus::Busy => 'مشغول حالياً',
-                    AvailabilityStatus::Weekends => 'عطلة نهاية الأسبوع',
-                    AvailabilityStatus::Evenings => 'مساءً',
-                    AvailabilityStatus::RemoteOnly => 'عن بعد فقط',
-                },
-            ])->values()->all(),
         ];
     }
 
@@ -71,29 +56,22 @@ class PersonalizationService
                 $preference->preferred_city = $user->city;
             }
 
-            if (! (bool) ($data['skipped'] ?? false)) {
-                $mapping = [
-                    'intent' => 'intent',
-                    'preferredCity' => 'preferred_city',
-                    'preferredGovernorate' => 'preferred_governorate',
-                    'preferredRadiusKm' => 'preferred_radius_km',
-                    'remoteHelpEnabled' => 'remote_help_enabled',
-                    'availabilityStatus' => 'availability_status',
-                ];
-
-                foreach ($mapping as $requestKey => $attribute) {
-                    if (array_key_exists($requestKey, $data) && $data[$requestKey] !== null) {
-                        $preference->setAttribute($attribute, $data[$requestKey]);
-                    }
+            foreach ([
+                'intent' => 'intent',
+                'preferredCity' => 'preferred_city',
+                'remoteHelpEnabled' => 'remote_help_enabled',
+            ] as $requestKey => $attribute) {
+                if (array_key_exists($requestKey, $data) && $data[$requestKey] !== null) {
+                    $preference->setAttribute($attribute, $data[$requestKey]);
                 }
+            }
 
-                if (array_key_exists('categoryIds', $data) && is_array($data['categoryIds'])) {
-                    $this->syncInterests($user, $data['categoryIds']);
-                }
+            if (array_key_exists('categoryIds', $data) && is_array($data['categoryIds'])) {
+                $this->syncInterests($user, $data['categoryIds']);
+            }
 
-                if (array_key_exists('capabilityIds', $data) && is_array($data['capabilityIds'])) {
-                    $this->syncCapabilities($user, $data['capabilityIds']);
-                }
+            if (array_key_exists('capabilityIds', $data) && is_array($data['capabilityIds'])) {
+                $this->syncCapabilities($user, $data['capabilityIds']);
             }
 
             $preference->onboarding_completed_at = now();
@@ -107,16 +85,12 @@ class PersonalizationService
     public function updatePreferences(User $user, array $data): array
     {
         $preference = UserPreference::query()->firstOrCreate(['user_id' => $user->id]);
-        $mapping = [
+
+        foreach ([
             'intent' => 'intent',
             'preferredCity' => 'preferred_city',
-            'preferredGovernorate' => 'preferred_governorate',
-            'preferredRadiusKm' => 'preferred_radius_km',
             'remoteHelpEnabled' => 'remote_help_enabled',
-            'availabilityStatus' => 'availability_status',
-        ];
-
-        foreach ($mapping as $requestKey => $attribute) {
+        ] as $requestKey => $attribute) {
             if (array_key_exists($requestKey, $data)) {
                 $preference->setAttribute($attribute, $data[$requestKey]);
             }
@@ -151,22 +125,13 @@ class PersonalizationService
         $explicitInterests = $user->categoryInterests
             ->filter(fn (UserCategoryInterest $interest): bool => $interest->explicit_weight > 0 && $interest->category !== null)
             ->values();
-        $missingFields = $this->missingOnboardingFields($user, $preference, $explicitInterests);
-        $onboardingCompleted = $preference?->onboarding_completed_at !== null;
-        $profileComplete = $missingFields === [];
 
         return [
-            'onboardingCompleted' => $onboardingCompleted,
-            'onboardingCompletedAt' => $preference?->onboarding_completed_at?->toIso8601String(),
-            'onboardingProfileComplete' => $profileComplete,
-            'onboardingNeedsCompletion' => $onboardingCompleted && ! $profileComplete,
-            'onboardingMissingFields' => $missingFields,
+            'onboardingCompleted' => $preference?->onboarding_completed_at !== null,
+            'missingFields' => $this->missingOnboardingFields($user, $preference, $explicitInterests),
             'intent' => $preference?->intent?->value,
-            'preferredCity' => $preference?->preferred_city,
-            'preferredGovernorate' => $preference?->preferred_governorate,
-            'preferredRadiusKm' => $preference?->preferred_radius_km,
+            'preferredCity' => $preference?->preferred_city ?? $user->city,
             'remoteHelpEnabled' => (bool) ($preference?->remote_help_enabled ?? false),
-            'availabilityStatus' => $preference?->availability_status?->value,
             'interests' => $explicitInterests
                 ->map(fn (UserCategoryInterest $interest): array => [
                     'category' => [
@@ -198,10 +163,6 @@ class PersonalizationService
 
         if (blank($preference?->preferred_city) && blank($user->city)) {
             $missing[] = 'preferredCity';
-        }
-
-        if ($preference?->availability_status === null) {
-            $missing[] = 'availabilityStatus';
         }
 
         if (

@@ -8,14 +8,18 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class RecommendationConfigurationRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        return true;
+    }
 
+    /** @return array<string, mixed> */
     public function rules(): array
     {
         $weightKeys = [
             'followed_publisher', 'explicit_interest', 'behavioral_interest',
-            'same_city', 'same_governorate', 'intent_match', 'capability_match',
-            'freshness', 'urgency', 'group_affinity', 'availability_match',
+            'same_city', 'intent_match', 'capability_match',
+            'freshness', 'urgency', 'group_affinity',
             'repeated_unengaged_view', 'not_interested',
         ];
 

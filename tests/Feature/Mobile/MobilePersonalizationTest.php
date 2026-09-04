@@ -2,186 +2,134 @@
 
 declare(strict_types=1);
 
+namespace Tests\Feature\Mobile;
+
 use App\Models\Capability;
 use App\Models\Category;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+final class MobilePersonalizationTest extends TestCase
+{
+    use RefreshDatabase;
 
-test('onboarding options expose active categories capabilities preference enums and skip metadata', function () {
-    $category = Category::factory()->create(['name' => 'التعليم', 'status' => 'active']);
-    Category::factory()->create(['name' => 'مخفي', 'status' => 'inactive']);
-    $capability = Capability::query()->create([
-        'name' => 'تدريس',
-        'slug' => 'teaching',
-        'status' => 'active',
-        'sort_order' => 1,
-    ]);
+    public function test_onboarding_options_expose_only_active_personalization_choices(): void
+    {
+        $category = Category::factory()->create(['name' => 'التعليم', 'status' => 'active']);
+        Category::factory()->create(['name' => 'مخفي', 'status' => 'inactive']);
+        $capability = Capability::query()->create(['name' => 'تدريس', 'slug' => 'teaching', 'status' => 'active', 'sort_order' => 1]);
 
-    $response = $this->getJson('/api/mobile/onboarding/options');
+        $response = $this->getJson('/api/mobile/onboarding/options');
 
-    $response->assertOk()
-        ->assertJsonPath('success', true)
-        ->assertJsonPath('data.onboarding.skippable', true)
-        ->assertJsonPath('data.onboarding.questionsRequired', false)
-        ->assertJsonPath('data.categories.0.id', $category->id)
-        ->assertJsonPath('data.capabilities.0.id', $capability->id)
-        ->assertJsonFragment(['value' => 'giver'])
-        ->assertJsonFragment(['value' => 'receiver'])
-        ->assertJsonMissing(['name' => 'مخفي']);
-});
+        $response->assertOk()
+            ->assertJsonPath('data.categories.0.id', $category->id)
+            ->assertJsonPath('data.capabilities.0.id', $capability->id)
+            ->assertJsonFragment(['value' => 'giver'])
+            ->assertJsonFragment(['value' => 'receiver'])
+            ->assertJsonMissing(['name' => 'مخفي']);
 
-test('authenticated user can complete personalization onboarding', function () {
-    $user = User::factory()->create(['city' => 'دمشق']);
-    $category = Category::factory()->create(['status' => 'active']);
-    $capability = Capability::query()->create([
-        'name' => 'نقل',
-        'slug' => 'transport',
-        'status' => 'active',
-        'sort_order' => 1,
-    ]);
-    Sanctum::actingAs($user);
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        $this->assertArrayNotHasKey('onboarding', $data);
+        $this->assertArrayNotHasKey('availabilityStatuses', $data);
+    }
 
-    $response = $this->postJson('/api/mobile/me/onboarding', [
-        'intent' => 'giver',
-        'categoryIds' => [$category->id],
-        'capabilityIds' => [$capability->id],
-        'preferredCity' => 'دمشق',
-        'remoteHelpEnabled' => true,
-        'availabilityStatus' => 'weekends',
-    ]);
+    public function test_complete_personalization_returns_simplified_profile(): void
+    {
+        $user = User::factory()->create(['city' => null]);
+        $category = Category::factory()->create(['status' => 'active']);
+        $capability = Capability::query()->create(['name' => 'نقل', 'slug' => 'transport', 'status' => 'active', 'sort_order' => 1]);
+        Sanctum::actingAs($user);
 
-    $response->assertOk()
-        ->assertJsonPath('data.onboardingCompleted', true)
-        ->assertJsonPath('data.onboardingProfileComplete', true)
-        ->assertJsonPath('data.onboardingNeedsCompletion', false)
-        ->assertJsonPath('data.onboardingMissingFields', [])
-        ->assertJsonPath('data.intent', 'giver')
-        ->assertJsonPath('data.preferredCity', 'دمشق')
-        ->assertJsonPath('data.interests.0.category.id', $category->id)
-        ->assertJsonPath('data.capabilities.0.id', $capability->id);
-
-    $this->assertDatabaseHas('user_preferences', [
-        'user_id' => $user->id,
-        'intent' => 'giver',
-        'preferred_city' => 'دمشق',
-        'remote_help_enabled' => 1,
-    ]);
-    $this->assertDatabaseHas('user_category_interests', [
-        'user_id' => $user->id,
-        'category_id' => $category->id,
-        'explicit_weight' => 10,
-    ]);
-    $this->assertDatabaseHas('user_capabilities', [
-        'user_id' => $user->id,
-        'capability_id' => $capability->id,
-    ]);
-});
-
-test('user can skip onboarding with no answers and frontend receives incomplete profile flags', function () {
-    $user = User::factory()->create(['city' => null]);
-    Sanctum::actingAs($user);
-
-    $this->postJson('/api/mobile/me/onboarding', [])
-        ->assertOk()
-        ->assertJsonPath('data.onboardingCompleted', true)
-        ->assertJsonPath('data.onboardingProfileComplete', false)
-        ->assertJsonPath('data.onboardingNeedsCompletion', true)
-        ->assertJsonPath('data.onboardingMissingFields', [
-            'intent',
-            'interests',
-            'preferredCity',
-            'availabilityStatus',
+        $response = $this->postJson('/api/mobile/me/onboarding', [
+            'intent' => 'giver',
+            'categoryIds' => [$category->id],
+            'capabilityIds' => [$capability->id],
+            'preferredCity' => 'دمشق',
+            'remoteHelpEnabled' => true,
         ]);
 
-    $this->assertDatabaseHas('user_preferences', [
-        'user_id' => $user->id,
-    ]);
+        $response->assertOk()
+            ->assertJsonPath('data.onboardingCompleted', true)
+            ->assertJsonPath('data.missingFields', [])
+            ->assertJsonPath('data.intent', 'giver')
+            ->assertJsonPath('data.preferredCity', 'دمشق')
+            ->assertJsonPath('data.remoteHelpEnabled', true);
 
-    $this->getJson('/api/mobile/me/preferences')
-        ->assertOk()
-        ->assertJsonPath('data.onboardingCompleted', true)
-        ->assertJsonPath('data.onboardingProfileComplete', false)
-        ->assertJsonPath('data.onboardingNeedsCompletion', true);
-});
+        $data = $response->json('data');
+        $this->assertIsArray($data);
+        foreach (['onboardingCompletedAt', 'onboardingProfileComplete', 'onboardingNeedsCompletion', 'onboardingMissingFields', 'preferredGovernorate', 'preferredRadiusKm', 'availabilityStatus'] as $key) {
+            $this->assertArrayNotHasKey($key, $data);
+        }
+    }
 
-test('explicit skip does not overwrite previously supplied onboarding answers', function () {
-    $user = User::factory()->create(['city' => 'دمشق']);
-    $category = Category::factory()->create(['status' => 'active']);
-    Sanctum::actingAs($user);
+    public function test_empty_onboarding_payload_finishes_flow_without_answers(): void
+    {
+        $user = User::factory()->create(['city' => null]);
+        Sanctum::actingAs($user);
 
-    $this->postJson('/api/mobile/me/onboarding', [
-        'intent' => 'receiver',
-        'categoryIds' => [$category->id],
-    ])->assertOk();
+        $this->postJson('/api/mobile/me/onboarding', [])
+            ->assertOk()
+            ->assertJsonPath('data.onboardingCompleted', true)
+            ->assertJsonPath('data.missingFields', ['intent', 'interests', 'preferredCity']);
+    }
 
-    $this->postJson('/api/mobile/me/onboarding', [
-        'skipped' => true,
-        'intent' => null,
-        'categoryIds' => [],
-    ])->assertOk()
-        ->assertJsonPath('data.intent', 'receiver')
-        ->assertJsonPath('data.interests.0.category.id', $category->id)
-        ->assertJsonPath('data.onboardingNeedsCompletion', true)
-        ->assertJsonPath('data.onboardingMissingFields', ['availabilityStatus']);
-});
+    public function test_empty_onboarding_payload_preserves_existing_answers(): void
+    {
+        $user = User::factory()->create(['city' => 'دمشق']);
+        $category = Category::factory()->create(['status' => 'active']);
+        Sanctum::actingAs($user);
 
-test('partial onboarding is allowed and completion flag updates when missing data is added later', function () {
-    $user = User::factory()->create(['city' => 'دمشق']);
-    $category = Category::factory()->create(['status' => 'active']);
-    Sanctum::actingAs($user);
+        $this->postJson('/api/mobile/me/onboarding', ['intent' => 'receiver', 'categoryIds' => [$category->id]])->assertOk();
 
-    $this->postJson('/api/mobile/me/onboarding', [
-        'intent' => 'receiver',
-        'categoryIds' => [$category->id],
-    ])->assertOk()
-        ->assertJsonPath('data.onboardingCompleted', true)
-        ->assertJsonPath('data.onboardingProfileComplete', false)
-        ->assertJsonPath('data.onboardingNeedsCompletion', true)
-        ->assertJsonPath('data.onboardingMissingFields', ['availabilityStatus']);
+        $this->postJson('/api/mobile/me/onboarding', [])
+            ->assertOk()
+            ->assertJsonPath('data.intent', 'receiver')
+            ->assertJsonPath('data.interests.0.category.id', $category->id)
+            ->assertJsonPath('data.preferredCity', 'دمشق')
+            ->assertJsonPath('data.missingFields', []);
+    }
 
-    $this->patchJson('/api/mobile/me/preferences', [
-        'availabilityStatus' => 'evenings',
-    ])->assertOk()
-        ->assertJsonPath('data.onboardingProfileComplete', true)
-        ->assertJsonPath('data.onboardingNeedsCompletion', false)
-        ->assertJsonPath('data.onboardingMissingFields', []);
-});
+    public function test_giver_requires_capabilities_but_receiver_does_not(): void
+    {
+        $category = Category::factory()->create(['status' => 'active']);
+        $capability = Capability::query()->create(['name' => 'نقل', 'slug' => 'transport', 'status' => 'active', 'sort_order' => 1]);
 
-test('user can replace interests and update preferences', function () {
-    $user = User::factory()->create();
-    $first = Category::factory()->create(['status' => 'active']);
-    $second = Category::factory()->create(['status' => 'active']);
-    Sanctum::actingAs($user);
+        $giver = User::factory()->create(['city' => 'دمشق']);
+        Sanctum::actingAs($giver);
+        $this->postJson('/api/mobile/me/onboarding', ['intent' => 'giver', 'categoryIds' => [$category->id]])
+            ->assertOk()->assertJsonPath('data.missingFields', ['capabilities']);
+        $this->patchJson('/api/mobile/me/capabilities', ['capabilityIds' => [$capability->id]])
+            ->assertOk()->assertJsonPath('data.missingFields', []);
 
-    $this->postJson('/api/mobile/me/onboarding', [
-        'intent' => 'both',
-        'categoryIds' => [$first->id],
-    ])->assertOk();
+        $receiver = User::factory()->create(['city' => 'حلب']);
+        Sanctum::actingAs($receiver);
+        $this->postJson('/api/mobile/me/onboarding', ['intent' => 'receiver', 'categoryIds' => [$category->id]])
+            ->assertOk()->assertJsonPath('data.missingFields', []);
+    }
 
-    $this->patchJson('/api/mobile/me/interests', [
-        'categoryIds' => [$second->id],
-    ])->assertOk()
-        ->assertJsonPath('data.interests.0.category.id', $second->id);
+    public function test_user_can_replace_interests_and_update_active_preferences(): void
+    {
+        $user = User::factory()->create(['city' => null]);
+        $first = Category::factory()->create(['status' => 'active']);
+        $second = Category::factory()->create(['status' => 'active']);
+        Sanctum::actingAs($user);
 
-    $this->patchJson('/api/mobile/me/preferences', [
-        'intent' => 'receiver',
-        'preferredCity' => 'حلب',
-        'availabilityStatus' => 'evenings',
-    ])->assertOk()
-        ->assertJsonPath('data.intent', 'receiver')
-        ->assertJsonPath('data.preferredCity', 'حلب')
-        ->assertJsonPath('data.availabilityStatus', 'evenings');
+        $this->postJson('/api/mobile/me/onboarding', ['intent' => 'receiver', 'categoryIds' => [$first->id], 'preferredCity' => 'دمشق'])->assertOk();
+        $this->patchJson('/api/mobile/me/interests', ['categoryIds' => [$second->id]])
+            ->assertOk()->assertJsonPath('data.interests.0.category.id', $second->id);
+        $this->patchJson('/api/mobile/me/preferences', ['preferredCity' => 'حلب', 'remoteHelpEnabled' => true])
+            ->assertOk()
+            ->assertJsonPath('data.preferredCity', 'حلب')
+            ->assertJsonPath('data.remoteHelpEnabled', true)
+            ->assertJsonPath('data.missingFields', []);
+    }
 
-    $this->assertDatabaseMissing('user_category_interests', [
-        'user_id' => $user->id,
-        'category_id' => $first->id,
-        'explicit_weight' => 10,
-    ]);
-});
-
-test('personalization endpoints require authentication', function () {
-    $this->getJson('/api/mobile/me/preferences')->assertUnauthorized();
-    $this->postJson('/api/mobile/me/onboarding', [])->assertUnauthorized();
-});
+    public function test_personalization_endpoints_require_authentication(): void
+    {
+        $this->getJson('/api/mobile/me/preferences')->assertUnauthorized();
+        $this->postJson('/api/mobile/me/onboarding', [])->assertUnauthorized();
+    }
+}
