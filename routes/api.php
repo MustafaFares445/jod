@@ -5,6 +5,9 @@ use App\Http\Controllers\API\Admin\ArticleController;
 use App\Http\Controllers\API\Admin\AuditLogController;
 use App\Http\Controllers\API\Admin\BadgeController;
 use App\Http\Controllers\API\Admin\CategoryController;
+use App\Http\Controllers\API\Admin\CapabilityController;
+use App\Http\Controllers\API\Admin\HelpRequestLifecycleController;
+use App\Http\Controllers\API\Admin\RecommendationAnalyticsController;
 use App\Http\Controllers\API\Admin\GroupController as AdminGroupController;
 use App\Http\Controllers\API\Admin\NotificationController;
 use App\Http\Controllers\API\Admin\OrganizationController;
@@ -60,6 +63,7 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::apiResource('users', UserController::class);
         Route::get('users/{user}/posts', [UserController::class, 'posts']);
         Route::get('users/{user}/donations', [UserController::class, 'donations']);
+        Route::get('users/{user}/personalization', [UserController::class, 'personalization']);
         Route::patch('users/{user}/status', UserController::class.'@updateStatus');
         Route::patch('users/{user}/password', UserController::class.'@updatePassword');
 
@@ -103,10 +107,13 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::apiResource('articles', ArticleController::class);
         Route::apiResource('categories', CategoryController::class);
         Route::patch('categories/{category}/status', CategoryController::class.'@updateStatus');
+        Route::apiResource('capabilities', CapabilityController::class)->except(['destroy']);
+        Route::patch('posts/{post}/lifecycle', HelpRequestLifecycleController::class);
 
         Route::get('overview', OverviewController::class);
         Route::get('analytics/kpis', AnalyticsController::class.'@kpis');
         Route::get('analytics/weekly', AnalyticsController::class.'@weekly');
+        Route::get('analytics/recommendations', RecommendationAnalyticsController::class);
 
         Route::get('audit-logs', AuditLogController::class.'@index');
 

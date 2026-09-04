@@ -18,6 +18,8 @@ enum PermissionGroup: string
     case BADGE = 'badges';
     case ARTICLE = 'articles';
     case CATEGORY = 'categories';
+    case CAPABILITY = 'capabilities';
+    case RECOMMENDATION = 'recommendations';
     case AUDIT_LOG = 'audit_logs';
     case PLATFORM_SETTINGS = 'platform_settings';
     case ORG_CAMPAIGN = 'org.campaigns';
@@ -130,6 +132,20 @@ enum PermissionGroup: string
                 module: PermissionModule::ADMIN,
                 description: 'إدارة تصنيفات المحتوى.',
                 order: 95,
+            ),
+            self::CAPABILITY => new PermissionGroupDefinition(
+                label: 'طرق المساعدة',
+                module: PermissionModule::ADMIN,
+                description: 'إدارة طرق المساعدة المستخدمة في التخصيص.',
+                order: 97,
+                actions: [PermissionAction::VIEW, PermissionAction::CREATE, PermissionAction::UPDATE],
+            ),
+            self::RECOMMENDATION => new PermissionGroupDefinition(
+                label: 'التوصيات والتخصيص',
+                module: PermissionModule::ADMIN,
+                description: 'عرض تحليلات التوصيات وبيانات التخصيص.',
+                order: 98,
+                actions: [PermissionAction::VIEW],
             ),
             self::AUDIT_LOG => new PermissionGroupDefinition(
                 label: 'سجل التدقيق',

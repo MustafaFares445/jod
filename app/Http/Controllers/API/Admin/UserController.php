@@ -112,6 +112,36 @@ class UserController extends Controller
         return UserDonationResource::collection($donations);
     }
 
+    public function personalization(Request $request, User $user): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('view', $user);
+        $user->loadMissing(['preference', 'categoryInterests.category', 'capabilities']);
+
+        return response()->json(['data' => [
+            'onboardingCompleted' => $user->preference?->onboarding_completed_at !== null,
+            'onboardingCompletedAt' => $user->preference?->onboarding_completed_at?->toIso8601String(),
+            'intent' => $user->preference?->intent?->value ?? $user->preference?->intent,
+            'preferredCity' => $user->preference?->preferred_city,
+            'preferredGovernorate' => $user->preference?->preferred_governorate,
+            'preferredRadiusKm' => $user->preference?->preferred_radius_km,
+            'remoteHelpEnabled' => (bool) ($user->preference?->remote_help_enabled ?? false),
+            'availabilityStatus' => $user->preference?->availability_status?->value ?? $user->preference?->availability_status,
+            'interests' => $user->categoryInterests->map(fn ($interest) => [
+                'category' => ['id' => (string) $interest->category_id, 'name' => (string) ($interest->category?->name ?? '')],
+                'selectedByUser' => (float) $interest->explicit_weight > 0,
+                'explicitWeight' => (float) $interest->explicit_weight,
+                'behavioralWeight' => (float) $interest->behavioral_weight,
+            ])->values(),
+            'capabilities' => $user->capabilities->map(fn ($capability) => ['id' => (string) $capability->id, 'name' => (string) $capability->name, 'slug' => (string) $capability->slug])->values(),
+            'feedback' => [
+                'interested' => $user->interactions()->where('event_type', 'interested')->count(),
+                'notInterested' => $user->interactions()->where('event_type', 'not_interested')->count(),
+                'hiddenPosts' => $user->postFeedback()->where('type', 'hide')->count(),
+                'hiddenPublishers' => $user->hiddenPublishers()->count(),
+            ],
+        ]]);
+    }
+
     public function update(UserRequest $request, User $user): UserResource
     {
         $this->authorize('update', $user);
