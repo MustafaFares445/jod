@@ -8,6 +8,8 @@ test('existing and requested mobile route names and paths remain registered', fu
         'mobile.auth.login' => ['POST', 'api/mobile/auth/login'],
         'mobile.auth.refresh' => ['POST', 'api/mobile/auth/refresh'],
         'mobile.auth.logout' => ['POST', 'api/mobile/auth/logout'],
+        'mobile.auth.verify-account' => ['POST', 'api/mobile/auth/verify-account'],
+        'mobile.auth.resend-verification' => ['POST', 'api/mobile/auth/resend-verification'],
         'mobile.auth.forgot-password' => ['POST', 'api/mobile/auth/forgot-password'],
         'mobile.auth.verify-reset-code' => ['POST', 'api/mobile/auth/verify-reset-code'],
         'mobile.auth.reset-password' => ['POST', 'api/mobile/auth/reset-password'],
@@ -72,6 +74,15 @@ test('public discovery and global search routes are throttled', function () {
 
         expect($route)->not->toBeNull("Route [{$routeName}] is not registered.");
         expect($route->gatherMiddleware())->toContain('throttle:60,1');
+    }
+});
+
+test('account verification routes are throttled', function () {
+    foreach (['mobile.auth.verify-account', 'mobile.auth.resend-verification'] as $routeName) {
+        $route = app('router')->getRoutes()->getByName($routeName);
+
+        expect($route)->not->toBeNull("Route [{$routeName}] is not registered.");
+        expect($route->gatherMiddleware())->toContain('throttle:10,1');
     }
 });
 

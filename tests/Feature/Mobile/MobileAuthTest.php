@@ -1,12 +1,16 @@
 <?php
 
 declare(strict_types=1);
+
 use App\Models\Organization;
 use App\Models\User;
+use App\Notifications\AccountVerificationCodeNotification;
 use App\Services\Auth\TokenService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\PersonalAccessToken;
+
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 test('mobile registration rejects non Syrian mobile numbers', function () {
@@ -20,35 +24,209 @@ test('mobile registration rejects non Syrian mobile numbers', function () {
         ->assertJsonValidationErrors(['phone'], 'error.details');
 });
 
-test('mobile registration issues rotating token pair with mobile envelope', function () {
+test('mobile registration creates a pending account and sends verification code without issuing tokens', function () {
+    Notification::fake();
+
     $response = $this->postJson('/api/mobile/auth/register', [
         'name' => 'Mobile Register User',
         'email' => 'register@example.com',
         'phone' => '+963991000111',
-        'password' => 'password',
-        'password_confirmation' => 'password',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
     ]);
 
-    $response->assertOk();
-    $response->assertJsonPath('success', true);
-    $response->assertJsonPath('message', 'Registered successfully.');
-    $response->assertJsonPath('data.tokenType', 'Bearer');
-    $response->assertJsonPath('data.user.email', 'register@example.com');
+    $response->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('message', 'Registration started. Verify your account to continue.')
+        ->assertJsonPath('data.verificationRequired', true)
+        ->assertJsonPath('data.verificationCodeSent', true)
+        ->assertJsonPath('data.verificationChannel', 'email')
+        ->assertJsonPath('data.user.email', 'register@example.com')
+        ->assertJsonPath('data.user.status', 'pending_verification')
+        ->assertJsonPath('data.user.verified', false);
+
+    expect($response->json('data.token'))->toBeNull();
+    expect($response->json('data.refreshToken'))->toBeNull();
+
+    $user = User::query()->where('email', 'register@example.com')->firstOrFail();
+
+    expect($user->email_verified_at)->toBeNull();
+    expect($user->status)->toBe('pending_verification');
+
+    $this->assertDatabaseHas('account_verification_tokens', [
+        'email' => 'register@example.com',
+        'attempts' => 0,
+    ]);
+
+    Notification::assertSentTo($user, AccountVerificationCodeNotification::class);
+});
+
+test('retrying registration for the same pending account resends instead of creating a duplicate', function () {
+    Notification::fake();
+
+    $payload = [
+        'name' => 'Pending User',
+        'email' => 'pending-register@example.com',
+        'phone' => '+963991000112',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ];
+
+    $this->postJson('/api/mobile/auth/register', $payload)->assertOk();
+
+    DB::table('account_verification_tokens')
+        ->where('email', $payload['email'])
+        ->update(['last_sent_at' => now()->subMinutes(2)]);
+
+    $this->postJson('/api/mobile/auth/register', $payload)
+        ->assertOk()
+        ->assertJsonPath('message', 'Verification code resent successfully.')
+        ->assertJsonPath('data.verificationRequired', true);
+
+    expect(User::query()->where('email', $payload['email'])->count())->toBe(1);
+});
+
+test('retrying registration too quickly is throttled', function () {
+    Notification::fake();
+
+    $payload = [
+        'name' => 'Pending User',
+        'email' => 'pending-throttle@example.com',
+        'phone' => '+963991000113',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ];
+
+    $this->postJson('/api/mobile/auth/register', $payload)->assertOk();
+
+    $this->postJson('/api/mobile/auth/register', $payload)
+        ->assertStatus(429)
+        ->assertJsonPath('error.code', 'verification_throttled');
+});
+
+test('registration rejects an already verified account', function () {
+    User::factory()->create([
+        'email' => 'existing@example.com',
+        'phone' => '+963991000114',
+    ]);
+
+    $this->postJson('/api/mobile/auth/register', [
+        'name' => 'Existing User',
+        'email' => 'existing@example.com',
+        'phone' => '+963991000114',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ])->assertStatus(409)
+        ->assertJsonPath('error.code', 'account_already_exists');
+});
+
+test('mobile login rejects unverified accounts with verification required', function () {
+    $user = User::factory()->unverified()->create([
+        'email' => 'unverified-login@example.com',
+        'phone' => '+963991000115',
+        'password' => Hash::make('password123'),
+        'status' => 'pending_verification',
+    ]);
+
+    $this->postJson('/api/mobile/auth/login', [
+        'email' => $user->email,
+        'password' => 'password123',
+    ])->assertForbidden()
+        ->assertJsonPath('error.code', 'verification_required')
+        ->assertJsonPath('error.details.verificationRequired', true)
+        ->assertJsonPath('error.details.verificationChannel', 'email');
+});
+
+test('mobile account verification activates account and issues rotating token pair', function () {
+    $user = User::factory()->unverified()->create([
+        'email' => 'verify-account@example.com',
+        'phone' => '+963991000116',
+        'status' => 'pending_verification',
+    ]);
+
+    DB::table('account_verification_tokens')->insert([
+        'email' => $user->email,
+        'token' => Hash::make('123456'),
+        'attempts' => 0,
+        'created_at' => now(),
+        'last_sent_at' => now(),
+    ]);
+
+    $response = $this->postJson('/api/mobile/auth/verify-account', [
+        'login' => $user->email,
+        'code' => '123456',
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('message', 'Account verified successfully.')
+        ->assertJsonPath('data.verificationRequired', false)
+        ->assertJsonPath('data.user.verified', true)
+        ->assertJsonPath('data.user.status', 'active')
+        ->assertJsonPath('data.tokenType', 'Bearer');
+
     expect($response->json('data.token'))->not->toBeEmpty();
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
-    expect($response->json('data.expiresIn'))->toBeInt();
-    expect($response->json('data.refreshExpiresIn'))->toBeInt();
+    expect($user->fresh()->email_verified_at)->not->toBeNull();
+    expect($user->fresh()->status)->toBe('active');
+
+    $this->assertDatabaseMissing('account_verification_tokens', ['email' => $user->email]);
 
     $accessToken = PersonalAccessToken::findToken($response->json('data.token'));
     $refreshToken = PersonalAccessToken::findToken($response->json('data.refreshToken'));
     expect($accessToken?->can(TokenService::ACCESS_ABILITY) ?? false)->toBeTrue();
     expect($refreshToken?->can(TokenService::REFRESH_ABILITY) ?? false)->toBeTrue();
-
-    $this->assertDatabaseHas('users', [
-        'email' => 'register@example.com',
-        'phone' => '+962790000111',
-    ]);
 });
+
+test('mobile account verification invalidates code after max failed attempts', function () {
+    $user = User::factory()->unverified()->create([
+        'email' => 'verify-attempts@example.com',
+        'status' => 'pending_verification',
+    ]);
+
+    DB::table('account_verification_tokens')->insert([
+        'email' => $user->email,
+        'token' => Hash::make('123456'),
+        'attempts' => 0,
+        'created_at' => now(),
+        'last_sent_at' => now(),
+    ]);
+
+    for ($attempt = 1; $attempt <= 4; $attempt++) {
+        $this->postJson('/api/mobile/auth/verify-account', [
+            'login' => $user->email,
+            'code' => '999999',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.code', 'invalid_verification_code');
+    }
+
+    $this->postJson('/api/mobile/auth/verify-account', [
+        'login' => $user->email,
+        'code' => '999999',
+    ])->assertStatus(429)
+        ->assertJsonPath('error.code', 'verification_attempts_exceeded');
+
+    $this->assertDatabaseMissing('account_verification_tokens', ['email' => $user->email]);
+});
+
+test('mobile resend verification enforces cooldown', function () {
+    Notification::fake();
+
+    $user = User::factory()->unverified()->create([
+        'email' => 'resend@example.com',
+        'status' => 'pending_verification',
+    ]);
+
+    $this->postJson('/api/mobile/auth/resend-verification', [
+        'login' => $user->email,
+    ])->assertOk()
+        ->assertJsonPath('data.verificationCodeSent', true);
+
+    $this->postJson('/api/mobile/auth/resend-verification', [
+        'login' => $user->email,
+    ])->assertStatus(429)
+        ->assertJsonPath('error.code', 'verification_throttled');
+});
+
 test('mobile login issues rotating token pair with mobile envelope', function () {
     $user = User::factory()->create([
         'email' => 'mobile@example.com',
@@ -72,6 +250,7 @@ test('mobile login issues rotating token pair with mobile envelope', function ()
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
     expect($user->fresh()->last_active_at)->not->toBeNull();
 });
+
 test('mobile login rejects inactive users and unverified organization accounts', function () {
     $inactiveUser = User::factory()->create([
         'email' => 'inactive-mobile@example.com',
@@ -118,14 +297,24 @@ test('mobile login accepts phone credentials', function () {
     expect($response->json('data.token'))->not->toBeEmpty();
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
 });
+
+test('mobile login rejects sending email and phone together', function () {
+    $this->postJson('/api/mobile/auth/login', [
+        'email' => 'mobile@example.com',
+        'phone' => '+963991000117',
+        'password' => 'password123',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['email', 'phone'], 'error.details');
+});
+
 test('mobile login rejects invalid credentials with mobile error envelope', function () {
     User::factory()->create([
-        'email' => 'mobile@example.com',
+        'email' => 'invalid-login@example.com',
         'password' => Hash::make('password'),
     ]);
 
     $response = $this->postJson('/api/mobile/auth/login', [
-        'email' => 'mobile@example.com',
+        'email' => 'invalid-login@example.com',
         'password' => 'wrong-password',
     ]);
 
@@ -134,6 +323,7 @@ test('mobile login rejects invalid credentials with mobile error envelope', func
     $response->assertJsonPath('data', null);
     $response->assertJsonPath('error.code', 'invalid_credentials');
 });
+
 test('mobile refresh rotates once and revokes previous session pair', function () {
     $user = User::factory()->create([
         'email' => 'rotate@example.com',
@@ -168,6 +358,7 @@ test('mobile refresh rotates once and revokes previous session pair', function (
     ])->assertUnauthorized()
         ->assertJsonPath('error.code', 'invalid_refresh_token');
 });
+
 test('mobile refresh token cannot access normal authenticated routes', function () {
     $user = User::factory()->create([
         'email' => 'refresh-only@example.com',
@@ -184,6 +375,7 @@ test('mobile refresh token cannot access normal authenticated routes', function 
         ->assertJsonPath('success', false)
         ->assertJsonPath('error.code', 'access_token_required');
 });
+
 test('mobile forgot password generates reset code for email or phone login', function () {
     $user = User::factory()->create([
         'email' => 'reset@example.com',
@@ -202,6 +394,7 @@ test('mobile forgot password generates reset code for email or phone login', fun
         'email' => $user->email,
     ]);
 });
+
 test('mobile verify reset code accepts the existing password reset token flow', function () {
     $user = User::factory()->create([
         'email' => 'verify@example.com',
@@ -222,6 +415,7 @@ test('mobile verify reset code accepts the existing password reset token flow', 
     $response->assertJsonPath('success', true);
     $response->assertJsonPath('data.resetCodeVerified', true);
 });
+
 test('mobile reset password updates password clears code and revokes sessions', function () {
     $user = User::factory()->create([
         'email' => 'reset-password@example.com',
@@ -253,6 +447,7 @@ test('mobile reset password updates password clears code and revokes sessions', 
     $this->assertDatabaseMissing('personal_access_tokens', ['id' => $accessId]);
     $this->assertDatabaseMissing('personal_access_tokens', ['id' => $refreshId]);
 });
+
 test('mobile logout revokes current access and refresh tokens', function () {
     $loginResponse = $this->postJson('/api/mobile/auth/login', [
         'email' => User::factory()->create([
