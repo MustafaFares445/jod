@@ -30,7 +30,6 @@ beforeEach(function () {
         [PermissionGroup::PERSONALIZATION, PermissionAction::VIEW],
         [PermissionGroup::RECOMMENDATION, PermissionAction::VIEW],
         [PermissionGroup::RECOMMENDATION, PermissionAction::DIAGNOSTICS],
-        [PermissionGroup::RECOMMENDATION, PermissionAction::CONFIGURE],
         [PermissionGroup::HELP_MATCHING, PermissionAction::VIEW],
         [PermissionGroup::HELP_REQUEST, PermissionAction::MANAGE_URGENCY],
         [PermissionGroup::HELP_REQUEST, PermissionAction::MANAGE_OUTCOMES],
@@ -68,8 +67,7 @@ test('admin manages category search aliases', function () {
 
     $this->putJson("/api/v1/admin/categories/{$category->id}/keywords", [
         'keywords' => ['تعليم', 'مدرس', 'جامعة', 'تعليم'],
-    ])->assertOk()
-        ->assertJsonCount(3, 'data.keywords');
+    ])->assertOk()->assertJsonCount(3, 'data.keywords');
 
     $this->getJson("/api/v1/admin/categories/{$category->id}/keywords")
         ->assertOk()
@@ -162,7 +160,7 @@ test('scheduled command expires elapsed help requests', function () {
     expect($post->refresh()->help_status->value)->toBe('expired');
 });
 
-test('recommendation analytics attributes interactions to matching impressions', function () {
+test('recommendation analytics attributes interactions and exploration feedback', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create(['status' => 'published']);
 
@@ -172,7 +170,8 @@ test('recommendation analytics attributes interactions to matching impressions',
         'subject_id' => $post->id,
         'feed_type' => 'for_you',
         'score' => 50,
-        'reasons' => ['fresh'],
+        'reasons' => ['discovery'],
+        'is_exploration' => true,
         'shown_at' => now()->subSecond(),
     ]);
     UserInteraction::query()->create([
@@ -182,15 +181,25 @@ test('recommendation analytics attributes interactions to matching impressions',
         'subject_id' => $post->id,
         'occurred_at' => now(),
     ]);
+    UserInteraction::query()->create([
+        'user_id' => $user->id,
+        'event_type' => PersonalizationEventType::ExplorationInterested,
+        'subject_type' => 'post',
+        'subject_id' => $post->id,
+        'occurred_at' => now(),
+    ]);
 
     $this->getJson('/api/v1/admin/recommendations/analytics?feedType=for_you')
         ->assertOk()
         ->assertJsonPath('data.summary.impressions', 1)
         ->assertJsonPath('data.summary.saves', 1)
+        ->assertJsonPath('data.summary.explorationImpressions', 1)
+        ->assertJsonPath('data.summary.explorationInterested', 1)
+        ->assertJsonPath('data.summary.explorationInterestedRate', 100)
         ->assertJsonPath('data.summary.attributionMode', 'same-user-subject-impression-v1');
 });
 
-test('recommendation inspector exposes scoring components from production ranking', function () {
+test('recommendation inspector exposes scoring components and exploration state', function () {
     $user = User::factory()->create(['city' => 'دمشق']);
     $category = Category::factory()->create(['status' => 'active']);
     UserPreference::query()->create([
@@ -217,20 +226,15 @@ test('recommendation inspector exposes scoring components from production rankin
 
     expect($response->json('data.recommendations.0.components.explicit_interest'))->toBe(30);
     expect($response->json('data.recommendations.0.components.same_city'))->toBe(25);
+    expect($response->json('data.recommendations.0.isExploration'))->toBeFalse();
 });
 
-test('admin can update and reset live recommendation settings', function () {
+test('admin recommendation weight editing endpoints are removed', function () {
+    $this->getJson('/api/v1/admin/recommendations/config')->assertNotFound();
     $this->patchJson('/api/v1/admin/recommendations/config', [
-        'weights' => ['same_city' => 40],
-        'candidateLimit' => 350,
-        'popularityCap' => 7,
-    ])->assertOk()
-        ->assertJsonPath('data.effective.weights.same_city', 40)
-        ->assertJsonPath('data.effective.candidate_limit', 350)
-        ->assertJsonPath('data.effective.popularity_cap', 7);
+        'weights' => ['same_city' => 999],
+    ])->assertNotFound();
+    $this->deleteJson('/api/v1/admin/recommendations/config')->assertNotFound();
 
-    $this->deleteJson('/api/v1/admin/recommendations/config')
-        ->assertOk()
-        ->assertJsonPath('data.effective.weights.same_city', 25)
-        ->assertJsonPath('data.effective.candidate_limit', 200);
+    expect(config('recommendations.weights.same_city'))->toBe(25);
 });
