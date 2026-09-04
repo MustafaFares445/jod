@@ -103,7 +103,10 @@ class OrganizationRecommendationAnalyticsService
     {
         return RecommendationImpression::query()->whereBetween('shown_at', [$from, $to])->where('publisher_type', 'organization')->where('publisher_id', $organizationId)
             ->when($filters['contentType'] ?? null, fn (Builder $q, $v) => $q->where('subject_type', $v))
-            ->when($filters['categoryId'] ?? null, fn (Builder $q, $v) => $q->where('category_id', $v));
+            ->when($filters['categoryId'] ?? null, fn (Builder $q, $v) => $q->where('category_id', $v))
+            ->when($filters['postType'] ?? null, function (Builder $q, $v) use ($organizationId): void {
+                $q->where('subject_type', 'post')->whereIn('subject_id', Post::query()->where('organization_id', $organizationId)->where('type', $v)->select('id'));
+            });
     }
 
     private function attributedInteractions(string $organizationId, array $filters, Carbon $from, Carbon $to): Builder
@@ -116,7 +119,10 @@ class OrganizationRecommendationAnalyticsService
                 ->where('oi.publisher_type', 'organization')->where('oi.publisher_id', $organizationId)
                 ->whereBetween('oi.shown_at', [$from, $to])->whereColumn('oi.shown_at', '<=', 'user_interactions.occurred_at')
                 ->when($filters['contentType'] ?? null, fn ($q, $v) => $q->where('oi.subject_type', $v))
-                ->when($filters['categoryId'] ?? null, fn ($q, $v) => $q->where('oi.category_id', $v));
+                ->when($filters['categoryId'] ?? null, fn ($q, $v) => $q->where('oi.category_id', $v))
+                ->when($filters['postType'] ?? null, function ($q, $v) use ($organizationId): void {
+                    $q->where('oi.subject_type', 'post')->whereIn('oi.subject_id', Post::query()->where('organization_id', $organizationId)->where('type', $v)->select('id'));
+                });
         });
     }
 
