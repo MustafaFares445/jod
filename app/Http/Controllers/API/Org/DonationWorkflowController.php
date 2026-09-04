@@ -4,19 +4,25 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\API\Org;
 
+use App\Enums\DonationStatus;
+use App\Enums\PersonalizationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\DonationCancelRequest;
 use App\Http\Resources\DonorResource;
 use App\Models\Donation;
 use App\Models\User;
 use App\Services\Mobile\DonationService;
+use App\Services\Mobile\InteractionTrackingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 
 class DonationWorkflowController extends Controller
 {
-    public function __construct(private readonly DonationService $service) {}
+    public function __construct(
+        private readonly DonationService $service,
+        private readonly InteractionTrackingService $interactions,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -55,7 +61,22 @@ class DonationWorkflowController extends Controller
 
     public function complete(Request $request, string $donation): DonorResource
     {
-        return DonorResource::make($this->service->complete($this->user($request), $donation));
+        $before = Donation::query()->whereKey($donation)->first();
+        $wasCompleted = ($before?->status?->value ?? $before?->status) === DonationStatus::Completed->value;
+
+        $completed = $this->service->complete($this->user($request), $donation);
+        $completed->loadMissing(['campaign.category', 'creator']);
+
+        if (! $wasCompleted && $completed->creator !== null && $completed->campaign !== null) {
+            $this->interactions->recordCampaignAction(
+                $completed->creator,
+                PersonalizationEventType::CampaignDonation,
+                $completed->campaign,
+                ['donationId' => (string) $completed->id],
+            );
+        }
+
+        return DonorResource::make($completed);
     }
 
     public function cancel(DonationCancelRequest $request, string $donation): DonorResource
