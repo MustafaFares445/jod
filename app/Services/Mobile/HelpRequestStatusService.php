@@ -10,47 +10,28 @@ use App\Models\Post;
 
 class HelpRequestStatusService
 {
-    /**
-     * Recalculate a help request's operational state without overriding an explicit fulfilled state.
-     */
     public function sync(Post $post): Post
     {
-        if ($post->type !== 'help_request') {
-            return $post;
+        if ($post->type !== 'help_request') return $post;
+        if ($post->help_status?->isTerminal()) return $post;
+        if ($post->expires_at !== null && $post->expires_at->isPast()) {
+            $post->forceFill(['help_status' => HelpRequestStatus::Expired])->save();
+            return $post->refresh();
         }
-
-        if ($post->help_status === HelpRequestStatus::Fulfilled) {
-            return $post;
-        }
-
-        $hasProgressingOffer = $post->helpOffers()
-            ->whereIn('status', [
-                HelpOfferStatus::Accepted->value,
-                HelpOfferStatus::Contacting->value,
-                HelpOfferStatus::Agreed->value,
-            ])
-            ->exists();
-
-        $post->forceFill([
-            'help_status' => $hasProgressingOffer
-                ? HelpRequestStatus::InProgress
-                : HelpRequestStatus::Open,
-        ])->save();
-
+        $hasProgressingOffer = $post->helpOffers()->whereIn('status', [HelpOfferStatus::Accepted->value, HelpOfferStatus::Contacting->value, HelpOfferStatus::Agreed->value])->exists();
+        $post->forceFill(['help_status' => $hasProgressingOffer ? HelpRequestStatus::InProgress : HelpRequestStatus::Open])->save();
         return $post->refresh();
     }
 
     public function fulfill(Post $post): Post
     {
-        $post->forceFill(['help_status' => HelpRequestStatus::Fulfilled])->save();
-
+        $post->forceFill(['help_status' => HelpRequestStatus::Fulfilled, 'fulfilled_at' => $post->fulfilled_at ?? now()])->save();
         return $post->refresh();
     }
 
     public function reopen(Post $post): Post
     {
-        $post->forceFill(['help_status' => HelpRequestStatus::Open])->save();
-
+        $post->forceFill(['help_status' => HelpRequestStatus::Open, 'fulfilled_at' => null])->save();
         return $this->sync($post->refresh());
     }
 }

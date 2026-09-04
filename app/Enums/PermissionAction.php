@@ -23,6 +23,10 @@ enum PermissionAction: string
     case RESTORE = 'restore';
     case SEND = 'send';
     case RESEND = 'resend';
+    case DIAGNOSTICS = 'diagnostics';
+    case CONFIGURE = 'configure';
+    case MANAGE_URGENCY = 'manage_urgency';
+    case MANAGE_OUTCOMES = 'manage_outcomes';
 
     public function label(): string
     {
@@ -44,16 +48,18 @@ enum PermissionAction: string
             self::RESTORE => 'استعادة',
             self::SEND => 'إرسال',
             self::RESEND => 'إعادة إرسال',
+            self::DIAGNOSTICS => 'تشخيص',
+            self::CONFIGURE => 'تهيئة',
+            self::MANAGE_URGENCY => 'إدارة الاستعجال',
+            self::MANAGE_OUTCOMES => 'إدارة النتائج',
         };
     }
 
-    /** @return list<self> */
     public static function crud(): array
     {
         return [self::VIEW, self::CREATE, self::UPDATE, self::DELETE];
     }
 
-    /** @return list<self> */
     public static function readOnly(): array
     {
         return [self::VIEW];
