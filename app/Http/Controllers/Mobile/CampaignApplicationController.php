@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Mobile;
 
+use App\Enums\PersonalizationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\CampaignApplicationHistoryRequest;
 use App\Http\Requests\Mobile\CampaignApplicationRequest;
@@ -11,13 +12,17 @@ use App\Http\Resources\Mobile\CampaignApplicationResource;
 use App\Models\CampaignApplication;
 use App\Models\User;
 use App\Services\Mobile\CampaignApplicationService;
+use App\Services\Mobile\InteractionTrackingService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CampaignApplicationController extends Controller
 {
-    public function __construct(private readonly CampaignApplicationService $service) {}
+    public function __construct(
+        private readonly CampaignApplicationService $service,
+        private readonly InteractionTrackingService $interactions,
+    ) {}
 
     public function index(CampaignApplicationHistoryRequest $request): JsonResponse
     {
@@ -31,7 +36,19 @@ class CampaignApplicationController extends Controller
 
     public function store(CampaignApplicationRequest $request, string $campaign): JsonResponse
     {
-        $application = $this->service->apply($this->user($request), $campaign, $request->validated());
+        $user = $this->user($request);
+        $application = $this->service->apply($user, $campaign, $request->validated());
+        $application->loadMissing('campaign.category');
+
+        if ($application->campaign !== null) {
+            $this->interactions->recordCampaignAction(
+                $user,
+                PersonalizationEventType::VolunteerApplication,
+                $application->campaign,
+                ['applicationId' => (string) $application->id],
+                60 * 24 * 3650,
+            );
+        }
 
         return MobileApiResponse::success(
             CampaignApplicationResource::make($application)->resolve($request),
