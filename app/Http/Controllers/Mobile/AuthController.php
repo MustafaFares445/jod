@@ -41,6 +41,14 @@ class AuthController extends Controller
      * Registration does not issue API tokens until verification succeeds.
      * Retrying registration with the same email and phone for an unverified
      * account resends the verification code instead of creating a duplicate.
+     *
+     * @bodyParam name string required The user's display name.
+     * @bodyParam email string required The user's email address.
+     * @bodyParam phone string required Syrian mobile number in +9639XXXXXXXX format.
+     * @bodyParam password string required The password.
+     * @bodyParam password_confirmation string required Confirmation of the password.
+     *
+     * @response array{success: bool, message: string, data: array{verificationRequired: bool, verificationCodeSent: bool, verificationChannel: string, expiresIn: int, resendAvailableIn: int, user: array}, error: null, meta: array}
      */
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -126,6 +134,11 @@ class AuthController extends Controller
 
     /**
      * Verify the registration OTP, activate the account, and issue tokens.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit account verification code.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, verificationRequired: bool, user: array}, error: null, meta: array}
      */
     public function verifyAccount(VerifyAccountRequest $request): JsonResponse
     {
@@ -136,6 +149,10 @@ class AuthController extends Controller
             return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
         }
 
+        if (! in_array($user->status, ['active', 'pending_verification'], true)) {
+            return MobileApiResponse::error('account_inactive', 'This account is not active.', null, 403);
+        }
+
         if ($user->email_verified_at !== null) {
             return MobileApiResponse::error(
                 'account_already_verified',
@@ -143,10 +160,6 @@ class AuthController extends Controller
                 null,
                 409,
             );
-        }
-
-        if (! in_array($user->status, ['active', 'pending_verification'], true)) {
-            return MobileApiResponse::error('account_inactive', 'This account is not active.', null, 403);
         }
 
         $result = $this->accountVerificationService->consume($user, $validated['code']);
@@ -186,6 +199,15 @@ class AuthController extends Controller
 
         $user->loadMissing(['organization', 'avatarMedia']);
 
+        if ($user->organization_id !== null && ! $user->organization?->isActiveAndVerified()) {
+            return MobileApiResponse::error(
+                'organization_inactive',
+                'The account was verified, but this organization must be active and verified before login.',
+                null,
+                403,
+            );
+        }
+
         return MobileApiResponse::success([
             ...$this->tokenService->issueTokenPair($user),
             'verificationRequired' => false,
@@ -195,6 +217,10 @@ class AuthController extends Controller
 
     /**
      * Resend a registration verification OTP.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     *
+     * @response array{success: bool, message: string, data: array{verificationRequired: bool, verificationCodeSent: bool, verificationChannel: string, expiresIn: int, resendAvailableIn: int}, error: null, meta: array}
      */
     public function resendAccountVerification(ResendAccountVerificationRequest $request): JsonResponse
     {
@@ -204,6 +230,10 @@ class AuthController extends Controller
             return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
         }
 
+        if (! in_array($user->status, ['active', 'pending_verification'], true)) {
+            return MobileApiResponse::error('account_inactive', 'This account is not active.', null, 403);
+        }
+
         if ($user->email_verified_at !== null) {
             return MobileApiResponse::error(
                 'account_already_verified',
@@ -211,10 +241,6 @@ class AuthController extends Controller
                 null,
                 409,
             );
-        }
-
-        if (! in_array($user->status, ['active', 'pending_verification'], true)) {
-            return MobileApiResponse::error('account_inactive', 'This account is not active.', null, 403);
         }
 
         $verification = $this->accountVerificationService->issue($user);
@@ -239,6 +265,18 @@ class AuthController extends Controller
 
     /**
      * Log in to the mobile API.
+     *
+     * Public endpoint that returns a short-lived access token, a rotating refresh token, and the current mobile user profile.
+     *
+     * @bodyParam email string optional The account email address. Required when phone is omitted.
+     * @bodyParam phone string optional The account phone number. Required when email is omitted.
+     * @bodyParam password string required The account password.
+     * @bodyParam fcmToken string optional Firebase Cloud Messaging registration token for this installation.
+     * @bodyParam fcmPlatform string optional Device platform. Allowed: ios, android.
+     * @bodyParam deviceId string optional Stable installation identifier.
+     * @bodyParam appVersion string optional Installed app version.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string, user: array{id: string, name: string, email: string, phone: string|null, userType: string|null, status: string|null, organizationId: string|null, organization: array|null, createdAt: string|null, lastActiveAt: string|null}}, error: null, meta: array}
      */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -263,6 +301,15 @@ class AuthController extends Controller
                 'The provided credentials are incorrect.',
                 null,
                 401,
+            );
+        }
+
+        if (! in_array($user->status, ['active', 'pending_verification'], true)) {
+            return MobileApiResponse::error(
+                'account_inactive',
+                'This account is not active.',
+                null,
+                403,
             );
         }
 
@@ -316,6 +363,15 @@ class AuthController extends Controller
         ], 'Logged in successfully.');
     }
 
+    /**
+     * Rotate a mobile refresh token and issue a new token pair.
+     *
+     * Refresh tokens are single-use. Rotating one revokes the previous access and refresh token pair.
+     *
+     * @bodyParam refreshToken string required The current refresh token.
+     *
+     * @response array{success: bool, message: string, data: array{token: string, refreshToken: string, tokenType: string, expiresIn: int, refreshExpiresIn: int, expiresAt: string, refreshExpiresAt: string}, error: null, meta: array}
+     */
     public function refresh(RefreshTokenRequest $request): JsonResponse
     {
         $tokens = $this->tokenService->rotateRefreshToken(
@@ -334,6 +390,13 @@ class AuthController extends Controller
         return MobileApiResponse::success($tokens, 'Token refreshed successfully.');
     }
 
+    /**
+     * Request a password reset code.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     *
+     * @response array{success: bool, message: string, data: array{resetCodeSent: bool}, error: null, meta: array}
+     */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         $user = $this->resolveUserByLogin($request->validated('login'));
@@ -354,6 +417,14 @@ class AuthController extends Controller
         ], 'Reset code generated successfully.');
     }
 
+    /**
+     * Verify a password reset code.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit reset code.
+     *
+     * @response array{success: bool, message: string, data: array{resetCodeVerified: bool}, error: null, meta: array}
+     */
     public function verifyResetCode(VerifyResetCodeRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -368,6 +439,18 @@ class AuthController extends Controller
         ], 'Reset code verified successfully.');
     }
 
+    /**
+     * Reset a mobile account password.
+     *
+     * A successful reset revokes all existing API sessions for the account.
+     *
+     * @bodyParam login string required The email address or phone number for the account.
+     * @bodyParam code string required The 6-digit reset code.
+     * @bodyParam password string required The new password.
+     * @bodyParam password_confirmation string required Confirmation of the new password.
+     *
+     * @response array{success: bool, message: string, data: array{resetPasswordUpdated: bool}, error: null, meta: array}
+     */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -391,6 +474,13 @@ class AuthController extends Controller
         ], 'Password reset successfully.');
     }
 
+    /**
+     * Log out from the mobile API.
+     *
+     * Requires a mobile access token and revokes both tokens belonging to the current session.
+     *
+     * @response array{success: bool, message: string, data: null, error: null, meta: array}
+     */
     public function logout(Request $request): JsonResponse
     {
         $user = $request->user();
