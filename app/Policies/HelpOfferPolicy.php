@@ -19,7 +19,8 @@ class HelpOfferPolicy
     public function create(User $user, Post $post): bool
     {
         return $post->type === 'help_request'
-            && (string) $post->author_id !== (string) $user->id;
+            && (string) $post->author_id !== (string) $user->id
+            && ! $this->belongsToOrganization($user, $post);
     }
 
     public function accept(User $user, HelpOffer $offer): bool
