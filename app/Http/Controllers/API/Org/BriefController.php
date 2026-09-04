@@ -6,6 +6,7 @@ namespace App\Http\Controllers\API\Org;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\Capability;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 
@@ -13,33 +14,21 @@ class BriefController extends Controller
 {
     public function categories(): JsonResponse
     {
-        $categories = Category::query()
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $categories = Category::query()->where('status', 'active')->whereNull('deleted_at')->orderBy('name')->get(['id', 'name']);
+        return response()->json(['data' => $categories->map(static fn (Category $category): array => ['id' => $category->id, 'name' => $category->name])->values()]);
+    }
 
-        return response()->json([
-            'data' => $categories->map(static fn (Category $category): array => [
-                'id' => $category->id,
-                'name' => $category->name,
-            ])->values(),
-        ]);
+    public function capabilities(): JsonResponse
+    {
+        $capabilities = Capability::query()->where('status', 'active')->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'slug']);
+        return response()->json(['data' => $capabilities->map(static fn (Capability $capability): array => ['id' => $capability->id, 'name' => $capability->name, 'slug' => $capability->slug])->values()]);
     }
 
     public function campaigns(): JsonResponse
     {
         $organizationId = (string) auth()->user()?->organization_id;
         abort_if($organizationId === '', 403, 'Authenticated user is not linked to an organization.');
-
-        $campaigns = Campaign::query()
-            ->where('organization_id', $organizationId)
-            ->orderBy('title')
-            ->get(['id', 'title']);
-
-        return response()->json([
-            'data' => $campaigns->map(static fn (Campaign $campaign): array => [
-                'id' => $campaign->id,
-                'name' => $campaign->title,
-            ])->values(),
-        ]);
+        $campaigns = Campaign::query()->where('organization_id', $organizationId)->orderBy('title')->get(['id', 'title']);
+        return response()->json(['data' => $campaigns->map(static fn (Campaign $campaign): array => ['id' => $campaign->id, 'name' => $campaign->title])->values()]);
     }
 }

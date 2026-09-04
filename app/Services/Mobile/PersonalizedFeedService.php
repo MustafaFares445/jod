@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Enums\FeedType;
+use App\Enums\HelpRequestStatus;
 use App\Enums\PostUrgency;
 use App\Enums\UserIntent;
+use App\Models\Campaign;
 use App\Models\HiddenPublisher;
 use App\Models\Post;
 use App\Models\PostFeedback;
@@ -28,346 +30,140 @@ class PersonalizedFeedService
         $page = max(1, $page);
         $perPage = max(1, min($perPage, 100));
         $location = $viewer->preference?->preferred_city ?? $viewer->city;
+        if ($type === FeedType::Nearby && blank($location)) return $this->paginator(collect(), $page, $perPage);
 
-        if ($type === FeedType::Nearby && blank($location)) {
-            return $this->paginator(collect(), $page, $perPage);
-        }
-
-        $query = Post::query()
-            ->with([
-                'organization.logoMedia',
-                'campaign',
-                'category',
-                'author.avatarMedia',
-                'images',
-                'videos',
-                'likes' => fn ($query) => $query->where('user_id', $viewer->id),
-                'saves' => fn ($query) => $query->where('user_id', $viewer->id),
-            ])
-            ->where('status', 'published')
+        $posts = Post::query()->with([
+            'organization.logoMedia', 'campaign', 'category', 'requiredCapabilities', 'author.avatarMedia', 'images', 'videos',
+            'likes' => fn ($query) => $query->where('user_id', $viewer->id),
+            'saves' => fn ($query) => $query->where('user_id', $viewer->id),
+        ])->where('status', 'published')
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->where(function ($query): void {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                $query->where('type', '!=', 'help_request')->orWhereNotIn('help_status', [
+                    HelpRequestStatus::Fulfilled->value,
+                    HelpRequestStatus::PartiallyFulfilled->value,
+                    HelpRequestStatus::NotFulfilled->value,
+                    HelpRequestStatus::Expired->value,
+                ]);
             });
+        if ($type === FeedType::Nearby) $posts->where('location', $location);
+        if ($type === FeedType::Urgent) $posts->whereIn('urgency', [PostUrgency::Important->value, PostUrgency::Urgent->value, PostUrgency::Critical->value]);
 
-        if ($type === FeedType::Nearby) {
-            $query->where('location', $location);
+        $candidateLimit = (int) config('recommendations.candidate_limit', 200);
+        $postCandidates = $posts->orderByDesc('published_at')->orderByDesc('created_at')->limit($candidateLimit)->get();
+
+        $campaignCandidates = collect();
+        if ($type !== FeedType::Urgent) {
+            $campaignQuery = Campaign::query()
+                ->with(['organization.logoMedia', 'imageMedia', 'category', 'creator'])
+                ->where('status', 'active')
+                ->where(function ($query): void {
+                    $query->whereNull('end_date')->orWhereDate('end_date', '>=', now()->toDateString());
+                });
+            if ($type === FeedType::Nearby) $campaignQuery->where('location', $location);
+            $campaignCandidates = $campaignQuery->orderByDesc('created_at')->limit($candidateLimit)->get();
         }
 
-        if ($type === FeedType::Urgent) {
-            $query->whereIn('urgency', [
-                PostUrgency::Important->value,
-                PostUrgency::Urgent->value,
-                PostUrgency::Critical->value,
-            ]);
-        }
-
-        $candidates = $query
-            ->orderByDesc('published_at')
-            ->orderByDesc('created_at')
-            ->limit((int) $this->settings->all()['candidateLimit'])
-            ->get();
-
-        $ranked = $this->rank($viewer, $candidates);
-
-        return $this->paginator($ranked, $page, $perPage);
+        return $this->paginator($this->rank($viewer, $postCandidates, $campaignCandidates), $page, $perPage);
     }
 
-    /** @return array<string, mixed> */
-    public function inspect(User $viewer, Post $post): array
+    private function rank(User $viewer, Collection $posts, Collection $campaigns): Collection
     {
         $preference = $viewer->preference()->first();
-        $interest = UserCategoryInterest::query()
-            ->where('user_id', $viewer->id)
-            ->where('category_id', $post->category_id)
-            ->first();
-        $followsAuthor = PublisherFollow::query()
-            ->where('follower_user_id', $viewer->id)
-            ->where('target_type', PublisherFollow::TARGET_USER)
-            ->where('target_id', (string) $post->author_id)
-            ->exists();
-        $followsOrganization = $post->organization_id !== null && PublisherFollow::query()
-            ->where('follower_user_id', $viewer->id)
-            ->where('target_type', PublisherFollow::TARGET_ORGANIZATION)
-            ->where('target_id', (string) $post->organization_id)
-            ->exists();
-        $viewCount = UserInteraction::query()
-            ->where('user_id', $viewer->id)
-            ->where('event_type', 'post_view')
-            ->where('subject_type', 'post')
-            ->where('subject_id', (string) $post->id)
-            ->where('occurred_at', '>=', now()->subDays(30))
-            ->count();
-
-        $scored = $this->score(
-            $viewer,
-            $post,
-            $preference?->intent,
-            $preference?->preferred_city ?? $viewer->city,
-            $interest,
-            $followsAuthor,
-            $followsOrganization,
-            $viewCount,
-        );
-
-        $personalizationReasons = array_intersect($scored['reasons'], [
-            'followed_publisher',
-            'explicit_interest',
-            'behavioral_interest',
-            'same_city',
-        ]);
-        $isExploration = $personalizationReasons === [];
-
-        $feedbackTypes = PostFeedback::query()
-            ->where('user_id', $viewer->id)
-            ->where('post_id', $post->id)
-            ->pluck('type')
-            ->all();
-        $publisherHidden = HiddenPublisher::query()
-            ->where('user_id', $viewer->id)
-            ->where('publisher_type', $post->organization_id !== null ? 'organization' : 'user')
-            ->where('publisher_id', (string) ($post->organization_id ?? $post->author_id))
-            ->exists();
-
-        $exclusions = [];
-        if ($post->status !== 'published') $exclusions[] = 'not_published';
-        if ($post->expires_at !== null && $post->expires_at->isPast()) $exclusions[] = 'expired';
-        if (in_array(PostFeedback::TYPE_NOT_INTERESTED, $feedbackTypes, true)) $exclusions[] = 'not_interested';
-        if (in_array(PostFeedback::TYPE_HIDE, $feedbackTypes, true)) $exclusions[] = 'hidden_post';
-        if ($publisherHidden) $exclusions[] = 'hidden_publisher';
-
-        return [
-            'user' => [
-                'id' => (string) $viewer->id,
-                'name' => (string) $viewer->name,
-                'intent' => $preference?->intent?->value ?? $preference?->intent,
-                'preferredCity' => $preference?->preferred_city ?? $viewer->city,
-            ],
-            'post' => [
-                'id' => (string) $post->id,
-                'title' => (string) $post->title,
-                'type' => (string) $post->type,
-                'status' => (string) $post->status,
-                'category' => $post->category ? ['id' => (string) $post->category->id, 'name' => (string) $post->category->name] : null,
-                'publisher' => $post->organization
-                    ? ['type' => 'organization', 'id' => (string) $post->organization->id, 'name' => (string) $post->organization->name]
-                    : ['type' => 'user', 'id' => (string) $post->author_id, 'name' => (string) ($post->author?->name ?? '')],
-                'location' => $post->location,
-                'urgency' => $post->urgency?->value ?? $post->urgency ?? 'normal',
-            ],
-            'eligible' => $exclusions === [],
-            'exclusions' => $exclusions,
-            'score' => $scored['score'],
-            'components' => $scored['components'],
-            'reasons' => $scored['reasons'],
-            'source' => $isExploration ? 'exploration' : 'for_you',
-            'isExploration' => $isExploration,
-            'feedbackRequested' => $isExploration,
-            'signals' => [
-                'followsAuthor' => $followsAuthor,
-                'followsOrganization' => $followsOrganization,
-                'explicitCategoryWeight' => (float) ($interest?->explicit_weight ?? 0),
-                'behavioralCategoryWeight' => (float) ($interest?->behavioral_weight ?? 0),
-                'viewsLast30Days' => $viewCount,
-                'publisherHidden' => $publisherHidden,
-            ],
-        ];
-    }
-
-    /** @param Collection<int, Post> $candidates */
-    private function rank(User $viewer, Collection $candidates): Collection
-    {
-        $preference = $viewer->preference()->first();
-        $interests = UserCategoryInterest::query()
-            ->where('user_id', $viewer->id)
-            ->get()
-            ->keyBy('category_id');
-        $follows = PublisherFollow::query()
-            ->where('follower_user_id', $viewer->id)
-            ->get();
+        $preferredCity = $preference?->preferred_city ?? $viewer->city;
+        $interests = UserCategoryInterest::query()->where('user_id', $viewer->id)->get()->keyBy('category_id');
+        $follows = PublisherFollow::query()->where('follower_user_id', $viewer->id)->get();
         $followedUsers = $follows->where('target_type', PublisherFollow::TARGET_USER)->pluck('target_id')->flip();
         $followedOrganizations = $follows->where('target_type', PublisherFollow::TARGET_ORGANIZATION)->pluck('target_id')->flip();
-        $excludedPostIds = PostFeedback::query()
-            ->where('user_id', $viewer->id)
-            ->whereIn('type', [PostFeedback::TYPE_NOT_INTERESTED, PostFeedback::TYPE_HIDE])
-            ->pluck('post_id')
-            ->flip();
-        $hiddenPublishers = HiddenPublisher::query()
-            ->where('user_id', $viewer->id)
-            ->get()
-            ->mapWithKeys(fn (HiddenPublisher $hidden): array => ["{$hidden->publisher_type}:{$hidden->publisher_id}" => true]);
-        $viewCounts = UserInteraction::query()
-            ->where('user_id', $viewer->id)
-            ->where('event_type', 'post_view')
-            ->where('subject_type', 'post')
-            ->where('occurred_at', '>=', now()->subDays(30))
-            ->selectRaw('subject_id, COUNT(*) as aggregate')
-            ->groupBy('subject_id')
-            ->pluck('aggregate', 'subject_id');
+        $excludedPostIds = PostFeedback::query()->where('user_id', $viewer->id)->whereIn('type', [PostFeedback::TYPE_NOT_INTERESTED, PostFeedback::TYPE_HIDE])->pluck('post_id')->flip();
+        $hiddenPublishers = HiddenPublisher::query()->where('user_id', $viewer->id)->get()->mapWithKeys(fn (HiddenPublisher $hidden): array => ["{$hidden->publisher_type}:{$hidden->publisher_id}" => true]);
+        $viewCounts = UserInteraction::query()->where('user_id', $viewer->id)->where('event_type', 'post_view')->where('subject_type', 'post')->where('occurred_at', '>=', now()->subDays(30))->selectRaw('subject_id, COUNT(*) as aggregate')->groupBy('subject_id')->pluck('aggregate', 'subject_id');
 
-        $ranked = $candidates
-            ->reject(function (Post $post) use ($excludedPostIds, $hiddenPublishers): bool {
-                if ($excludedPostIds->has((string) $post->id)) {
-                    return true;
-                }
-
-                return $hiddenPublishers->has($this->publisherKey($post));
-            })
-            ->map(function (Post $post) use ($viewer, $preference, $interests, $followedUsers, $followedOrganizations, $viewCounts): array {
-                $scored = $this->score(
+        $rankedPosts = $posts
+            ->reject(fn (Post $post): bool => $excludedPostIds->has((string) $post->id) || $hiddenPublishers->has($this->postPublisherKey($post)))
+            ->map(function (Post $post) use ($viewer, $preference, $preferredCity, $interests, $followedUsers, $followedOrganizations, $viewCounts): array {
+                $scored = $this->scorePost(
                     $viewer,
                     $post,
                     $preference?->intent,
-                    $preference?->preferred_city ?? $viewer->city,
+                    $preferredCity,
                     $interests->get($post->category_id),
                     $followedUsers->has((string) $post->author_id),
                     $post->organization_id !== null && $followedOrganizations->has((string) $post->organization_id),
                     (int) ($viewCounts[$post->id] ?? 0),
                 );
+                return ['contentType' => 'post', 'sortAt' => $post->published_at ?? $post->created_at, 'model' => $post, 'score' => $scored['score'], 'reasons' => $scored['reasons'], 'components' => $scored['components']];
+            });
 
-                $personalizationReasons = array_intersect($scored['reasons'], [
-                    'followed_publisher',
-                    'explicit_interest',
-                    'behavioral_interest',
-                    'same_city',
-                ]);
-                $isExploration = $personalizationReasons === [];
+        $rankedCampaigns = $campaigns
+            ->reject(fn (Campaign $campaign): bool => $hiddenPublishers->has('organization:'.$campaign->organization_id))
+            ->map(function (Campaign $campaign) use ($preference, $preferredCity, $interests, $followedOrganizations): array {
+                $scored = $this->scoreCampaign(
+                    $campaign,
+                    $preference?->intent,
+                    $preferredCity,
+                    $interests->get($campaign->category_id),
+                    $followedOrganizations->has((string) $campaign->organization_id),
+                );
+                return ['contentType' => 'campaign', 'sortAt' => $campaign->created_at, 'model' => $campaign, 'score' => $scored['score'], 'reasons' => $scored['reasons'], 'components' => $scored['components']];
+            });
 
-                return [
-                    'contentType' => 'post',
-                    'sortAt' => $post->published_at ?? $post->created_at,
-                    'model' => $post,
-                    'score' => $scored['score'],
-                    'reasons' => $scored['reasons'],
-                    'isExploration' => $isExploration,
-                ];
-            })
-            ->sort(function (array $left, array $right): int {
-                $scoreComparison = $right['score'] <=> $left['score'];
-                if ($scoreComparison !== 0) {
-                    return $scoreComparison;
-                }
-
-                return ($right['sortAt']?->getTimestamp() ?? 0) <=> ($left['sortAt']?->getTimestamp() ?? 0);
-            })
-            ->values();
-
-        return $this->applyExplorationMix($ranked, (float) $this->settings->all()['explorationRatio']);
+        return $rankedPosts->concat($rankedCampaigns)->sort(function (array $left, array $right): int {
+            $scoreComparison = $right['score'] <=> $left['score'];
+            return $scoreComparison !== 0 ? $scoreComparison : (($right['sortAt']?->getTimestamp() ?? 0) <=> ($left['sortAt']?->getTimestamp() ?? 0));
+        })->values();
     }
 
-    /**
-     * @return array{score: float, reasons: array<int, string>, components: array<string, float>}
-     */
-    private function score(
-        User $viewer,
-        Post $post,
-        ?UserIntent $intent,
-        ?string $preferredCity,
-        ?UserCategoryInterest $interest,
-        bool $followsAuthor,
-        bool $followsOrganization,
-        int $viewCount,
-    ): array {
-        $weights = $this->settings->all()['weights'];
+    private function scorePost(User $viewer, Post $post, ?UserIntent $intent, ?string $preferredCity, ?UserCategoryInterest $interest, bool $followsAuthor, bool $followsOrganization, int $viewCount): array
+    {
+        $weights = config('recommendations.weights');
         $components = [];
+        if ($followsAuthor || $followsOrganization) $components['followed_publisher'] = (float) $weights['followed_publisher'];
+        $this->applyInterestComponents($components, $interest, $weights);
+        if ($this->sameLocation($preferredCity, $post->location)) $components['same_city'] = (float) $weights['same_city'];
+        if ($this->postIntentMatches($intent, $post)) $components['intent_match'] = (float) $weights['intent_match'];
 
-        if ($followsAuthor || $followsOrganization) {
-            $components['followed_publisher'] = (float) $weights['followed_publisher'];
+        $requiredIds = $post->requiredCapabilities->pluck('id');
+        if ($requiredIds->isNotEmpty() && $viewer->capabilities()->whereIn('capabilities.id', $requiredIds)->exists()) {
+            $components['capability_match'] = (float) $weights['capability_match'];
         }
 
-        if ($interest?->explicit_weight > 0) {
-            $components['explicit_interest'] = (float) $weights['explicit_interest'];
-        }
-
-        if (($interest?->behavioral_weight ?? 0) > 0) {
-            $components['behavioral_interest'] = min(
-                (float) $weights['behavioral_interest'],
-                (float) $interest->behavioral_weight,
-            );
-        }
-
-        if ($this->sameLocation($preferredCity, $post->location)) {
-            $components['same_city'] = (float) $weights['same_city'];
-        }
-
-        if ($this->intentMatches($intent, $post)) {
-            $components['intent_match'] = (float) $weights['intent_match'];
-        }
-
-        $freshness = $this->freshnessScore($post);
-        if ($freshness > 0) {
-            $components['fresh'] = $freshness;
-        }
-
-        $urgency = $this->urgencyScore($post);
-        if ($urgency > 0) {
-            $components['urgent'] = $urgency;
-        }
-
-        $popularity = min(
-            (float) $this->settings->all()['popularityCap'],
-            floor(((int) $post->views_count + (int) $post->reactions_count) / 10),
-        );
-        if ($popularity > 0) {
-            $components['popular_near_you'] = $popularity;
-        }
-
-        if ($viewCount >= 3) {
-            $components['repeated_unengaged_view'] = (float) $weights['repeated_unengaged_view'];
-        }
-
-        $score = array_sum($components);
-        $positiveComponents = collect($components)->filter(fn (float $value): bool => $value > 0)->sortDesc();
-
-        return [
-            'score' => $score,
-            'reasons' => $positiveComponents->keys()->take(3)->values()->all(),
-            'components' => $components,
-        ];
+        $freshness = $this->freshnessScore($post->published_at ?? $post->created_at); if ($freshness > 0) $components['fresh'] = $freshness;
+        $urgency = $this->urgencyScore($post); if ($urgency > 0) $components['urgent'] = $urgency;
+        $popularity = min((float) config('recommendations.popularity_cap', 10), floor(((int) $post->views_count + (int) $post->reactions_count) / 10)); if ($popularity > 0) $components['popular_near_you'] = $popularity;
+        if ($viewCount >= 3) $components['repeated_unengaged_view'] = (float) $weights['repeated_unengaged_view'];
+        return $this->scoreResult($components);
     }
 
-    /** @param Collection<int, array<string, mixed>> $ranked */
-    private function applyExplorationMix(Collection $ranked, float $ratio): Collection
+    private function scoreCampaign(Campaign $campaign, ?UserIntent $intent, ?string $preferredCity, ?UserCategoryInterest $interest, bool $followsOrganization): array
     {
-        $ratio = max(0.0, min($ratio, 0.5));
-        if ($ratio <= 0 || $ranked->isEmpty()) {
-            return $ranked;
-        }
-
-        $personalized = $ranked->where('isExploration', false)->values();
-        $exploration = $ranked->where('isExploration', true)->values();
-        if ($personalized->isEmpty() || $exploration->isEmpty()) {
-            return $ranked;
-        }
-
-        $interval = max(2, (int) round(1 / $ratio));
-        $mixed = collect();
-        $personalizedIndex = 0;
-        $explorationIndex = 0;
-        $position = 1;
-
-        while ($mixed->count() < $ranked->count()) {
-            $useExploration = $position % $interval === 0 && $explorationIndex < $exploration->count();
-            if ($useExploration) {
-                $mixed->push($exploration[$explorationIndex++]);
-            } elseif ($personalizedIndex < $personalized->count()) {
-                $mixed->push($personalized[$personalizedIndex++]);
-            } elseif ($explorationIndex < $exploration->count()) {
-                $mixed->push($exploration[$explorationIndex++]);
-            } else {
-                break;
-            }
-            $position++;
-        }
-
-        return $mixed->values();
+        $weights = config('recommendations.weights');
+        $components = [];
+        if ($followsOrganization) $components['followed_publisher'] = (float) $weights['followed_publisher'];
+        $this->applyInterestComponents($components, $interest, $weights);
+        if ($this->sameLocation($preferredCity, $campaign->location)) $components['same_city'] = (float) $weights['same_city'];
+        if ($intent === null || $intent === UserIntent::Both || $intent === UserIntent::Giver) $components['intent_match'] = (float) $weights['intent_match'];
+        $freshness = $this->freshnessScore($campaign->created_at); if ($freshness > 0) $components['fresh'] = $freshness;
+        $popularity = min((float) config('recommendations.popularity_cap', 10), floor(((int) $campaign->donors_count + (int) $campaign->applicants_count) / 2));
+        if ($popularity > 0) $components['popular_near_you'] = $popularity;
+        return $this->scoreResult($components);
     }
 
-    private function intentMatches(?UserIntent $intent, Post $post): bool
+    private function applyInterestComponents(array &$components, ?UserCategoryInterest $interest, array $weights): void
     {
-        if ($intent === null || $intent === UserIntent::Both) {
-            return true;
-        }
+        if ($interest?->explicit_weight > 0) $components['explicit_interest'] = (float) $weights['explicit_interest'];
+        if (($interest?->behavioral_weight ?? 0) > 0) $components['behavioral_interest'] = min((float) $weights['behavioral_interest'], (float) $interest->behavioral_weight);
+    }
 
+    private function scoreResult(array $components): array
+    {
+        $positive = collect($components)->filter(fn (float $value): bool => $value > 0)->sortDesc();
+        return ['score' => array_sum($components), 'reasons' => $positive->keys()->take(3)->values()->all(), 'components' => $components];
+    }
+
+    private function postIntentMatches(?UserIntent $intent, Post $post): bool
+    {
+        if ($intent === null || $intent === UserIntent::Both) return true;
         return match ($intent) {
             UserIntent::Giver => in_array($post->type, ['help_request', 'volunteer_opportunity', 'donation_campaign'], true),
             UserIntent::Receiver => in_array($post->type, ['service_offer', 'awareness', 'campaign_update'], true),
@@ -375,63 +171,31 @@ class PersonalizedFeedService
         };
     }
 
-    private function freshnessScore(Post $post): float
+    private function freshnessScore(mixed $publishedAt): float
     {
-        $publishedAt = $post->published_at ?? $post->created_at;
-        if ($publishedAt === null) {
-            return 0;
-        }
-
+        if ($publishedAt === null) return 0;
         $hours = $publishedAt->diffInHours(now());
-
-        return match (true) {
-            $hours <= 6 => 10,
-            $hours <= 24 => 8,
-            $hours <= 72 => 5,
-            $hours <= 168 => 2,
-            default => 0,
-        };
+        return match (true) { $hours <= 6 => 10, $hours <= 24 => 8, $hours <= 72 => 5, $hours <= 168 => 2, default => 0 };
     }
 
     private function urgencyScore(Post $post): float
     {
         $urgency = $post->urgency?->value ?? $post->urgency ?? PostUrgency::Normal->value;
-
-        return match ($urgency) {
-            PostUrgency::Important->value => 4,
-            PostUrgency::Urgent->value => 8,
-            PostUrgency::Critical->value => 10,
-            default => 0,
-        };
+        return match ($urgency) { PostUrgency::Important->value => 4, PostUrgency::Urgent->value => 8, PostUrgency::Critical->value => 10, default => 0 };
     }
 
     private function sameLocation(?string $left, ?string $right): bool
     {
-        if (blank($left) || blank($right)) {
-            return false;
-        }
-
-        return Str::lower(trim($left)) === Str::lower(trim($right));
+        return ! blank($left) && ! blank($right) && Str::lower(trim($left)) === Str::lower(trim($right));
     }
 
-    private function publisherKey(Post $post): string
+    private function postPublisherKey(Post $post): string
     {
-        if ($post->organization_id !== null) {
-            return 'organization:'.$post->organization_id;
-        }
-
-        return 'user:'.$post->author_id;
+        return $post->organization_id !== null ? 'organization:'.$post->organization_id : 'user:'.$post->author_id;
     }
 
-    /** @param Collection<int, array<string, mixed>> $items */
     private function paginator(Collection $items, int $page, int $perPage): LengthAwarePaginator
     {
-        $total = $items->count();
-        $slice = $items->slice(($page - 1) * $perPage, $perPage)->values();
-
-        return new LengthAwarePaginator($slice, $total, $perPage, $page, [
-            'path' => request()->url(),
-            'query' => request()->query(),
-        ]);
+        return new LengthAwarePaginator($items->slice(($page - 1) * $perPage, $perPage)->values(), $items->count(), $perPage, $page, ['path' => request()->url(), 'query' => request()->query()]);
     }
 }

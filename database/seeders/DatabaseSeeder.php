@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(CapabilitySeeder::class);
         $this->call(JodCompleteDemoSeeder::class);
+        $this->call(PersonalizationDemoSeeder::class);
         $this->call(OrganizationRolePermissionSyncSeeder::class);
     }
 }

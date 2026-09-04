@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Campaign;
+use App\Models\Category;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
@@ -126,10 +127,13 @@ function campaignPayload(): array
 }
 function postPayload(): array
 {
+    $category = Category::factory()->create(['status' => 'active']);
+
     return [
         'title' => 'Post',
         'summary' => 'Summary',
         'type' => 'general',
+        'categoryId' => $category->id,
         'location' => 'Amman',
     ];
 }

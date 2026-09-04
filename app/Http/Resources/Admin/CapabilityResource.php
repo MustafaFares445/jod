@@ -16,8 +16,8 @@ class CapabilityResource extends JsonResource
             'name' => (string) $this->name,
             'slug' => (string) $this->slug,
             'status' => (string) $this->status,
-            'usersCount' => (int) ($this->users_count ?? $this->users()->count()),
             'sortOrder' => (int) $this->sort_order,
+            'usersCount' => (int) ($this->users_count ?? 0),
             'createdAt' => $this->created_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
         ];

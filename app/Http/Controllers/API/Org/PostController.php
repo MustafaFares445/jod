@@ -32,13 +32,13 @@ class PostController extends Controller
         $data = collect($request->validated())->merge(['status' => $request->validated('status', 'published')])->all();
         $post = $this->service->create(PostData::from($data), $this->organizationId());
         $post->update(['author_id' => auth()->id(), 'updated_by' => auth()->id()]);
-        return PostResource::make($post->refresh()->load(['campaign', 'images', 'videos', 'author', 'updatedBy']));
+        return PostResource::make($this->loadPost($post->refresh()));
     }
 
     public function show(Post $post): PostResource
     {
         $this->authorize('viewOrganization', $post);
-        return PostResource::make($post->loadMissing(['campaign', 'images', 'videos', 'author', 'updatedBy']));
+        return PostResource::make($this->loadPost($post));
     }
 
     public function update(PostRequest $request, Post $post): PostResource
@@ -54,10 +54,17 @@ class PostController extends Controller
                 'campaignTitle' => array_key_exists('campaignTitle', $validated) ? $validated['campaignTitle'] : $post->campaign?->title,
                 'status' => $post->status,
                 'audience' => $validated['audience'] ?? $post->audience ?? 'general',
+                'categoryId' => $validated['categoryId'] ?? $post->category_id,
+                'urgency' => $validated['urgency'] ?? ($post->urgency?->value ?? $post->urgency ?? 'normal'),
+                'urgencyReason' => array_key_exists('urgencyReason', $validated) ? $validated['urgencyReason'] : $post->urgency_reason,
+                'expiresAt' => array_key_exists('expiresAt', $validated) ? $validated['expiresAt'] : $post->expires_at?->toIso8601String(),
+                'requiredCapabilityIds' => array_key_exists('requiredCapabilityIds', $validated)
+                    ? $validated['requiredCapabilityIds']
+                    : $post->requiredCapabilities()->pluck('capabilities.id')->all(),
             ]), $this->organizationId());
             $post->update(['updated_by' => auth()->id()]);
         }
-        return PostResource::make($post->refresh()->load(['campaign', 'images', 'videos', 'author', 'updatedBy']));
+        return PostResource::make($this->loadPost($post->refresh()));
     }
 
     public function updateStatus(PostStatusRequest $request, Post $post): PostResource
@@ -65,13 +72,13 @@ class PostController extends Controller
         $status = (string) $request->validated('status');
         $this->authorize($status === 'published' ? 'publishOrganization' : 'updateOrganization', $post);
         $post = $this->service->updateStatus($post, $status);
-        return PostResource::make($post->refresh()->loadMissing(['images', 'author', 'updatedBy']));
+        return PostResource::make($this->loadPost($post->refresh()));
     }
 
     public function publish(Post $post): PostResource
     {
         $this->authorize('publishOrganization', $post);
-        return PostResource::make($this->service->publish($post)->loadMissing(['images', 'author', 'updatedBy']));
+        return PostResource::make($this->loadPost($this->service->publish($post)));
     }
 
     public function destroy(Post $post): Response
@@ -84,6 +91,11 @@ class PostController extends Controller
         }
         $this->service->delete($post);
         return response()->noContent();
+    }
+
+    private function loadPost(Post $post): Post
+    {
+        return $post->loadMissing(['organization', 'campaign', 'category', 'requiredCapabilities', 'images', 'videos', 'author', 'updatedBy', 'urgencyReviewedBy']);
     }
 
     private function organizationId(): string

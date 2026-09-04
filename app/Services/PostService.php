@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Data\PostData;
+use App\Enums\HelpRequestStatus;
 use App\Models\Campaign;
 use App\Models\Post;
 use App\Models\User;
@@ -79,11 +80,7 @@ class PostService
 
     public function findPublicPost(string $id, ?User $viewer = null): ?Post
     {
-        return Post::query()
-            ->with($this->mobileRelations($viewer))
-            ->whereKey($id)
-            ->where('status', 'published')
-            ->first();
+        return Post::query()->with($this->mobileRelations($viewer))->whereKey($id)->where('status', 'published')->first();
     }
 
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
@@ -93,19 +90,31 @@ class PostService
         $status = $params['status'] ?? $this->param($params, 'filter.status');
         $search = SearchFilter::fromArray($params);
         $audience = $params['audience'] ?? $this->param($params, 'filter.audience');
+        $categoryId = $params['categoryId'] ?? $this->param($params, 'filter.categoryId');
+        $urgency = $params['urgency'] ?? $this->param($params, 'filter.urgency');
+        $helpStatus = $params['helpStatus'] ?? $this->param($params, 'filter.helpStatus');
+        $location = $params['location'] ?? $this->param($params, 'filter.location');
+        $expired = filter_var($params['expired'] ?? $this->param($params, 'filter.expired'), FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
 
         $query = Post::query()
-            ->with(['campaign', 'images', 'videos'])
+            ->with(['campaign', 'category', 'requiredCapabilities', 'images', 'videos'])
             ->where('organization_id', $organizationId)
             ->when($status && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
             ->when($audience && $audience !== 'all', fn (Builder $builder) => $builder->where('audience', $audience))
             ->when(($type = $this->param($params, 'filter.type')) && $type !== 'all', fn (Builder $builder) => $builder->where('type', $type))
+            ->when(filled($categoryId), fn (Builder $builder) => $builder->where('category_id', $categoryId))
+            ->when(filled($urgency) && $urgency !== 'all', fn (Builder $builder) => $builder->where('urgency', $urgency))
+            ->when(filled($helpStatus) && $helpStatus !== 'all', fn (Builder $builder) => $builder->where('help_status', $helpStatus))
+            ->when(filled($location), fn (Builder $builder) => $builder->where('location', 'like', '%'.$location.'%'))
+            ->when($expired === true, fn (Builder $builder) => $builder->whereNotNull('expires_at')->where('expires_at', '<=', now()))
+            ->when($expired === false, fn (Builder $builder) => $builder->where(fn (Builder $q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now())))
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
                         ->orWhere('summary', 'like', "%{$search}%")
                         ->orWhere('content', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhereHas('category', fn (Builder $category) => $category->where('name', 'like', "%{$search}%"))
                         ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('title', 'like', "%{$search}%"));
                 });
             });
@@ -124,45 +133,53 @@ class PostService
 
     public function create(PostData $data, string $organizationId): Post
     {
-        $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
-
-        $post = Post::create([
-            'title' => $data->title,
-            'summary' => $data->summary,
-            'type' => $data->type,
-            'audience' => $data->audience,
-            'status' => $data->status,
-            'location' => $data->location,
-            'organization_id' => $organizationId,
-            'campaign_id' => $campaignId,
-            'published_at' => $data->status === 'published' ? now() : null,
-        ]);
-
-        if ($post->status === 'published') $this->notifyFollowersForPublishedPost($post);
-
-        return $post;
+        return DB::transaction(function () use ($data, $organizationId): Post {
+            $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
+            $post = Post::create([
+                'title' => $data->title,
+                'summary' => $data->summary,
+                'type' => $data->type,
+                'audience' => $data->audience,
+                'status' => $data->status,
+                'location' => $data->location,
+                'organization_id' => $organizationId,
+                'campaign_id' => $campaignId,
+                'category_id' => $data->categoryId,
+                'urgency' => $data->urgency,
+                'urgency_reason' => $data->urgencyReason,
+                'expires_at' => $data->expiresAt,
+                'published_at' => $data->status === 'published' ? now() : null,
+            ]);
+            $post->requiredCapabilities()->sync($data->type === 'help_request' ? $data->requiredCapabilityIds : []);
+            if ($post->status === 'published') $this->notifyFollowersForPublishedPost($post);
+            return $post;
+        });
     }
 
     public function update(Post $post, PostData $data, string $organizationId): Post
     {
-        $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
-
-        $post->update([
-            'title' => $data->title,
-            'summary' => $data->summary,
-            'type' => $data->type,
-            'audience' => $data->audience,
-            'location' => $data->location,
-            'campaign_id' => $campaignId,
-        ]);
-
-        return $post;
+        return DB::transaction(function () use ($post, $data, $organizationId): Post {
+            $campaignId = $this->resolveCampaignId($data->campaignTitle, $organizationId);
+            $post->update([
+                'title' => $data->title,
+                'summary' => $data->summary,
+                'type' => $data->type,
+                'audience' => $data->audience,
+                'location' => $data->location,
+                'campaign_id' => $campaignId,
+                'category_id' => $data->categoryId,
+                'urgency' => $data->urgency,
+                'urgency_reason' => $data->urgencyReason,
+                'expires_at' => $data->expiresAt,
+            ]);
+            $post->requiredCapabilities()->sync($data->type === 'help_request' ? $data->requiredCapabilityIds : []);
+            return $post;
+        });
     }
 
     public function updateStatus(Post $post, string $status): Post
     {
         if ($post->status === $status) return $post;
-
         return match ("{$post->status}:{$status}") {
             'draft:published' => $this->publish($post),
             'published:draft' => $this->unpublish($post),
@@ -174,7 +191,6 @@ class PostService
     {
         $published = $this->transitionStatus($post, 'draft', ['status' => 'published', 'published_at' => now()], 'Only draft posts can be published.');
         $this->notifyFollowersForPublishedPost($published);
-
         return $published;
     }
 
@@ -188,18 +204,12 @@ class PostService
     private function notifyFollowersForPublishedPost(Post $post): void
     {
         if (! filled($post->organization_id)) return;
-
         $title = filled($post->title) ? (string) $post->title : 'منشور جديد';
         $this->notifications->notifyPublisherFollowers(
-            'organization',
-            (string) $post->organization_id,
+            'organization', (string) $post->organization_id,
             \App\Enums\NotificationEventType::PostPublished,
-            'منشور جديد من منظمة تتابعها',
-            "نشرت منظمة تتابعها «{$title}».",
-            'post',
-            'normal',
-            $title,
-            '/posts/'.$post->id,
+            'منشور جديد من منظمة تتابعها', "نشرت منظمة تتابعها «{$title}».",
+            'post', 'normal', $title, '/posts/'.$post->id,
             (string) $post->organization_id,
             auth()->id() !== null ? (string) auth()->id() : null,
         );
@@ -246,7 +256,7 @@ class PostService
 
     private function mobileRelations(?User $viewer): array
     {
-        $relations = ['organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images', 'videos'];
+        $relations = ['organization.logoMedia', 'campaign', 'category', 'requiredCapabilities', 'author.avatarMedia', 'images', 'videos'];
         if ($viewer === null) return $relations;
         $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);

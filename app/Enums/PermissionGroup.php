@@ -19,8 +19,10 @@ enum PermissionGroup: string
     case ARTICLE = 'articles';
     case CATEGORY = 'categories';
     case CAPABILITY = 'capabilities';
+    case PERSONALIZATION = 'personalization';
     case RECOMMENDATION = 'recommendations';
-    case HELP_MATCH = 'help_matching';
+    case HELP_MATCHING = 'help_matching';
+    case HELP_REQUEST = 'help_requests';
     case AUDIT_LOG = 'audit_logs';
     case PLATFORM_SETTINGS = 'platform_settings';
     case ORG_CAMPAIGN = 'org.campaigns';
@@ -137,29 +139,50 @@ enum PermissionGroup: string
             self::CAPABILITY => new PermissionGroupDefinition(
                 label: 'طرق المساعدة',
                 module: PermissionModule::ADMIN,
-                description: 'إدارة طرق المساعدة المستخدمة في التخصيص.',
+                description: 'إدارة طرق وقدرات تقديم المساعدة.',
+                order: 96,
+            ),
+            self::PERSONALIZATION => new PermissionGroupDefinition(
+                label: 'التفضيلات والتخصيص',
+                module: PermissionModule::ADMIN,
+                description: 'عرض ملخصات تخصيص المستخدمين.',
                 order: 97,
-                actions: [PermissionAction::VIEW, PermissionAction::CREATE, PermissionAction::UPDATE],
+                actions: [PermissionAction::VIEW],
             ),
             self::RECOMMENDATION => new PermissionGroupDefinition(
-                label: 'التوصيات والتخصيص',
+                label: 'التوصيات',
                 module: PermissionModule::ADMIN,
-                description: 'عرض تحليلات التوصيات وفحصها وإدارة إعدادات التخصيص.',
+                description: 'عرض وتحليل وتشخيص نظام التوصيات.',
                 order: 98,
-                actions: [PermissionAction::VIEW, PermissionAction::UPDATE],
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::DIAGNOSTICS,
+                    PermissionAction::CONFIGURE,
+                ],
             ),
-            self::HELP_MATCH => new PermissionGroupDefinition(
+            self::HELP_MATCHING => new PermissionGroupDefinition(
                 label: 'مطابقة المساعدات',
                 module: PermissionModule::ADMIN,
-                description: 'متابعة عروض المساعدة ومسار المطابقة والتنبيهات المرتبطة بها.',
+                description: 'عرض وإدارة عمليات مطابقة طلبات المساعدة.',
                 order: 99,
-                actions: [PermissionAction::VIEW],
+                actions: [PermissionAction::VIEW, PermissionAction::MANAGE],
+            ),
+            self::HELP_REQUEST => new PermissionGroupDefinition(
+                label: 'دورة حياة طلبات المساعدة',
+                module: PermissionModule::ADMIN,
+                description: 'إدارة الاستعجال والنتائج والانتهاء لطلبات المساعدة.',
+                order: 100,
+                actions: [
+                    PermissionAction::VIEW,
+                    PermissionAction::MANAGE_URGENCY,
+                    PermissionAction::MANAGE_OUTCOMES,
+                ],
             ),
             self::AUDIT_LOG => new PermissionGroupDefinition(
                 label: 'سجل التدقيق',
                 module: PermissionModule::ADMIN,
                 description: 'عرض سجل عمليات المنصة.',
-                order: 100,
+                order: 105,
                 actions: [PermissionAction::VIEW],
             ),
             self::PLATFORM_SETTINGS => new PermissionGroupDefinition(

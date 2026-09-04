@@ -16,6 +16,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Services\Mobile\FollowingFeedService;
 use App\Services\Mobile\PersonalizedFeedService;
+use App\Services\Mobile\RecommendationImpressionService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -24,6 +25,7 @@ class FeedController extends Controller
     public function __construct(
         private readonly PersonalizedFeedService $personalizedFeed,
         private readonly FollowingFeedService $followingFeed,
+        private readonly RecommendationImpressionService $impressions,
     ) {}
 
     public function __invoke(FeedRequest $request): JsonResponse
@@ -39,6 +41,8 @@ class FeedController extends Controller
         $paginator = $type === FeedType::Following
             ? $this->followingFeed->paginate($viewer, $page, $perPage)
             : $this->personalizedFeed->paginate($viewer, $type, $page, $perPage);
+
+        $this->impressions->record($viewer, $type, $paginator->items());
 
         return MobileApiResponse::paginated(
             $paginator->through(fn (array $item): array => $this->serializeItem($request, $item, $type)),
