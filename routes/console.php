@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\HelpRequestStatus;
 use App\Enums\NotificationEventType;
 use App\Models\Campaign;
 use App\Models\Notification;
+use App\Models\Post;
 use App\Services\NotificationEventService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -65,6 +67,33 @@ Artisan::command('notifications:campaign-closing-soon', function (): void {
         });
 })->purpose('Send notifications for active campaigns ending in three days');
 
+Artisan::command('jod:expire-help-requests', function (): void {
+    $terminalStatuses = [
+        HelpRequestStatus::Fulfilled->value,
+        HelpRequestStatus::PartiallyFulfilled->value,
+        HelpRequestStatus::NotFulfilled->value,
+        HelpRequestStatus::Expired->value,
+    ];
+
+    $updated = Post::query()
+        ->where('type', 'help_request')
+        ->whereNotNull('expires_at')
+        ->where('expires_at', '<=', now())
+        ->where(function ($query) use ($terminalStatuses): void {
+            $query->whereNull('help_status')->orWhereNotIn('help_status', $terminalStatuses);
+        })
+        ->update([
+            'help_status' => HelpRequestStatus::Expired->value,
+            'updated_at' => now(),
+        ]);
+
+    $this->info("Expired {$updated} help request(s).");
+})->purpose('Mark elapsed help requests as expired');
+
 Schedule::command('notifications:campaign-closing-soon')
     ->dailyAt('09:00')
+    ->withoutOverlapping();
+
+Schedule::command('jod:expire-help-requests')
+    ->hourly()
     ->withoutOverlapping();

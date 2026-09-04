@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Enums\HelpRequestStatus;
 use App\Enums\MediaModel;
 use App\Models\Campaign;
 use App\Models\Media;
@@ -23,6 +24,15 @@ class FollowingFeedService
         $posts = Post::query()
             ->with(['organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images', 'videos'])
             ->where('status', 'published')
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->where(function ($query): void {
+                $query->where('type', '!=', 'help_request')->orWhereNotIn('help_status', [
+                    HelpRequestStatus::Fulfilled->value,
+                    HelpRequestStatus::PartiallyFulfilled->value,
+                    HelpRequestStatus::NotFulfilled->value,
+                    HelpRequestStatus::Expired->value,
+                ]);
+            })
             ->where(function ($query) use ($userIds, $organizationIds): void {
                 $query->where(function ($userPosts) use ($userIds): void {
                     $userPosts->whereNull('organization_id')->whereIn('author_id', $userIds);
@@ -34,6 +44,9 @@ class FollowingFeedService
         $campaigns = Campaign::query()
             ->with(['organization.logoMedia', 'imageMedia', 'category'])
             ->where('status', 'active')
+            ->where(function ($query): void {
+                $query->whereNull('end_date')->orWhereDate('end_date', '>=', now()->toDateString());
+            })
             ->whereIn('organization_id', $organizationIds)
             ->get()
             ->map(fn (Campaign $campaign) => ['contentType' => 'campaign', 'sortAt' => $campaign->created_at, 'model' => $campaign]);

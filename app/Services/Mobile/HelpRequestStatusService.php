@@ -11,7 +11,7 @@ use App\Models\Post;
 class HelpRequestStatusService
 {
     /**
-     * Recalculate a help request's operational state without overriding an explicit fulfilled state.
+     * Recalculate a help request's operational state without overriding an explicit terminal state.
      */
     public function sync(Post $post): Post
     {
@@ -19,8 +19,16 @@ class HelpRequestStatusService
             return $post;
         }
 
-        if ($post->help_status === HelpRequestStatus::Fulfilled) {
+        if ($post->help_status?->isTerminal()) {
             return $post;
+        }
+
+        if ($post->expires_at !== null && $post->expires_at->isPast()) {
+            $post->forceFill([
+                'help_status' => HelpRequestStatus::Expired,
+            ])->save();
+
+            return $post->refresh();
         }
 
         $hasProgressingOffer = $post->helpOffers()
@@ -42,14 +50,20 @@ class HelpRequestStatusService
 
     public function fulfill(Post $post): Post
     {
-        $post->forceFill(['help_status' => HelpRequestStatus::Fulfilled])->save();
+        $post->forceFill([
+            'help_status' => HelpRequestStatus::Fulfilled,
+            'fulfilled_at' => $post->fulfilled_at ?? now(),
+        ])->save();
 
         return $post->refresh();
     }
 
     public function reopen(Post $post): Post
     {
-        $post->forceFill(['help_status' => HelpRequestStatus::Open])->save();
+        $post->forceFill([
+            'help_status' => HelpRequestStatus::Open,
+            'fulfilled_at' => null,
+        ])->save();
 
         return $this->sync($post->refresh());
     }

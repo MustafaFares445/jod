@@ -17,10 +17,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'urgency', 'location',
+    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'urgency', 'urgency_reason', 'location',
     'organization_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
     'block_reason', 'views_count', 'reactions_count', 'applications_count',
-    'published_at', 'expires_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'blocked_at', 'blocked_by',
+    'published_at', 'expires_at', 'fulfilled_at', 'submitted_at', 'reviewed_at', 'reviewed_by',
+    'urgency_reviewed_at', 'urgency_reviewed_by', 'blocked_at', 'blocked_by',
 ])]
 class Post extends Model
 {
@@ -38,6 +39,10 @@ class Post extends Model
 
             if ($post->type !== 'help_request') {
                 $post->help_status = null;
+                $post->urgency = PostUrgency::Normal;
+                $post->urgency_reason = null;
+                $post->expires_at = null;
+                $post->fulfilled_at = null;
             }
         });
     }
@@ -49,8 +54,10 @@ class Post extends Model
             'urgency' => PostUrgency::class,
             'published_at' => 'datetime',
             'expires_at' => 'datetime',
+            'fulfilled_at' => 'datetime',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'urgency_reviewed_at' => 'datetime',
             'blocked_at' => 'datetime',
         ];
     }
@@ -61,26 +68,20 @@ class Post extends Model
     public function author(): BelongsTo { return $this->belongsTo(User::class, 'author_id'); }
     public function updatedBy(): BelongsTo { return $this->belongsTo(User::class, 'updated_by'); }
     public function reviewedBy(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
+    public function urgencyReviewedBy(): BelongsTo { return $this->belongsTo(User::class, 'urgency_reviewed_by'); }
     public function blockedBy(): BelongsTo { return $this->belongsTo(User::class, 'blocked_by'); }
 
-    public function media(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->orderBy('prop')->orderBy('position')->orderBy('id');
-    }
-
-    public function images(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'images')->orderBy('position')->orderBy('id');
-    }
-
-    public function videos(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'videos')->orderBy('position')->orderBy('id');
-    }
-
+    public function media(): HasMany { return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->orderBy('prop')->orderBy('position')->orderBy('id'); }
+    public function images(): HasMany { return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'images')->orderBy('position')->orderBy('id'); }
+    public function videos(): HasMany { return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'videos')->orderBy('position')->orderBy('id'); }
     public function likes(): HasMany { return $this->hasMany(PostLike::class); }
     public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
     public function helpOffers(): HasMany { return $this->hasMany(HelpOffer::class); }
+
+    public function requiredCapabilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Capability::class, 'post_capabilities')->withTimestamps();
+    }
 
     public function activeHelpOffers(): HasMany
     {

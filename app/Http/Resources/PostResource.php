@@ -27,15 +27,23 @@ class PostResource extends JsonResource
             'type' => $this->type,
             'audience' => $this->audience ?? 'general',
             'status' => $this->status,
+            'helpStatus' => $this->help_status?->value ?? $this->help_status,
+            'urgency' => $this->urgency?->value ?? $this->urgency ?? 'normal',
+            'urgencyReason' => $this->urgency_reason,
+            'expiresAt' => $this->expires_at?->toIso8601String(),
+            'fulfilledAt' => $this->fulfilled_at?->toIso8601String(),
+            'helpOffersCount' => isset($this->help_offers_count) ? (int) $this->help_offers_count : null,
+            'activeHelpOffersCount' => isset($this->active_help_offers_count) ? (int) $this->active_help_offers_count : null,
+            'completedHelpOffersCount' => isset($this->completed_help_offers_count) ? (int) $this->completed_help_offers_count : null,
+            'urgencyReviewedAt' => $this->urgency_reviewed_at?->toIso8601String(),
+            'urgencyReviewedBy' => $this->whenLoaded('urgencyReviewedBy', fn () => $this->userSummary($this->urgencyReviewedBy)),
             'organizationName' => $this->organization?->name,
             'authorName' => $this->whenLoaded('author', fn () => $this->author?->name),
             'author' => $this->whenLoaded('author', fn () => $this->userSummary($this->author)),
             'publisher' => $this->publisherSummary(),
             'categoryId' => $this->category_id ? (string) $this->category_id : null,
-            'category' => $this->whenLoaded('category', fn () => $this->category ? [
-                'id' => (string) $this->category->id,
-                'name' => (string) $this->category->name,
-            ] : null),
+            'category' => $this->whenLoaded('category', fn () => $this->category ? ['id' => (string) $this->category->id, 'name' => (string) $this->category->name] : null),
+            'requiredCapabilities' => $this->whenLoaded('requiredCapabilities', fn () => $this->requiredCapabilities->map(fn ($capability) => ['id' => (string) $capability->id, 'name' => (string) $capability->name, 'slug' => (string) $capability->slug])->values()),
             'updatedBy' => $this->whenLoaded('updatedBy', fn () => $this->userSummary($this->updatedBy)),
             'updatedByName' => $this->whenLoaded('updatedBy', fn () => $this->updatedBy?->name),
             'location' => $this->location,
@@ -61,21 +69,9 @@ class PostResource extends JsonResource
 
     private function publisherSummary(): array
     {
-        if ($this->relationLoaded('organization') && $this->organization !== null) {
-            return [
-                'id' => (string) $this->organization->id,
-                'name' => (string) $this->organization->name,
-                'type' => 'organization',
-            ];
-        }
-
+        if ($this->relationLoaded('organization') && $this->organization !== null) return ['id' => (string) $this->organization->id, 'name' => (string) $this->organization->name, 'type' => 'organization'];
         $author = $this->relationLoaded('author') ? $this->author : null;
-
-        return [
-            'id' => $author?->id ? (string) $author->id : (string) ($this->author_id ?? ''),
-            'name' => (string) ($author?->name ?? $this->author_name ?? 'JOD'),
-            'type' => $author?->user_type === 'admin' ? 'admin' : 'user',
-        ];
+        return ['id' => $author?->id ? (string) $author->id : (string) ($this->author_id ?? ''), 'name' => (string) ($author?->name ?? $this->author_name ?? 'JOD'), 'type' => $author?->user_type === 'admin' ? 'admin' : 'user'];
     }
 
     private function userSummary(?User $user): ?array
