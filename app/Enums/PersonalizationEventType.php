@@ -25,4 +25,8 @@ enum PersonalizationEventType: string
     case NotInterested = 'not_interested';
     case HidePost = 'hide_post';
     case HidePublisher = 'hide_publisher';
+    case ExplorationImpression = 'exploration_impression';
+    case ExplorationPromptShown = 'exploration_prompt_shown';
+    case ExplorationInterested = 'exploration_interested';
+    case ExplorationNotInterested = 'exploration_not_interested';
 }
