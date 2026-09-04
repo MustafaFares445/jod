@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Enums\FeedType;
+use App\Enums\MediaModel;
 use App\Models\Campaign;
 use App\Models\Media;
 use App\Models\Post;
@@ -34,7 +35,8 @@ class RecommendationImpressionService
                 $publisherId = $model->organization_id;
                 $city = $model->location;
             } elseif ($model instanceof Media) {
-                $publisherType = $model->model_type === 'organization' ? 'organization' : null;
+                $modelType = $model->model_type instanceof MediaModel ? $model->model_type->value : (string) $model->model_type;
+                $publisherType = $modelType === MediaModel::ORGANIZATION->value ? 'organization' : null;
                 $publisherId = $publisherType ? $model->model_id : null;
             }
             return [
