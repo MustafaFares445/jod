@@ -14,21 +14,28 @@ class RecommendationConfigurationService
 
     public function defaults(): array
     {
-        return (array) config('recommendations', []);
+        $defaults = require config_path('recommendations.php');
+
+        return is_array($defaults) ? $defaults : [];
     }
 
     public function overrides(): array
     {
         $value = PlatformSetting::get(self::SETTING_KEY, []);
+
         return is_array($value) ? $value : [];
     }
 
     public function effective(): array
     {
-        return Cache::remember(self::CACHE_KEY, 60, fn (): array => array_replace_recursive(
-            $this->defaults(),
-            $this->overrides(),
-        ));
+        return Cache::remember(
+            self::CACHE_KEY,
+            60,
+            fn (): array => array_replace_recursive(
+                $this->defaults(),
+                $this->overrides(),
+            ),
+        );
     }
 
     public function get(string $key, mixed $default = null): mixed
@@ -63,6 +70,7 @@ class RecommendationConfigurationService
     {
         PlatformSetting::query()->where('key', self::SETTING_KEY)->delete();
         Cache::forget(self::CACHE_KEY);
+
         return $this->effective();
     }
 }
