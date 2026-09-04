@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Enums\NotificationEventType;
+use App\Enums\PersonalizationEventType;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\Report;
@@ -15,7 +16,10 @@ use Illuminate\Support\Facades\DB;
 
 class PostEngagementService
 {
-    public function __construct(private readonly NotificationEventService $notifications) {}
+    public function __construct(
+        private readonly NotificationEventService $notifications,
+        private readonly InteractionTrackingService $interactions,
+    ) {}
 
     /** @return array{postId: string, isLiked: bool, likesCount: int} */
     public function like(User $user, string $postId): array
@@ -31,6 +35,7 @@ class PostEngagementService
             if ($like->wasRecentlyCreated) {
                 $post->increment('reactions_count');
                 $post->refresh();
+                $this->interactions->recordPostAction($user, PersonalizationEventType::PostLike, $post);
             }
 
             return $this->likeState($post, true);
@@ -63,10 +68,14 @@ class PostEngagementService
         return DB::transaction(function () use ($user, $postId): array {
             $post = $this->findPublicPostForUpdate($postId);
 
-            SavedPost::query()->firstOrCreate([
+            $saved = SavedPost::query()->firstOrCreate([
                 'user_id' => $user->id,
                 'post_id' => $post->id,
             ]);
+
+            if ($saved->wasRecentlyCreated) {
+                $this->interactions->recordPostAction($user, PersonalizationEventType::PostSave, $post);
+            }
 
             return $this->saveState($post, true);
         });
@@ -87,9 +96,7 @@ class PostEngagementService
         });
     }
 
-    /**
-     * @param  array{reason: string, details?: string|null}  $data
-     */
+    /** @param array{reason: string, details?: string|null} $data */
     public function report(User $user, string $postId, array $data): Report
     {
         return DB::transaction(function () use ($user, $postId, $data): Report {
@@ -114,13 +121,11 @@ class PostEngagementService
                     'reasonLabel' => $label,
                     'details' => $details,
                 ],
-                'timeline' => [
-                    [
-                        'action' => 'created',
-                        'actorId' => $user->id,
-                        'at' => now()->toIso8601String(),
-                    ],
-                ],
+                'timeline' => [[
+                    'action' => 'created',
+                    'actorId' => $user->id,
+                    'at' => now()->toIso8601String(),
+                ]],
             ]);
 
             $this->notifications->notifyUser(
@@ -153,6 +158,7 @@ class PostEngagementService
     private function findPublicPostForUpdate(string $postId): Post
     {
         return Post::query()
+            ->with('category')
             ->whereKey($postId)
             ->where('status', 'published')
             ->lockForUpdate()
