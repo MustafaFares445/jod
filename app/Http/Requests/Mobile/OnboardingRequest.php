@@ -20,24 +20,25 @@ class OnboardingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'intent' => ['required', Rule::enum(UserIntent::class)],
-            'categoryIds' => ['required', 'array', 'min:1', 'max:20'],
+            'skipped' => ['sometimes', 'boolean'],
+            'intent' => ['sometimes', 'nullable', Rule::enum(UserIntent::class)],
+            'categoryIds' => ['sometimes', 'nullable', 'array', 'max:20'],
             'categoryIds.*' => [
                 'string',
                 'distinct',
                 Rule::exists('categories', 'id')->where(fn ($query) => $query->where('status', 'active')),
             ],
-            'capabilityIds' => ['sometimes', 'array', 'max:20'],
+            'capabilityIds' => ['sometimes', 'nullable', 'array', 'max:20'],
             'capabilityIds.*' => [
                 'string',
                 'distinct',
                 Rule::exists('capabilities', 'id')->where(fn ($query) => $query->where('status', 'active')),
             ],
-            'preferredCity' => ['nullable', 'string', 'max:100'],
-            'preferredGovernorate' => ['nullable', 'string', 'max:100'],
-            'preferredRadiusKm' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'preferredCity' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'preferredGovernorate' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'preferredRadiusKm' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:500'],
             'remoteHelpEnabled' => ['sometimes', 'boolean'],
-            'availabilityStatus' => ['nullable', Rule::enum(AvailabilityStatus::class)],
+            'availabilityStatus' => ['sometimes', 'nullable', Rule::enum(AvailabilityStatus::class)],
         ];
     }
 }
