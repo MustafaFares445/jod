@@ -6,9 +6,10 @@ use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\CampaignApplicationController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
+use App\Http\Controllers\Mobile\FeedController;
 use App\Http\Controllers\Mobile\FollowController;
-use App\Http\Controllers\Mobile\HelpOfferController;
 use App\Http\Controllers\Mobile\GroupController;
+use App\Http\Controllers\Mobile\HelpOfferController;
 use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
 use App\Http\Controllers\Mobile\MediaDiscoveryController;
@@ -17,13 +18,15 @@ use App\Http\Controllers\Mobile\MediaStreamController;
 use App\Http\Controllers\Mobile\MobileDeviceController;
 use App\Http\Controllers\Mobile\NotificationController;
 use App\Http\Controllers\Mobile\OrganizationVideoController;
+use App\Http\Controllers\Mobile\PersonalizationController;
 use App\Http\Controllers\Mobile\PostEngagementController;
 use App\Http\Controllers\Mobile\PostImageController;
 use App\Http\Controllers\Mobile\PostReportController;
+use App\Http\Controllers\Mobile\RecommendationFeedbackController;
 use App\Http\Controllers\Mobile\SavedPostController;
 use App\Http\Controllers\Mobile\SearchController;
-use App\Http\Controllers\Mobile\UserPostController;
 use App\Http\Controllers\Mobile\UserAvatarController;
+use App\Http\Controllers\Mobile\UserPostController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->name('auth.')->group(function (): void {
@@ -35,6 +38,7 @@ Route::prefix('auth')->name('auth.')->group(function (): void {
     Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('reset-password');
 });
 
+Route::get('onboarding/options', [PersonalizationController::class, 'options'])->middleware('throttle:60,1')->name('onboarding.options');
 Route::get('search', SearchController::class)->middleware('throttle:60,1')->name('search');
 
 Route::prefix('discovery')->name('discovery.')->middleware('throttle:60,1')->group(function (): void {
@@ -82,8 +86,15 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     });
 
+    Route::get('feed', FeedController::class)->name('feed');
+
     Route::prefix('me')->name('me.')->group(function (): void {
         Route::get('/', [MeController::class, 'profile'])->name('profile');
+        Route::post('onboarding', [PersonalizationController::class, 'onboarding'])->name('onboarding');
+        Route::get('preferences', [PersonalizationController::class, 'show'])->name('preferences.show');
+        Route::patch('preferences', [PersonalizationController::class, 'updatePreferences'])->name('preferences.update');
+        Route::patch('interests', [PersonalizationController::class, 'updateInterests'])->name('interests.update');
+        Route::patch('capabilities', [PersonalizationController::class, 'updateCapabilities'])->name('capabilities.update');
         Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
         Route::get('groups', [GroupController::class, 'mine'])->name('groups.index');
         Route::get('posts/{post}', [UserPostController::class, 'show'])->name('posts.show');
@@ -129,6 +140,8 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
     Route::get('discovery/following', [FollowController::class, 'feed'])->name('discovery.following');
     Route::put('publishers/{targetType}/{targetId}/follow', [FollowController::class, 'follow'])->name('publishers.follow');
     Route::delete('publishers/{targetType}/{targetId}/follow', [FollowController::class, 'unfollow'])->name('publishers.unfollow');
+    Route::post('publishers/{targetType}/{targetId}/hide', [RecommendationFeedbackController::class, 'hidePublisher'])->name('publishers.hide');
+    Route::delete('publishers/{targetType}/{targetId}/hide', [RecommendationFeedbackController::class, 'unhidePublisher'])->name('publishers.unhide');
 
     Route::post('campaigns/{campaign}/applications', [CampaignApplicationController::class, 'store'])->name('campaigns.applications.store');
     Route::post('campaigns/{campaign}/donations', [DonationController::class, 'store'])->name('campaigns.donations.store');
@@ -154,6 +167,9 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
     Route::prefix('posts')->name('posts.')->group(function (): void {
         Route::post('/', [UserPostController::class, 'store'])->name('store');
         Route::patch('{post}', [UserPostController::class, 'update'])->name('update');
+        Route::post('{post}/view', [RecommendationFeedbackController::class, 'view'])->name('view');
+        Route::post('{post}/not-interested', [RecommendationFeedbackController::class, 'notInterested'])->name('not-interested');
+        Route::post('{post}/hide', [RecommendationFeedbackController::class, 'hidePost'])->name('hide');
         Route::post('{post}/help-offers', [HelpOfferController::class, 'store'])->name('help-offers.store');
         Route::patch('{post}/help-status', [HelpOfferController::class, 'updatePostStatus'])->name('help-status.update');
 

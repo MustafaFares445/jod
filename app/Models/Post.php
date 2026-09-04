@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\HelpOfferStatus;
 use App\Enums\HelpRequestStatus;
+use App\Enums\PostUrgency;
 use App\Models\Concerns\HasStringPrimaryKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,10 +17,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'location',
+    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'urgency', 'location',
     'organization_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
     'block_reason', 'views_count', 'reactions_count', 'applications_count',
-    'published_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'blocked_at', 'blocked_by',
+    'published_at', 'expires_at', 'submitted_at', 'reviewed_at', 'reviewed_by', 'blocked_at', 'blocked_by',
 ])]
 class Post extends Model
 {
@@ -45,7 +46,9 @@ class Post extends Model
     {
         return [
             'help_status' => HelpRequestStatus::class,
+            'urgency' => PostUrgency::class,
             'published_at' => 'datetime',
+            'expires_at' => 'datetime',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'blocked_at' => 'datetime',
