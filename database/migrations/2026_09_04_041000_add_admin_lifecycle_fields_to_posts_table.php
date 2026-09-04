@@ -12,7 +12,7 @@ return new class extends Migration
     {
         Schema::table('posts', function (Blueprint $table): void {
             $table->text('urgency_reason')->nullable()->after('urgency');
-            $table->uuid('urgency_reviewed_by')->nullable()->index()->after('urgency_reason');
+            $table->string('urgency_reviewed_by')->nullable()->index()->after('urgency_reason');
             $table->timestamp('urgency_reviewed_at')->nullable()->after('urgency_reviewed_by');
             $table->timestamp('fulfilled_at')->nullable()->index()->after('expires_at');
             $table->foreign('urgency_reviewed_by')->references('id')->on('users')->nullOnDelete();
@@ -23,7 +23,12 @@ return new class extends Migration
     {
         Schema::table('posts', function (Blueprint $table): void {
             $table->dropForeign(['urgency_reviewed_by']);
-            $table->dropColumn(['urgency_reason', 'urgency_reviewed_by', 'urgency_reviewed_at', 'fulfilled_at']);
+            $table->dropColumn([
+                'urgency_reason',
+                'urgency_reviewed_by',
+                'urgency_reviewed_at',
+                'fulfilled_at',
+            ]);
         });
     }
 };
