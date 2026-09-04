@@ -9,6 +9,7 @@ use App\Notifications\AccountVerificationCodeNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Throwable;
 
 class AccountVerificationService
 {
@@ -45,7 +46,25 @@ class AccountVerificationService
             ],
         );
 
-        $user->notify(new AccountVerificationCodeNotification($code, $expiresInMinutes));
+        try {
+            $user->notify(new AccountVerificationCodeNotification($code, $expiresInMinutes));
+        } catch (Throwable $exception) {
+            if ($record === null) {
+                DB::table('account_verification_tokens')->where('email', $user->email)->delete();
+            } else {
+                DB::table('account_verification_tokens')->updateOrInsert(
+                    ['email' => $user->email],
+                    [
+                        'token' => $record->token,
+                        'attempts' => (int) $record->attempts,
+                        'created_at' => $record->created_at,
+                        'last_sent_at' => $record->last_sent_at,
+                    ],
+                );
+            }
+
+            throw $exception;
+        }
 
         return [
             'sent' => true,
@@ -96,10 +115,5 @@ class AccountVerificationService
         DB::table('account_verification_tokens')->where('email', $user->email)->delete();
 
         return 'verified';
-    }
-
-    public function clear(User $user): void
-    {
-        DB::table('account_verification_tokens')->where('email', $user->email)->delete();
     }
 }
