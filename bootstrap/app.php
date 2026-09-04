@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Middleware\ApplyRecommendationConfiguration;
 use App\Http\Middleware\EnsureAccessToken;
 use App\Http\Middleware\EnsureApiResponseMessage;
 use App\Http\Middleware\EnsureMobileAccessToken;
@@ -24,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             __DIR__.'/../routes/company_auth.php',
             __DIR__.'/../routes/org_donation_workflow.php',
             __DIR__.'/../routes/mobile_account_verification.php',
+            __DIR__.'/../routes/mobile_recommendation.php',
         ],
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
@@ -36,7 +36,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->api(append: [
-            ApplyRecommendationConfiguration::class,
             EnsureApiResponseMessage::class,
         ]);
     })
