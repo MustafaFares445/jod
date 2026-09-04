@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Mobile;
 
 use App\Enums\HelpRequestStatus;
+use App\Enums\PersonalizationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\HelpOfferCancelRequest;
 use App\Http\Requests\Mobile\HelpOfferHistoryRequest;
@@ -14,17 +15,32 @@ use App\Http\Requests\Mobile\HelpRequestStatusRequest;
 use App\Http\Resources\Mobile\HelpOfferResource;
 use App\Models\User;
 use App\Services\Mobile\HelpOfferService;
+use App\Services\Mobile\InteractionTrackingService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class HelpOfferController extends Controller
 {
-    public function __construct(private readonly HelpOfferService $service) {}
+    public function __construct(
+        private readonly HelpOfferService $service,
+        private readonly InteractionTrackingService $interactions,
+    ) {}
 
     public function store(HelpOfferRequest $request, string $post): JsonResponse
     {
-        $offer = $this->service->create($this->user($request), $post, $request->validated());
+        $user = $this->user($request);
+        $offer = $this->service->create($user, $post, $request->validated());
+        $offer->loadMissing('post.category');
+
+        if ($offer->post !== null) {
+            $this->interactions->recordPostAction(
+                $user,
+                PersonalizationEventType::HelpOffer,
+                $offer->post,
+                ['offerId' => (string) $offer->id],
+            );
+        }
 
         return MobileApiResponse::success(
             HelpOfferResource::make($offer)->resolve($request),
