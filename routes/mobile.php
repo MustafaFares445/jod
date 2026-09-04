@@ -9,6 +9,7 @@ use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\FeedController;
 use App\Http\Controllers\Mobile\FollowController;
 use App\Http\Controllers\Mobile\GroupController;
+use App\Http\Controllers\Mobile\GenericRecommendationFeedbackController;
 use App\Http\Controllers\Mobile\HelpOfferController;
 use App\Http\Controllers\Mobile\LookupController;
 use App\Http\Controllers\Mobile\MeController;
@@ -87,6 +88,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
     });
 
     Route::get('feed', FeedController::class)->name('feed');
+    Route::post('recommendation-feedback', GenericRecommendationFeedbackController::class)->name('recommendation-feedback.store');
 
     Route::prefix('me')->name('me.')->group(function (): void {
         Route::get('/', [MeController::class, 'profile'])->name('profile');

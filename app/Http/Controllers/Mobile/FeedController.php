@@ -67,6 +67,9 @@ class FeedController extends Controller
             'publishedAt' => $item['sortAt']?->toIso8601String(),
             'recommendation' => [
                 'reasons' => $item['reasons'] ?? ($type === FeedType::Following ? ['followed_publisher'] : []),
+                'source' => ($item['isExploration'] ?? false) ? 'exploration' : $type->value,
+                'isExploration' => (bool) ($item['isExploration'] ?? false),
+                'feedbackRequested' => $type === FeedType::ForYou && (bool) ($item['isExploration'] ?? false),
             ],
             'content' => $content,
         ];

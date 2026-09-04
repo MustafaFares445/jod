@@ -30,6 +30,7 @@ return [
         'help_offer' => 10,
         'volunteer_application' => 10,
         'campaign_donation' => 15,
+        'interested' => 6,
         'not_interested' => -15,
     ],
 

@@ -22,6 +22,7 @@ enum PersonalizationEventType: string
     case ReelWatch = 'reel_watch';
     case ReelComplete = 'reel_complete';
     case ReelReplay = 'reel_replay';
+    case Interested = 'interested';
     case NotInterested = 'not_interested';
     case HidePost = 'hide_post';
     case HidePublisher = 'hide_publisher';

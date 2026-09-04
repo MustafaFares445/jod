@@ -120,12 +120,21 @@ class PersonalizedFeedService
                     (int) ($viewCounts[$post->id] ?? 0),
                 );
 
+                $personalizationReasons = array_intersect($scored['reasons'], [
+                    'followed_publisher',
+                    'explicit_interest',
+                    'behavioral_interest',
+                    'same_city',
+                ]);
+                $isExploration = $personalizationReasons === [];
+
                 return [
                     'contentType' => 'post',
                     'sortAt' => $post->published_at ?? $post->created_at,
                     'model' => $post,
                     'score' => $scored['score'],
                     'reasons' => $scored['reasons'],
+                    'isExploration' => $isExploration,
                 ];
             })
             ->sort(function (array $left, array $right): int {

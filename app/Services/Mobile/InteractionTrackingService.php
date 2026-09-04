@@ -47,6 +47,11 @@ class InteractionTrackingService
         return true;
     }
 
+    public function markInterested(User $user, Post $post): void
+    {
+        $this->record($user, PersonalizationEventType::Interested, $post->loadMissing('category'));
+    }
+
     public function markNotInterested(User $user, Post $post): void
     {
         $feedback = PostFeedback::query()->firstOrCreate([
