@@ -13,6 +13,8 @@ use App\Models\Campaign;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Mobile\InteractionTrackingService;
+use App\Services\Mobile\SearchInterestResolver;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -20,6 +22,11 @@ use Illuminate\Http\JsonResponse;
 
 class SearchController extends Controller
 {
+    public function __construct(
+        private readonly SearchInterestResolver $interestResolver,
+        private readonly InteractionTrackingService $interactions,
+    ) {}
+
     public function __invoke(GlobalSearchRequest $request): JsonResponse
     {
         $params = $request->validated();
@@ -27,6 +34,11 @@ class SearchController extends Controller
         $limit = (int) ($params['perType'] ?? 10);
         $viewer = $request->user('sanctum');
         $viewer = $viewer instanceof User ? $viewer : null;
+
+        $search = trim((string) ($params['search'] ?? ''));
+        if ($viewer !== null && $search !== '') {
+            $this->interactions->recordSearch($viewer, $search, $this->interestResolver->resolve($search));
+        }
 
         [$accounts, $accountsTotal] = in_array($type, ['all', 'accounts'], true)
             ? $this->accounts($params, $limit, $request)
@@ -174,7 +186,12 @@ class SearchController extends Controller
             ])
             ->where('status', 'active')
             ->when($location !== '', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
-            ->when($category !== '', fn (Builder $builder) => $builder->where('category', $category))
+            ->when($category !== '', function (Builder $builder) use ($category): void {
+                $builder->where(function (Builder $inner) use ($category): void {
+                    $inner->where('category_id', $category)
+                        ->orWhereHas('category', fn (Builder $categoryQuery) => $categoryQuery->where('name', $category));
+                });
+            })
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('title', 'like', "%{$search}%")
@@ -200,9 +217,7 @@ class SearchController extends Controller
     {
         $relations = ['organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images'];
 
-        if ($viewer === null) {
-            return $relations;
-        }
+        if ($viewer === null) return $relations;
 
         $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
