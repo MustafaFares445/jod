@@ -71,24 +71,17 @@ class Post extends Model
     public function urgencyReviewedBy(): BelongsTo { return $this->belongsTo(User::class, 'urgency_reviewed_by'); }
     public function blockedBy(): BelongsTo { return $this->belongsTo(User::class, 'blocked_by'); }
 
-    public function media(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->orderBy('prop')->orderBy('position')->orderBy('id');
-    }
-
-    public function images(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'images')->orderBy('position')->orderBy('id');
-    }
-
-    public function videos(): HasMany
-    {
-        return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'videos')->orderBy('position')->orderBy('id');
-    }
-
+    public function media(): HasMany { return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->orderBy('prop')->orderBy('position')->orderBy('id'); }
+    public function images(): HasMany { return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'images')->orderBy('position')->orderBy('id'); }
+    public function videos(): HasMany { return $this->hasMany(Media::class, 'model_id')->where('model_type', 'post')->where('prop', 'videos')->orderBy('position')->orderBy('id'); }
     public function likes(): HasMany { return $this->hasMany(PostLike::class); }
     public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
     public function helpOffers(): HasMany { return $this->hasMany(HelpOffer::class); }
+
+    public function requiredCapabilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Capability::class, 'post_capabilities')->withTimestamps();
+    }
 
     public function activeHelpOffers(): HasMany
     {

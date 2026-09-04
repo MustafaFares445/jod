@@ -40,6 +40,7 @@ class PostResource extends JsonResource
             'publisher' => $this->publisherSummary(),
             'categoryId' => $this->category_id ? (string) $this->category_id : null,
             'category' => $this->whenLoaded('category', fn () => $this->category ? ['id' => (string) $this->category->id, 'name' => (string) $this->category->name] : null),
+            'requiredCapabilities' => $this->whenLoaded('requiredCapabilities', fn () => $this->requiredCapabilities->map(fn ($capability) => ['id' => (string) $capability->id, 'name' => (string) $capability->name, 'slug' => (string) $capability->slug])->values()),
             'updatedBy' => $this->whenLoaded('updatedBy', fn () => $this->userSummary($this->updatedBy)),
             'updatedByName' => $this->whenLoaded('updatedBy', fn () => $this->updatedBy?->name),
             'location' => $this->location,
