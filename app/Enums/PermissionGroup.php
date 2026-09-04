@@ -20,6 +20,7 @@ enum PermissionGroup: string
     case CATEGORY = 'categories';
     case CAPABILITY = 'capabilities';
     case RECOMMENDATION = 'recommendations';
+    case HELP_MATCH = 'help_matching';
     case AUDIT_LOG = 'audit_logs';
     case PLATFORM_SETTINGS = 'platform_settings';
     case ORG_CAMPAIGN = 'org.campaigns';
@@ -145,6 +146,13 @@ enum PermissionGroup: string
                 module: PermissionModule::ADMIN,
                 description: 'عرض تحليلات التوصيات وبيانات التخصيص.',
                 order: 98,
+                actions: [PermissionAction::VIEW],
+            ),
+            self::HELP_MATCH => new PermissionGroupDefinition(
+                label: 'مطابقة المساعدات',
+                module: PermissionModule::ADMIN,
+                description: 'متابعة عروض المساعدة ومسار المطابقة والتنبيهات المرتبطة بها.',
+                order: 99,
                 actions: [PermissionAction::VIEW],
             ),
             self::AUDIT_LOG => new PermissionGroupDefinition(

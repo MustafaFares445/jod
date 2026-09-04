@@ -7,6 +7,8 @@ use App\Http\Controllers\API\Admin\BadgeController;
 use App\Http\Controllers\API\Admin\CategoryController;
 use App\Http\Controllers\API\Admin\CapabilityController;
 use App\Http\Controllers\API\Admin\HelpRequestLifecycleController;
+use App\Http\Controllers\API\Admin\HelpMatchController;
+use App\Http\Controllers\API\Admin\HelpMonitoringAnalyticsController;
 use App\Http\Controllers\API\Admin\RecommendationAnalyticsController;
 use App\Http\Controllers\API\Admin\GroupController as AdminGroupController;
 use App\Http\Controllers\API\Admin\NotificationController;
@@ -109,11 +111,14 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('categories/{category}/status', CategoryController::class.'@updateStatus');
         Route::apiResource('capabilities', CapabilityController::class)->except(['destroy']);
         Route::patch('posts/{post}/lifecycle', HelpRequestLifecycleController::class);
+        Route::get('help-matches', [HelpMatchController::class, 'index']);
+        Route::get('help-matches/{helpMatch}', [HelpMatchController::class, 'show']);
 
         Route::get('overview', OverviewController::class);
         Route::get('analytics/kpis', AnalyticsController::class.'@kpis');
         Route::get('analytics/weekly', AnalyticsController::class.'@weekly');
         Route::get('analytics/recommendations', RecommendationAnalyticsController::class);
+        Route::get('analytics/help-matching', HelpMonitoringAnalyticsController::class);
 
         Route::get('audit-logs', AuditLogController::class.'@index');
 
