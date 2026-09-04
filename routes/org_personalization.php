@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('capabilities/brief', [BriefController::class, 'capabilities']);
 Route::get('help-requests', [HelpRequestController::class, 'index']);
+Route::get('help-requests/{post}/offers', [HelpOfferController::class, 'forRequest']);
 Route::get('help-requests/{post}', [HelpRequestController::class, 'show']);
 Route::patch('help-requests/{post}/status', [HelpRequestController::class, 'updateStatus']);
 Route::get('help-offers', [HelpOfferController::class, 'index']);
