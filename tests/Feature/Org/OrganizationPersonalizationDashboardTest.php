@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\PersonalizationEventType;
 use App\Models\Capability;
 use App\Models\Category;
+use App\Models\HelpOffer;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
 use App\Models\OrganizationStaff;
@@ -91,6 +92,46 @@ test('organization help request listing is isolated from other organizations', f
 
     $response = $this->actingAs($this->owner)->getJson('/api/v1/org/help-requests');
     $response->assertOk()->assertJsonFragment(['id' => (string) $mine->id])->assertJsonMissing(['id' => (string) $foreign->id]);
+});
+
+test('request scoped help offers never leak offers from another request', function () {
+    $mine = Post::factory()->create([
+        'organization_id' => $this->organization->id,
+        'author_id' => $this->owner->id,
+        'type' => 'help_request',
+        'status' => 'published',
+        'help_status' => 'open',
+    ]);
+    $otherRequest = Post::factory()->create([
+        'organization_id' => $this->organization->id,
+        'author_id' => $this->owner->id,
+        'type' => 'help_request',
+        'status' => 'published',
+        'help_status' => 'open',
+    ]);
+    $helper = User::factory()->create();
+    $otherHelper = User::factory()->create();
+
+    $mineOffer = HelpOffer::query()->create([
+        'post_id' => $mine->id,
+        'helper_user_id' => $helper->id,
+        'post_owner_id' => $this->owner->id,
+        'type' => 'transport',
+        'status' => 'pending',
+    ]);
+    $otherOffer = HelpOffer::query()->create([
+        'post_id' => $otherRequest->id,
+        'helper_user_id' => $otherHelper->id,
+        'post_owner_id' => $this->owner->id,
+        'type' => 'teaching',
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($this->owner)
+        ->getJson("/api/v1/org/help-requests/{$mine->id}/offers")
+        ->assertOk()
+        ->assertJsonFragment(['id' => (string) $mineOffer->id])
+        ->assertJsonMissing(['id' => (string) $otherOffer->id]);
 });
 
 test('organization can close its help request with an outcome', function () {
