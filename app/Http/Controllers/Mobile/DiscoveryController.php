@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Mobile;
 
+use App\Enums\PersonalizationEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\CampaignDiscoveryRequest;
 use App\Http\Requests\Mobile\CategoryDiscoveryRequest;
@@ -17,6 +18,7 @@ use App\Models\Article;
 use App\Models\User;
 use App\Services\CampaignService;
 use App\Services\CategoryService;
+use App\Services\Mobile\InteractionTrackingService;
 use App\Services\Mobile\PublisherService;
 use App\Services\PostService;
 use App\Support\Mobile\MobileApiResponse;
@@ -30,14 +32,9 @@ class DiscoveryController extends Controller
         private readonly CampaignService $campaignService,
         private readonly CategoryService $categoryService,
         private readonly PublisherService $publisherService,
+        private readonly InteractionTrackingService $interactions,
     ) {}
 
-    /**
-     * List public posts for mobile discovery.
-     *
-     * Public endpoint. A valid Sanctum bearer token is optional and enriches
-     * viewer-specific fields such as saved and application state.
-     */
     public function posts(PostDiscoveryRequest $request): JsonResponse
     {
         $viewer = $this->viewer($request);
@@ -50,9 +47,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * Show a public post for mobile discovery.
-     */
     public function showPost(Request $request, string $post): JsonResponse
     {
         $viewer = $this->viewer($request);
@@ -62,6 +56,10 @@ class DiscoveryController extends Controller
             return MobileApiResponse::error('not_found', 'The requested post could not be found.', null, 404);
         }
 
+        if ($viewer !== null) {
+            $this->interactions->recordPostOpen($viewer, $model);
+        }
+
         return MobileApiResponse::success(
             MobileHomePostResource::make($model)->resolve($request),
             'Post retrieved successfully.',
@@ -69,11 +67,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * Show a public mobile publisher. Publisher identifiers are the same values
-     * emitted by MobileHomePostResource: organization id for organization-backed
-     * content, otherwise the individual author id.
-     */
     public function showPublisher(Request $request, string $publisher): JsonResponse
     {
         $model = $this->publisherService->findPublic($publisher);
@@ -91,9 +84,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * List public posts belonging to one mobile publisher.
-     */
     public function publisherPosts(PostDiscoveryRequest $request, string $publisher): JsonResponse
     {
         $model = $this->publisherService->findPublic($publisher);
@@ -112,9 +102,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * List active campaigns for mobile discovery.
-     */
     public function campaigns(CampaignDiscoveryRequest $request): JsonResponse
     {
         $paginator = $this->campaignService->discover($request->validated());
@@ -127,9 +114,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * Show an active campaign for mobile discovery.
-     */
     public function showCampaign(Request $request, string $campaign): JsonResponse
     {
         $model = $this->campaignService->findPublicCampaign($campaign);
@@ -139,6 +123,15 @@ class DiscoveryController extends Controller
         }
 
         $viewer = $this->viewer($request);
+        if ($viewer !== null) {
+            $this->interactions->recordCampaignAction(
+                $viewer,
+                PersonalizationEventType::CampaignOpen,
+                $model,
+                [],
+                (int) config('recommendations.open_dedupe_minutes', 30),
+            );
+        }
 
         return MobileApiResponse::success(
             MobileCampaignResource::make($model)->resolve($request),
@@ -147,9 +140,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * List published articles for mobile discovery.
-     */
     public function articles(Request $request): JsonResponse
     {
         $perPage = max(1, min((int) $request->query('perPage', 20), 100));
@@ -176,9 +166,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * Show one published article for mobile discovery.
-     */
     public function showArticle(Request $request, string $article): JsonResponse
     {
         $model = Article::query()
@@ -199,9 +186,6 @@ class DiscoveryController extends Controller
         );
     }
 
-    /**
-     * List active categories for mobile discovery.
-     */
     public function categories(CategoryDiscoveryRequest $request): JsonResponse
     {
         $paginator = $this->categoryService->discover($request->validated());
@@ -221,14 +205,10 @@ class DiscoveryController extends Controller
         return $user instanceof User ? $user : null;
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function viewerMeta(?User $user): array
     {
-        if ($user === null) {
-            return [];
-        }
+        if ($user === null) return [];
 
         return [
             'viewer' => [
