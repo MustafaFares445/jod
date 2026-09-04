@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApplyRecommendationConfiguration;
 use App\Http\Middleware\EnsureAccessToken;
 use App\Http\Middleware\EnsureApiResponseMessage;
 use App\Http\Middleware\EnsureMobileAccessToken;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->api(append: [
+            ApplyRecommendationConfiguration::class,
             EnsureApiResponseMessage::class,
         ]);
     })
