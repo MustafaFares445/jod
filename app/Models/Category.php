@@ -24,11 +24,13 @@ class Category extends Model
         'id',
         'name',
         'description',
+        'keywords',
         'status',
         'usage_count',
     ];
 
     protected $casts = [
+        'keywords' => 'array',
         'usage_count' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

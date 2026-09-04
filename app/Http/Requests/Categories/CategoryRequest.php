@@ -18,6 +18,8 @@ class CategoryRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255', 'unique:categories,name,'.($this->category->id ?? 'NULL')],
             'description' => ['required', 'string', 'max:1000'],
+            'keywords' => ['sometimes', 'array', 'max:30'],
+            'keywords.*' => ['string', 'max:80', 'distinct'],
             'status' => ['sometimes', 'in:active,inactive'],
         ];
     }
