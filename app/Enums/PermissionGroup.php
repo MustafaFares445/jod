@@ -152,12 +152,11 @@ enum PermissionGroup: string
             self::RECOMMENDATION => new PermissionGroupDefinition(
                 label: 'التوصيات',
                 module: PermissionModule::ADMIN,
-                description: 'عرض وتحليل وتشخيص نظام التوصيات.',
+                description: 'عرض وتحليل وتشخيص نظام التوصيات فقط. أوزان الترتيب مُدارة من الكود وليست قابلة للتعديل من لوحة التحكم.',
                 order: 98,
                 actions: [
                     PermissionAction::VIEW,
                     PermissionAction::DIAGNOSTICS,
-                    PermissionAction::CONFIGURE,
                 ],
             ),
             self::HELP_MATCHING => new PermissionGroupDefinition(
