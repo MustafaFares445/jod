@@ -5,6 +5,7 @@ use App\Enums\NotificationEventType;
 use App\Models\Campaign;
 use App\Models\Notification;
 use App\Models\Post;
+use App\Services\Mobile\BehavioralInterestDecayService;
 use App\Services\NotificationEventService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -90,10 +91,19 @@ Artisan::command('jod:expire-help-requests', function (): void {
     $this->info("Expired {$updated} help request(s).");
 })->purpose('Mark elapsed help requests as expired');
 
+Artisan::command('jod:decay-behavioral-interests', function (): void {
+    $updated = app(BehavioralInterestDecayService::class)->decay();
+    $this->info("Decayed {$updated} behavioral interest record(s).");
+})->purpose('Decay stale behavioral recommendation interests');
+
 Schedule::command('notifications:campaign-closing-soon')
     ->dailyAt('09:00')
     ->withoutOverlapping();
 
 Schedule::command('jod:expire-help-requests')
     ->hourly()
+    ->withoutOverlapping();
+
+Schedule::command('jod:decay-behavioral-interests')
+    ->weekly()
     ->withoutOverlapping();
