@@ -14,12 +14,15 @@ use App\Models\PublisherFollow;
 use App\Models\User;
 use App\Models\UserCategoryInterest;
 use App\Models\UserInteraction;
+use App\Services\RecommendationSettingsService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class PersonalizedFeedService
 {
+    public function __construct(private readonly RecommendationSettingsService $settings) {}
+
     public function paginate(User $viewer, FeedType $type, int $page = 1, int $perPage = 20): LengthAwarePaginator
     {
         $page = max(1, $page);
@@ -61,12 +64,113 @@ class PersonalizedFeedService
         $candidates = $query
             ->orderByDesc('published_at')
             ->orderByDesc('created_at')
-            ->limit((int) config('recommendations.candidate_limit', 200))
+            ->limit((int) $this->settings->all()['candidateLimit'])
             ->get();
 
         $ranked = $this->rank($viewer, $candidates);
 
         return $this->paginator($ranked, $page, $perPage);
+    }
+
+    /** @return array<string, mixed> */
+    public function inspect(User $viewer, Post $post): array
+    {
+        $preference = $viewer->preference()->first();
+        $interest = UserCategoryInterest::query()
+            ->where('user_id', $viewer->id)
+            ->where('category_id', $post->category_id)
+            ->first();
+        $followsAuthor = PublisherFollow::query()
+            ->where('follower_user_id', $viewer->id)
+            ->where('target_type', PublisherFollow::TARGET_USER)
+            ->where('target_id', (string) $post->author_id)
+            ->exists();
+        $followsOrganization = $post->organization_id !== null && PublisherFollow::query()
+            ->where('follower_user_id', $viewer->id)
+            ->where('target_type', PublisherFollow::TARGET_ORGANIZATION)
+            ->where('target_id', (string) $post->organization_id)
+            ->exists();
+        $viewCount = UserInteraction::query()
+            ->where('user_id', $viewer->id)
+            ->where('event_type', 'post_view')
+            ->where('subject_type', 'post')
+            ->where('subject_id', (string) $post->id)
+            ->where('occurred_at', '>=', now()->subDays(30))
+            ->count();
+
+        $scored = $this->score(
+            $viewer,
+            $post,
+            $preference?->intent,
+            $preference?->preferred_city ?? $viewer->city,
+            $interest,
+            $followsAuthor,
+            $followsOrganization,
+            $viewCount,
+        );
+
+        $personalizationReasons = array_intersect($scored['reasons'], [
+            'followed_publisher',
+            'explicit_interest',
+            'behavioral_interest',
+            'same_city',
+        ]);
+        $isExploration = $personalizationReasons === [];
+
+        $feedbackTypes = PostFeedback::query()
+            ->where('user_id', $viewer->id)
+            ->where('post_id', $post->id)
+            ->pluck('type')
+            ->all();
+        $publisherHidden = HiddenPublisher::query()
+            ->where('user_id', $viewer->id)
+            ->where('publisher_type', $post->organization_id !== null ? 'organization' : 'user')
+            ->where('publisher_id', (string) ($post->organization_id ?? $post->author_id))
+            ->exists();
+
+        $exclusions = [];
+        if ($post->status !== 'published') $exclusions[] = 'not_published';
+        if ($post->expires_at !== null && $post->expires_at->isPast()) $exclusions[] = 'expired';
+        if (in_array(PostFeedback::TYPE_NOT_INTERESTED, $feedbackTypes, true)) $exclusions[] = 'not_interested';
+        if (in_array(PostFeedback::TYPE_HIDE, $feedbackTypes, true)) $exclusions[] = 'hidden_post';
+        if ($publisherHidden) $exclusions[] = 'hidden_publisher';
+
+        return [
+            'user' => [
+                'id' => (string) $viewer->id,
+                'name' => (string) $viewer->name,
+                'intent' => $preference?->intent?->value ?? $preference?->intent,
+                'preferredCity' => $preference?->preferred_city ?? $viewer->city,
+            ],
+            'post' => [
+                'id' => (string) $post->id,
+                'title' => (string) $post->title,
+                'type' => (string) $post->type,
+                'status' => (string) $post->status,
+                'category' => $post->category ? ['id' => (string) $post->category->id, 'name' => (string) $post->category->name] : null,
+                'publisher' => $post->organization
+                    ? ['type' => 'organization', 'id' => (string) $post->organization->id, 'name' => (string) $post->organization->name]
+                    : ['type' => 'user', 'id' => (string) $post->author_id, 'name' => (string) ($post->author?->name ?? '')],
+                'location' => $post->location,
+                'urgency' => $post->urgency?->value ?? $post->urgency ?? 'normal',
+            ],
+            'eligible' => $exclusions === [],
+            'exclusions' => $exclusions,
+            'score' => $scored['score'],
+            'components' => $scored['components'],
+            'reasons' => $scored['reasons'],
+            'source' => $isExploration ? 'exploration' : 'for_you',
+            'isExploration' => $isExploration,
+            'feedbackRequested' => $isExploration,
+            'signals' => [
+                'followsAuthor' => $followsAuthor,
+                'followsOrganization' => $followsOrganization,
+                'explicitCategoryWeight' => (float) ($interest?->explicit_weight ?? 0),
+                'behavioralCategoryWeight' => (float) ($interest?->behavioral_weight ?? 0),
+                'viewsLast30Days' => $viewCount,
+                'publisherHidden' => $publisherHidden,
+            ],
+        ];
     }
 
     /** @param Collection<int, Post> $candidates */
@@ -100,7 +204,7 @@ class PersonalizedFeedService
             ->groupBy('subject_id')
             ->pluck('aggregate', 'subject_id');
 
-        return $candidates
+        $ranked = $candidates
             ->reject(function (Post $post) use ($excludedPostIds, $hiddenPublishers): bool {
                 if ($excludedPostIds->has((string) $post->id)) {
                     return true;
@@ -146,10 +250,12 @@ class PersonalizedFeedService
                 return ($right['sortAt']?->getTimestamp() ?? 0) <=> ($left['sortAt']?->getTimestamp() ?? 0);
             })
             ->values();
+
+        return $this->applyExplorationMix($ranked, (float) $this->settings->all()['explorationRatio']);
     }
 
     /**
-     * @return array{score: float, reasons: array<int, string>}
+     * @return array{score: float, reasons: array<int, string>, components: array<string, float>}
      */
     private function score(
         User $viewer,
@@ -161,7 +267,7 @@ class PersonalizedFeedService
         bool $followsOrganization,
         int $viewCount,
     ): array {
-        $weights = config('recommendations.weights');
+        $weights = $this->settings->all()['weights'];
         $components = [];
 
         if ($followsAuthor || $followsOrganization) {
@@ -198,7 +304,7 @@ class PersonalizedFeedService
         }
 
         $popularity = min(
-            (float) config('recommendations.popularity_cap', 10),
+            (float) $this->settings->all()['popularityCap'],
             floor(((int) $post->views_count + (int) $post->reactions_count) / 10),
         );
         if ($popularity > 0) {
@@ -215,7 +321,45 @@ class PersonalizedFeedService
         return [
             'score' => $score,
             'reasons' => $positiveComponents->keys()->take(3)->values()->all(),
+            'components' => $components,
         ];
+    }
+
+    /** @param Collection<int, array<string, mixed>> $ranked */
+    private function applyExplorationMix(Collection $ranked, float $ratio): Collection
+    {
+        $ratio = max(0.0, min($ratio, 0.5));
+        if ($ratio <= 0 || $ranked->isEmpty()) {
+            return $ranked;
+        }
+
+        $personalized = $ranked->where('isExploration', false)->values();
+        $exploration = $ranked->where('isExploration', true)->values();
+        if ($personalized->isEmpty() || $exploration->isEmpty()) {
+            return $ranked;
+        }
+
+        $interval = max(2, (int) round(1 / $ratio));
+        $mixed = collect();
+        $personalizedIndex = 0;
+        $explorationIndex = 0;
+        $position = 1;
+
+        while ($mixed->count() < $ranked->count()) {
+            $useExploration = $position % $interval === 0 && $explorationIndex < $exploration->count();
+            if ($useExploration) {
+                $mixed->push($exploration[$explorationIndex++]);
+            } elseif ($personalizedIndex < $personalized->count()) {
+                $mixed->push($personalized[$personalizedIndex++]);
+            } elseif ($explorationIndex < $exploration->count()) {
+                $mixed->push($exploration[$explorationIndex++]);
+            } else {
+                break;
+            }
+            $position++;
+        }
+
+        return $mixed->values();
     }
 
     private function intentMatches(?UserIntent $intent, Post $post): bool

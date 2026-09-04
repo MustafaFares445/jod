@@ -10,6 +10,8 @@ use App\Http\Controllers\API\Admin\HelpRequestLifecycleController;
 use App\Http\Controllers\API\Admin\HelpMatchController;
 use App\Http\Controllers\API\Admin\HelpMonitoringAnalyticsController;
 use App\Http\Controllers\API\Admin\RecommendationAnalyticsController;
+use App\Http\Controllers\API\Admin\RecommendationInspectorController;
+use App\Http\Controllers\API\Admin\RecommendationSettingsController;
 use App\Http\Controllers\API\Admin\GroupController as AdminGroupController;
 use App\Http\Controllers\API\Admin\NotificationController;
 use App\Http\Controllers\API\Admin\OrganizationController;
@@ -118,6 +120,9 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::get('analytics/kpis', AnalyticsController::class.'@kpis');
         Route::get('analytics/weekly', AnalyticsController::class.'@weekly');
         Route::get('analytics/recommendations', RecommendationAnalyticsController::class);
+        Route::get('recommendations/inspector', RecommendationInspectorController::class);
+        Route::get('recommendations/settings', [RecommendationSettingsController::class, 'index']);
+        Route::patch('recommendations/settings', [RecommendationSettingsController::class, 'update']);
         Route::get('analytics/help-matching', HelpMonitoringAnalyticsController::class);
 
         Route::get('audit-logs', AuditLogController::class.'@index');

@@ -144,9 +144,9 @@ enum PermissionGroup: string
             self::RECOMMENDATION => new PermissionGroupDefinition(
                 label: 'التوصيات والتخصيص',
                 module: PermissionModule::ADMIN,
-                description: 'عرض تحليلات التوصيات وبيانات التخصيص.',
+                description: 'عرض تحليلات التوصيات وفحصها وإدارة إعدادات التخصيص.',
                 order: 98,
-                actions: [PermissionAction::VIEW],
+                actions: [PermissionAction::VIEW, PermissionAction::UPDATE],
             ),
             self::HELP_MATCH => new PermissionGroupDefinition(
                 label: 'مطابقة المساعدات',
