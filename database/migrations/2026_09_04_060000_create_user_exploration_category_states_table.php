@@ -24,10 +24,17 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
             $table->foreign('category_id')->references('id')->on('categories')->cascadeOnDelete();
         });
+
+        Schema::table('recommendation_impressions', function (Blueprint $table): void {
+            $table->boolean('is_exploration')->default(false)->index()->after('reasons');
+        });
     }
 
     public function down(): void
     {
+        Schema::table('recommendation_impressions', function (Blueprint $table): void {
+            $table->dropColumn('is_exploration');
+        });
         Schema::dropIfExists('user_exploration_category_states');
     }
 };
