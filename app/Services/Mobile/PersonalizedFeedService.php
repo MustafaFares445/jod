@@ -126,6 +126,7 @@ class PersonalizedFeedService
                     'model' => $post,
                     'score' => $scored['score'],
                     'reasons' => $scored['reasons'],
+                    'components' => $scored['components'],
                 ];
             })
             ->sort(function (array $left, array $right): int {
@@ -140,7 +141,7 @@ class PersonalizedFeedService
     }
 
     /**
-     * @return array{score: float, reasons: array<int, string>}
+     * @return array{score: float, reasons: array<int, string>, components: array<string, float>}
      */
     private function score(
         User $viewer,
@@ -206,6 +207,7 @@ class PersonalizedFeedService
         return [
             'score' => $score,
             'reasons' => $positiveComponents->keys()->take(3)->values()->all(),
+            'components' => $components,
         ];
     }
 
