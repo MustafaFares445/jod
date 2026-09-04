@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Models\Campaign;
+use App\Models\Category;
 use App\Models\Organization;
+use App\Models\Post;
 use App\Models\PublisherFollow;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -14,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class FollowService
 {
+    public function __construct(private readonly InteractionTrackingService $interactions) {}
+
     public function resolveTarget(string $type, string $id): Organization|User
     {
         if (! in_array($type, [PublisherFollow::TARGET_USER, PublisherFollow::TARGET_ORGANIZATION], true)) {
@@ -43,13 +48,22 @@ class FollowService
             'target_id' => $id,
         ];
 
-        PublisherFollow::query()->insertOrIgnore([[
+        $created = PublisherFollow::query()->insertOrIgnore([[
             'id' => (string) Str::uuid(),
             ...$attributes,
             'notification_level' => PublisherFollow::NOTIFICATION_ALL,
             'created_at' => now(),
             'updated_at' => now(),
-        ]]);
+        ]]) > 0;
+
+        if ($created) {
+            $this->interactions->recordPublisherFollow(
+                $actor,
+                $type,
+                $id,
+                $this->dominantCategory($type, $id),
+            );
+        }
 
         return PublisherFollow::query()->where($attributes)->firstOrFail();
     }
@@ -117,9 +131,7 @@ class FollowService
                 ? $users->get((string) $follow->target_id)
                 : $organizations->get((string) $follow->target_id);
 
-            if ($target === null) {
-                return null;
-            }
+            if ($target === null) return null;
 
             $count = $counts->get($follow->target_type.':'.$follow->target_id);
             $target->setAttribute('followers_count', (int) ($count?->aggregate ?? 0));
@@ -129,6 +141,46 @@ class FollowService
         })->filter()->values());
 
         return $paginator;
+    }
+
+    private function dominantCategory(string $type, string $id): ?Category
+    {
+        $categoryIds = collect();
+
+        $postQuery = Post::query()
+            ->where('status', 'published')
+            ->whereNotNull('category_id')
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->limit(10);
+
+        if ($type === PublisherFollow::TARGET_ORGANIZATION) {
+            $categoryIds = $categoryIds->concat(
+                (clone $postQuery)->where('organization_id', $id)->pluck('category_id')
+            );
+            $categoryIds = $categoryIds->concat(
+                Campaign::query()
+                    ->where('organization_id', $id)
+                    ->where('status', 'active')
+                    ->whereNotNull('category_id')
+                    ->orderByDesc('created_at')
+                    ->limit(10)
+                    ->pluck('category_id')
+            );
+        } else {
+            $categoryIds = $categoryIds->concat(
+                $postQuery->whereNull('organization_id')->where('author_id', $id)->pluck('category_id')
+            );
+        }
+
+        $dominantId = $categoryIds
+            ->filter()
+            ->countBy()
+            ->sortDesc()
+            ->keys()
+            ->first();
+
+        return $dominantId !== null ? Category::query()->find((string) $dominantId) : null;
     }
 
     private function targets(Collection $follows, string $type, string $model, string $relation): Collection
