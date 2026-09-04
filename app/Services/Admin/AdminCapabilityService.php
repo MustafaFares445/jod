@@ -14,7 +14,8 @@ class AdminCapabilityService
 
     public function create(User $actor, array $data): Capability
     {
-        $capability = Capability::query()->create($this->attributes($data));
+        $attributes = $this->attributes($data) + ['status' => 'active', 'sort_order' => 0];
+        $capability = Capability::query()->create($attributes);
         $this->audit->record($actor, 'capability.created', 'capability', (string) $capability->id, [], $capability->toArray());
         return $capability->loadCount('users');
     }
@@ -45,8 +46,6 @@ class AdminCapabilityService
     {
         $attributes = Arr::only($data, ['name', 'slug', 'status']);
         if (array_key_exists('sortOrder', $data)) $attributes['sort_order'] = $data['sortOrder'];
-        $attributes['status'] ??= 'active';
-        $attributes['sort_order'] ??= 0;
         return $attributes;
     }
 }
