@@ -16,6 +16,7 @@ class PostResource extends JsonResource
         $images = $this->relationLoaded('images') ? $this->images : $this->resource->images()->get();
         $videos = $this->relationLoaded('videos') ? $this->videos : $this->resource->videos()->get();
         $media = $images->concat($videos)->values();
+        $helpStatus = $this->help_status?->value ?? $this->help_status;
 
         return [
             'id' => $this->id,
@@ -27,7 +28,9 @@ class PostResource extends JsonResource
             'type' => $this->type,
             'audience' => $this->audience ?? 'general',
             'status' => $this->status,
-            'helpStatus' => $this->help_status?->value ?? $this->help_status,
+            'helpStatus' => $helpStatus,
+            // Backward-compatible alias used by the existing combined admin lifecycle endpoint.
+            'fulfillmentStatus' => $helpStatus,
             'urgency' => $this->urgency?->value ?? $this->urgency ?? 'normal',
             'urgencyReason' => $this->urgency_reason,
             'expiresAt' => $this->expires_at?->toIso8601String(),
