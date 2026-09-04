@@ -51,6 +51,7 @@ class RecommendationImpressionService
                 'city' => $city,
                 'score' => $item['score'] ?? null,
                 'reasons' => json_encode($item['reasons'] ?? [], JSON_UNESCAPED_UNICODE),
+                'is_exploration' => (bool) ($item['isExploration'] ?? false),
                 'shown_at' => $now,
                 'created_at' => $now,
                 'updated_at' => $now,
