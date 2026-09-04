@@ -35,6 +35,10 @@ class RecommendationAnalyticsController extends Controller
             'dateTo' => ['nullable', 'date', 'after_or_equal:dateFrom'],
             'contentType' => ['nullable', Rule::in(['post', 'campaign', 'media'])],
             'categoryId' => ['nullable', 'string', Rule::exists('categories', 'id')],
+            'postType' => ['nullable', 'string', Rule::in([
+                'general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary',
+                'service_offer', 'volunteer_opportunity', 'awareness', 'help_request',
+            ])],
         ]);
     }
 
