@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Admin;
 
+use App\Enums\HelpRequestStatus;
 use App\Enums\PersonalizationEventType;
+use App\Models\Post;
 use App\Models\RecommendationImpression;
 use App\Models\UserInteraction;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +27,7 @@ class AdminRecommendationAnalyticsService
         $impressions = $this->impressionsQuery($filters, $from, $to);
         $total = (clone $impressions)->count();
         $interactions = $this->attributedInteractionsQuery($filters, $from, $to);
+        $fulfilledRequests = $this->attributedFulfilledRequestsQuery($filters, $from, $to)->count();
 
         $counts = collect([
             'opens' => PersonalizationEventType::PostOpen->value,
@@ -67,6 +70,7 @@ class AdminRecommendationAnalyticsService
                 'helpOffers' => (int) $counts['helpOffers'],
                 'applications' => (int) $counts['applications'],
                 'donations' => (int) $counts['donations'],
+                'fulfilledRequests' => $fulfilledRequests,
                 'recommendationToHelpRate' => $rate($meaningful),
                 'attributionMode' => 'same-user-subject-impression-v1',
             ],
@@ -164,6 +168,43 @@ class AdminRecommendationAnalyticsService
                     ->when(
                         $filters['city'] ?? null,
                         fn ($inner, $value) => $inner->where('attributed_impressions.city', 'like', '%'.$value.'%'),
+                    );
+            });
+    }
+
+    private function attributedFulfilledRequestsQuery(array $filters, Carbon $from, Carbon $to): Builder
+    {
+        return Post::query()
+            ->where('type', 'help_request')
+            ->whereIn('help_status', [
+                HelpRequestStatus::Fulfilled->value,
+                HelpRequestStatus::PartiallyFulfilled->value,
+            ])
+            ->whereNotNull('fulfilled_at')
+            ->whereBetween('fulfilled_at', [$from, $to])
+            ->whereExists(function ($query) use ($filters, $from, $to): void {
+                $query
+                    ->selectRaw('1')
+                    ->from('recommendation_impressions as fulfillment_impressions')
+                    ->where('fulfillment_impressions.subject_type', 'post')
+                    ->whereColumn('fulfillment_impressions.subject_id', 'posts.id')
+                    ->whereBetween('fulfillment_impressions.shown_at', [$from, $to])
+                    ->whereColumn('fulfillment_impressions.shown_at', '<=', 'posts.fulfilled_at')
+                    ->when(
+                        $filters['feedType'] ?? null,
+                        fn ($inner, $value) => $inner->where('fulfillment_impressions.feed_type', $value),
+                    )
+                    ->when(
+                        $filters['categoryId'] ?? null,
+                        fn ($inner, $value) => $inner->where('fulfillment_impressions.category_id', $value),
+                    )
+                    ->when(
+                        $filters['publisherId'] ?? null,
+                        fn ($inner, $value) => $inner->where('fulfillment_impressions.publisher_id', $value),
+                    )
+                    ->when(
+                        $filters['city'] ?? null,
+                        fn ($inner, $value) => $inner->where('fulfillment_impressions.city', 'like', '%'.$value.'%'),
                     );
             });
     }
