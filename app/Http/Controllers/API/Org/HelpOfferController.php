@@ -21,14 +21,17 @@ class HelpOfferController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAnyOrganization', Post::class);
-        $organizationId = $this->organizationId();
-        $perPage = max(1, min((int) $request->input('perPage', 20), 100));
-        $offers = HelpOffer::query()->with(['post', 'helper', 'postOwner'])
-            ->whereHas('post', fn (Builder $q) => $q->where('organization_id', $organizationId)->where('type', 'help_request'))
-            ->when($request->filled('postId'), fn (Builder $q) => $q->where('post_id', $request->input('postId')))
-            ->when($request->filled('status'), fn (Builder $q) => $q->where('status', $request->input('status')))
-            ->orderByDesc('created_at')->paginate($perPage);
-        return HelpOfferResource::collection($offers);
+        return HelpOfferResource::collection($this->offersQuery($request)->paginate($this->perPage($request)));
+    }
+
+    public function forRequest(Request $request, Post $post): AnonymousResourceCollection
+    {
+        abort_unless($post->type === 'help_request' && (string) $post->organization_id === $this->organizationId(), 404);
+        $this->authorize('viewOrganization', $post);
+
+        return HelpOfferResource::collection(
+            $this->offersQuery($request)->where('post_id', $post->id)->paginate($this->perPage($request)),
+        );
     }
 
     public function show(HelpOffer $offer): HelpOfferResource
@@ -67,6 +70,25 @@ class HelpOfferController extends Controller
     {
         $this->assertOwns($offer);
         return HelpOfferResource::make($this->service->confirmReceived($request->user(), (string) $offer->id));
+    }
+
+    private function offersQuery(Request $request): Builder
+    {
+        $organizationId = $this->organizationId();
+
+        return HelpOffer::query()
+            ->with(['post', 'helper', 'postOwner'])
+            ->whereHas('post', fn (Builder $query) => $query
+                ->where('organization_id', $organizationId)
+                ->where('type', 'help_request'))
+            ->when($request->filled('postId'), fn (Builder $query) => $query->where('post_id', $request->input('postId')))
+            ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->input('status')))
+            ->orderByDesc('created_at');
+    }
+
+    private function perPage(Request $request): int
+    {
+        return max(1, min((int) $request->input('perPage', 20), 100));
     }
 
     private function assertOwns(HelpOffer $offer): void
