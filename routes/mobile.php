@@ -122,6 +122,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::patch('profile', [MeController::class, 'updateProfile'])->name('profile.update');
         Route::post('avatar', [UserAvatarController::class, 'store'])->name('avatar.store');
         Route::delete('avatar', [UserAvatarController::class, 'destroy'])->name('avatar.destroy');
+        Route::post('change-password/code', [MeController::class, 'requestPasswordChangeCode'])->name('change-password.code');
         Route::patch('change-password', [MeController::class, 'changePassword'])->name('change-password');
         Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
     });

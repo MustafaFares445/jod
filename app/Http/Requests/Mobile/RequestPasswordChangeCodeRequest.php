@@ -6,7 +6,7 @@ namespace App\Http\Requests\Mobile;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ChangePasswordRequest extends FormRequest
+class RequestPasswordChangeCodeRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -17,9 +17,6 @@ class ChangePasswordRequest extends FormRequest
     {
         return [
             'currentPassword' => ['required', 'string'],
-            'code' => ['required', 'digits:6'],
-            'password' => ['required', 'string', 'min:8', 'confirmed', 'different:currentPassword'],
-            'password_confirmation' => ['required', 'string'],
         ];
     }
 }

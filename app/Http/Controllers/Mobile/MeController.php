@@ -8,6 +8,7 @@ use App\Data\UserData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\ChangePasswordRequest;
 use App\Http\Requests\Mobile\ProfileRequest;
+use App\Http\Requests\Mobile\RequestPasswordChangeCodeRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Models\User;
 use App\Services\Permissions\PermissionCatalogService;
@@ -65,6 +66,27 @@ class MeController extends Controller
         );
     }
 
+    public function requestPasswordChangeCode(RequestPasswordChangeCodeRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! Hash::check($request->validated('currentPassword'), $user->password)) {
+            return MobileApiResponse::error('invalid_credentials', 'The current password is incorrect.', null, 422);
+        }
+
+        $code = (string) random_int(100000, 999999);
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => $code, 'created_at' => now()],
+        );
+
+        return MobileApiResponse::success([
+            'verificationRequired' => true,
+            'verificationCodeSent' => true,
+            'expiresIn' => 900,
+        ], 'Password change verification code generated successfully.');
+    }
+
     /**
      * Change the authenticated mobile user password.
      *
@@ -84,7 +106,18 @@ class MeController extends Controller
             return MobileApiResponse::error('invalid_credentials', 'The current password is incorrect.', null, 422);
         }
 
+        $record = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $user->email)->first();
+        $validCode = $record
+            && isset($record->created_at)
+            && now()->diffInMinutes($record->created_at) <= 15
+            && hash_equals((string) $record->token, $request->validated('code'));
+
+        if (! $validCode) {
+            return MobileApiResponse::error('invalid_verification_code', 'The provided verification code is invalid or expired.', null, 422);
+        }
+
         $this->userService->updatePassword($user, $request->validated('password'));
+        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
         return MobileApiResponse::success([
             'passwordChanged' => true,
