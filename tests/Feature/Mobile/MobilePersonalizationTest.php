@@ -9,7 +9,7 @@ use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('onboarding options expose active categories capabilities and preference enums', function () {
+test('onboarding options expose active categories capabilities preference enums and skip metadata', function () {
     $category = Category::factory()->create(['name' => 'التعليم', 'status' => 'active']);
     Category::factory()->create(['name' => 'مخفي', 'status' => 'inactive']);
     $capability = Capability::query()->create([
@@ -23,6 +23,8 @@ test('onboarding options expose active categories capabilities and preference en
 
     $response->assertOk()
         ->assertJsonPath('success', true)
+        ->assertJsonPath('data.onboarding.skippable', true)
+        ->assertJsonPath('data.onboarding.questionsRequired', false)
         ->assertJsonPath('data.categories.0.id', $category->id)
         ->assertJsonPath('data.capabilities.0.id', $capability->id)
         ->assertJsonFragment(['value' => 'giver'])
@@ -52,6 +54,9 @@ test('authenticated user can complete personalization onboarding', function () {
 
     $response->assertOk()
         ->assertJsonPath('data.onboardingCompleted', true)
+        ->assertJsonPath('data.onboardingProfileComplete', true)
+        ->assertJsonPath('data.onboardingNeedsCompletion', false)
+        ->assertJsonPath('data.onboardingMissingFields', [])
         ->assertJsonPath('data.intent', 'giver')
         ->assertJsonPath('data.preferredCity', 'دمشق')
         ->assertJsonPath('data.interests.0.category.id', $category->id)
@@ -72,6 +77,76 @@ test('authenticated user can complete personalization onboarding', function () {
         'user_id' => $user->id,
         'capability_id' => $capability->id,
     ]);
+});
+
+test('user can skip onboarding with no answers and frontend receives incomplete profile flags', function () {
+    $user = User::factory()->create(['city' => null]);
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/mobile/me/onboarding', [])
+        ->assertOk()
+        ->assertJsonPath('data.onboardingCompleted', true)
+        ->assertJsonPath('data.onboardingProfileComplete', false)
+        ->assertJsonPath('data.onboardingNeedsCompletion', true)
+        ->assertJsonPath('data.onboardingMissingFields', [
+            'intent',
+            'interests',
+            'preferredCity',
+            'availabilityStatus',
+        ]);
+
+    $this->assertDatabaseHas('user_preferences', [
+        'user_id' => $user->id,
+    ]);
+
+    $this->getJson('/api/mobile/me/preferences')
+        ->assertOk()
+        ->assertJsonPath('data.onboardingCompleted', true)
+        ->assertJsonPath('data.onboardingProfileComplete', false)
+        ->assertJsonPath('data.onboardingNeedsCompletion', true);
+});
+
+test('explicit skip does not overwrite previously supplied onboarding answers', function () {
+    $user = User::factory()->create(['city' => 'دمشق']);
+    $category = Category::factory()->create(['status' => 'active']);
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/mobile/me/onboarding', [
+        'intent' => 'receiver',
+        'categoryIds' => [$category->id],
+    ])->assertOk();
+
+    $this->postJson('/api/mobile/me/onboarding', [
+        'skipped' => true,
+        'intent' => null,
+        'categoryIds' => [],
+    ])->assertOk()
+        ->assertJsonPath('data.intent', 'receiver')
+        ->assertJsonPath('data.interests.0.category.id', $category->id)
+        ->assertJsonPath('data.onboardingNeedsCompletion', true)
+        ->assertJsonPath('data.onboardingMissingFields', ['availabilityStatus']);
+});
+
+test('partial onboarding is allowed and completion flag updates when missing data is added later', function () {
+    $user = User::factory()->create(['city' => 'دمشق']);
+    $category = Category::factory()->create(['status' => 'active']);
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/mobile/me/onboarding', [
+        'intent' => 'receiver',
+        'categoryIds' => [$category->id],
+    ])->assertOk()
+        ->assertJsonPath('data.onboardingCompleted', true)
+        ->assertJsonPath('data.onboardingProfileComplete', false)
+        ->assertJsonPath('data.onboardingNeedsCompletion', true)
+        ->assertJsonPath('data.onboardingMissingFields', ['availabilityStatus']);
+
+    $this->patchJson('/api/mobile/me/preferences', [
+        'availabilityStatus' => 'evenings',
+    ])->assertOk()
+        ->assertJsonPath('data.onboardingProfileComplete', true)
+        ->assertJsonPath('data.onboardingNeedsCompletion', false)
+        ->assertJsonPath('data.onboardingMissingFields', []);
 });
 
 test('user can replace interests and update preferences', function () {
