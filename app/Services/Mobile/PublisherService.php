@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Mobile;
 
+use App\Enums\DonationStatus;
 use App\Models\Organization;
+use App\Models\Donation;
 use App\Models\Post;
 use App\Models\User;
 use App\Support\SearchFilter;
@@ -17,6 +19,13 @@ class PublisherService
     public function findPublic(string $id): Organization|User|null
     {
         $organization = Organization::query()
+            ->select('organizations.*')
+            ->addSelect([
+                'donors_count' => Donation::query()
+                    ->selectRaw('COUNT(DISTINCT created_by)')
+                    ->whereColumn('organization_id', 'organizations.id')
+                    ->where('status', DonationStatus::Completed->value),
+            ])
             ->with('logoMedia')
             ->whereKey($id)
             ->where('status', 'active')

@@ -44,6 +44,10 @@ class MobilePublisherResource extends JsonResource
             'isFollowing' => $this->isFollowing('organization', (string) $organization->id),
         ];
 
+        if ($organization->getAttribute('donors_count') !== null) {
+            $data['donorsCount'] = (int) $organization->getAttribute('donors_count');
+        }
+
         if (filled($organization->description)) {
             $data['bio'] = $organization->description;
         }

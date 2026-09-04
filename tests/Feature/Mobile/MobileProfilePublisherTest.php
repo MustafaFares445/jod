@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Mobile;
 
+use App\Enums\DonationStatus;
 use App\Models\Donation;
 use App\Models\Organization;
 use App\Models\Post;
@@ -88,6 +89,31 @@ class MobileProfilePublisherTest extends TestCase
             'verification_status' => 'verified',
         ]);
         $author = User::factory()->create(['city' => 'Homs']);
+        $donorOne = User::factory()->create();
+        $donorTwo = User::factory()->create();
+        Donation::factory()->create([
+            'organization_id' => $organization->id,
+            'created_by' => $donorOne->id,
+            'status' => DonationStatus::Completed->value,
+            'completed_at' => now(),
+        ]);
+        Donation::factory()->create([
+            'organization_id' => $organization->id,
+            'created_by' => $donorOne->id,
+            'status' => DonationStatus::Completed->value,
+            'completed_at' => now(),
+        ]);
+        Donation::factory()->create([
+            'organization_id' => $organization->id,
+            'created_by' => $donorTwo->id,
+            'status' => DonationStatus::Completed->value,
+            'completed_at' => now(),
+        ]);
+        Donation::factory()->create([
+            'organization_id' => $organization->id,
+            'created_by' => User::factory(),
+            'status' => DonationStatus::Pending->value,
+        ]);
 
         $organizationPost = Post::factory()->published()->create([
             'organization_id' => $organization->id,
@@ -112,7 +138,8 @@ class MobileProfilePublisherTest extends TestCase
             ->assertJsonPath('data.username', 'hello')
             ->assertJsonPath('data.city', 'Damascus')
             ->assertJsonPath('data.bio', 'Verified humanitarian organization')
-            ->assertJsonPath('data.verified', true);
+            ->assertJsonPath('data.verified', true)
+            ->assertJsonPath('data.donorsCount', 2);
 
         $response = $this->getJson("/api/mobile/discovery/publishers/{$organization->id}/posts?perPage=10");
         $response->assertOk()
