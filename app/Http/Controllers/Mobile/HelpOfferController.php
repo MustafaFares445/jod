@@ -84,7 +84,21 @@ class HelpOfferController extends Controller
 
     public function contact(Request $request, string $offer): JsonResponse
     {
-        return $this->offerResponse($request, $this->service->markContacting($this->user($request), $offer), 'Help offer marked as contacting.');
+        $user = $this->user($request);
+        $model = $this->service->markContacting($user, $offer);
+        $model->loadMissing('post.category');
+
+        if ($model->post !== null) {
+            $this->interactions->recordPostAction(
+                $user,
+                PersonalizationEventType::ContactAction,
+                $model->post,
+                ['offerId' => (string) $model->id],
+                60 * 24,
+            );
+        }
+
+        return $this->offerResponse($request, $model, 'Help offer marked as contacting.');
     }
 
     public function agree(Request $request, string $offer): JsonResponse
