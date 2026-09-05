@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Data\CampaignData;
 use App\Models\Campaign;
+use App\Models\User;
 use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -13,14 +14,14 @@ use Illuminate\Validation\ValidationException;
 
 class CampaignService
 {
-    public function discover(array $params): LengthAwarePaginator
+    public function discover(array $params, ?User $viewer = null): LengthAwarePaginator
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $sort = $this->normalizeDiscoverySort($params);
         $search = SearchFilter::fromArray($params);
 
         $query = Campaign::query()
-            ->with($this->mobileDiscoveryRelations())
+            ->with($this->mobileDiscoveryRelations($viewer))
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['audience'] ?? null), fn (Builder $builder) => $builder->where('audience', $params['audience']))
@@ -55,9 +56,9 @@ class CampaignService
         return $query->paginate($perPage);
     }
 
-    public function findPublicCampaign(string $id): ?Campaign
+    public function findPublicCampaign(string $id, ?User $viewer = null): ?Campaign
     {
-        return Campaign::query()->with($this->mobileDiscoveryRelations())->whereKey($id)->where('status', 'active')->first();
+        return Campaign::query()->with($this->mobileDiscoveryRelations($viewer))->whereKey($id)->where('status', 'active')->first();
     }
 
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
@@ -144,10 +145,25 @@ class CampaignService
         return match ((string) ($params['sortBy'] ?? '')) { 'updated_oldest' => 'updatedAt', 'progress_highest' => '-progress', 'progress_lowest' => 'progress', default => '-updatedAt' };
     }
 
-    private function mobileDiscoveryRelations(): array
+    private function mobileDiscoveryRelations(?User $viewer = null): array
     {
-        return ['organization.logoMedia', 'creator', 'category', 'imageMedia', 'posts' => static fn ($relation) => $relation
-            ->where('status', 'published')->orderByDesc('published_at')->orderByDesc('created_at')->with('images')];
+        return [
+            'organization.logoMedia',
+            'creator',
+            'category',
+            'imageMedia',
+            'posts' => static function ($relation) use ($viewer): void {
+                $relation
+                    ->where('status', 'published')
+                    ->orderByDesc('published_at')
+                    ->orderByDesc('created_at')
+                    ->with('images');
+
+                if ($viewer !== null) {
+                    $relation->with(['likes' => static fn ($likes) => $likes->where('user_id', $viewer->id)]);
+                }
+            },
+        ];
     }
 
     private function normalizeDiscoverySort(array $params): string

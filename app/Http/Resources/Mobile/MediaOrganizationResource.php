@@ -16,6 +16,7 @@ class MediaOrganizationResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'name' => $this->name,
+            'verified' => $this->verification_status === 'verified',
             'image' => $this->logoMedia?->publicUrl(),
             'logo' => $this->whenLoaded('logoMedia', function () use ($request): ?array {
                 if ($this->logoMedia === null) {

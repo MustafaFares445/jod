@@ -67,6 +67,7 @@ test('organization media discovery includes the organization and its logo relati
         ->assertJsonPath('data.0.previewSize', 123)
         ->assertJsonPath('data.0.organization.id', $organization->id)
         ->assertJsonPath('data.0.organization.name', $organization->name)
+        ->assertJsonPath('data.0.organization.verified', true)
         ->assertJsonPath('data.0.organization.logo.id', $logo->id)
         ->assertJsonPath('data.0.organization.logo.model', 'organization')
         ->assertJsonPath('data.0.organization.logo.prop', 'logo');
@@ -77,6 +78,7 @@ test('organization media discovery includes the organization and its logo relati
         ->assertJsonPath('data.previewUrl', $previewUrl)
         ->assertJsonPath('data.previewStatus', 'ready')
         ->assertJsonPath('data.organization.id', $organization->id)
+        ->assertJsonPath('data.organization.verified', true)
         ->assertJsonPath('data.organization.logo.id', $logo->id)
         ->assertJsonPath('data.organization.logo.prop', 'logo');
 });

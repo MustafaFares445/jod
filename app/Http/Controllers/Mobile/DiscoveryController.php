@@ -117,8 +117,8 @@ class DiscoveryController extends Controller
      */
     public function campaigns(CampaignDiscoveryRequest $request): JsonResponse
     {
-        $paginator = $this->campaignService->discover($request->validated());
         $viewer = $this->viewer($request);
+        $paginator = $this->campaignService->discover($request->validated(), $viewer);
 
         return MobileApiResponse::paginated(
             $paginator->through(fn ($campaign) => MobileCampaignResource::make($campaign)->resolve($request)),
@@ -132,13 +132,12 @@ class DiscoveryController extends Controller
      */
     public function showCampaign(Request $request, string $campaign): JsonResponse
     {
-        $model = $this->campaignService->findPublicCampaign($campaign);
+        $viewer = $this->viewer($request);
+        $model = $this->campaignService->findPublicCampaign($campaign, $viewer);
 
         if (! $model) {
             return MobileApiResponse::error('not_found', 'The requested campaign could not be found.', null, 404);
         }
-
-        $viewer = $this->viewer($request);
 
         return MobileApiResponse::success(
             MobileCampaignResource::make($model)->resolve($request),

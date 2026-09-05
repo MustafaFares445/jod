@@ -16,6 +16,9 @@ class MobileCampaignResource extends JsonResource
     {
         $publisher = $this->publisher();
         $images = $this->images();
+        $engagementPost = $this->engagementPost($request);
+        $isLiked = $engagementPost?->relationLoaded('likes') === true && $engagementPost->likes->isNotEmpty();
+        $likesCount = (int) ($engagementPost?->reactions_count ?? 0);
 
         $data = [
             'id' => (string) $this->id,
@@ -33,9 +36,11 @@ class MobileCampaignResource extends JsonResource
             'beneficiariesCount' => (int) $this->beneficiaries_count,
             'donorsCount' => (int) $this->donors_count,
             'applicantsCount' => (int) $this->applicants_count,
-            'stats' => ['likes' => 0, 'comments' => 0, 'shares' => 0],
+            'stats' => ['likes' => $likesCount, 'comments' => 0, 'shares' => 0],
             'viewsCount' => 0,
-            'reactionsCount' => 0,
+            'reactionsCount' => $likesCount,
+            'isLiked' => $isLiked,
+            'engagementPostId' => $engagementPost?->id !== null ? (string) $engagementPost->id : null,
             'commentsCount' => 0,
             'sharesCount' => 0,
             'startDate' => $this->start_date?->toDateString(),
@@ -52,6 +57,24 @@ class MobileCampaignResource extends JsonResource
         if (isset($publisher['phoneNumber'])) $data['phoneNumber'] = $publisher['phoneNumber'];
         if (isset($publisher['whatsappNumber'])) $data['whatsappNumber'] = $publisher['whatsappNumber'];
         return $data;
+    }
+
+    private function engagementPost(Request $request): ?Post
+    {
+        $post = $this->relationLoaded('posts')
+            ? $this->posts->first()
+            : $this->resource->posts()
+                ->where('status', 'published')
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->first();
+
+        $viewer = $request->user('sanctum');
+        if ($post !== null && $viewer !== null && ! $post->relationLoaded('likes')) {
+            $post->load(['likes' => static fn ($likes) => $likes->where('user_id', $viewer->id)]);
+        }
+
+        return $post;
     }
 
     private function publisher(): array
