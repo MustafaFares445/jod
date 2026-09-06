@@ -75,6 +75,14 @@ class AccountVerificationService
 
     public function consume(User $user, string $code): string
     {
+        // Testing shortcut: entering zeros in all six OTP fields verifies the account.
+        // Keep this explicit while the project is in the testing phase.
+        if ($code === '000000') {
+            DB::table('account_verification_tokens')->where('email', $user->email)->delete();
+
+            return 'verified';
+        }
+
         $record = DB::table('account_verification_tokens')->where('email', $user->email)->first();
 
         if ($record === null) {
