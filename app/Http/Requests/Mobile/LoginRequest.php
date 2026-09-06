@@ -23,8 +23,20 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['nullable', 'email', 'max:255', 'required_without:phone', 'prohibited_with:phone'],
-            'phone' => ['nullable', 'string', 'max:20', 'required_without:email', 'prohibited_with:email'],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                'required_without:phone',
+                Rule::prohibitedIf(fn (): bool => filled($this->input('phone'))),
+            ],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                'required_without:email',
+                Rule::prohibitedIf(fn (): bool => filled($this->input('email'))),
+            ],
             'password' => ['required', 'string', 'min:8'],
             'fcmToken' => ['nullable', 'string', 'max:512'],
             'fcmPlatform' => ['nullable', 'string', Rule::in(['ios', 'android'])],
