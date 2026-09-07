@@ -12,7 +12,9 @@ class DonationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $organizationName = $this->campaign?->organization?->name;
-        $amount = (float) $this->amount_or_type;
+        $requestedAmount = (float) $this->amount_or_type;
+        $confirmedAmount = $this->confirmed_amount !== null ? (float) $this->confirmed_amount : null;
+        $amount = $confirmedAmount ?? $requestedAmount;
 
         return [
             'id' => (string) $this->id,
@@ -20,6 +22,8 @@ class DonationResource extends JsonResource
             'campaignTitle' => $this->campaign_title,
             'organizationName' => $organizationName,
             'amount' => $amount,
+            'requestedAmount' => $requestedAmount,
+            'confirmedAmount' => $confirmedAmount,
             'status' => $this->status?->value ?? (string) $this->status,
             'contactMethod' => $this->contact_method,
             'paymentMethod' => $this->payment_method,
@@ -30,6 +34,7 @@ class DonationResource extends JsonResource
             'cancelReason' => $this->cancel_reason,
             'source' => $this->source,
             'createdAt' => $this->created_at?->toIso8601String(),
+            'acceptedAt' => $this->accepted_at?->toIso8601String(),
             'contactedAt' => $this->contacted_at?->toIso8601String(),
             'agreedAt' => $this->agreed_at?->toIso8601String(),
             'completedAt' => $this->completed_at?->toIso8601String(),

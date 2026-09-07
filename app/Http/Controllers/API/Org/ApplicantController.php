@@ -60,6 +60,30 @@ class ApplicantController extends Controller
         return ApplicantResource::make($applicant);
     }
 
+    public function accept(CampaignApplication $applicant): ApplicantResource
+    {
+        $this->authorize('update', $applicant);
+        return ApplicantResource::make($this->service->accept($applicant, $this->organizationId()));
+    }
+
+    public function contact(CampaignApplication $applicant): ApplicantResource
+    {
+        $this->authorize('update', $applicant);
+        return ApplicantResource::make($this->service->contact($applicant, $this->organizationId()));
+    }
+
+    public function complete(CampaignApplication $applicant): ApplicantResource
+    {
+        $this->authorize('update', $applicant);
+        return ApplicantResource::make($this->service->complete($applicant, $this->organizationId()));
+    }
+
+    public function reject(CampaignApplication $applicant): ApplicantResource
+    {
+        $this->authorize('update', $applicant);
+        return ApplicantResource::make($this->service->reject($applicant, $this->organizationId()));
+    }
+
     public function destroy(CampaignApplication $applicant): Response
     {
         $this->authorize('delete', $applicant);

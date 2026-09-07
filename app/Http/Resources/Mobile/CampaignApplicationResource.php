@@ -20,7 +20,7 @@ class CampaignApplicationResource extends JsonResource
             'postId' => $this->campaign_id === null && $this->request_type === 'volunteer' && $this->campaign_ref ? (string) $this->campaign_ref : null,
             'campaignTitle' => $this->campaign_title,
             'organizationName' => $this->campaign?->organization?->name ?? $this->organization?->name,
-            'status' => $this->applicant_status,
+            'status' => (string) $this->applicant_status,
             'phone' => $this->phone,
             'city' => $this->city,
             'submittedAt' => $this->applied_at?->toIso8601String(),

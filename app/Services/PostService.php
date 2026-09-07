@@ -262,6 +262,7 @@ class PostService
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['campaignApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
         $relations['volunteerApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
+        $relations['campaignDonations'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id)->latest('created_at');
         return $relations;
     }
 

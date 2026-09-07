@@ -34,6 +34,7 @@ class HelpOfferResource extends JsonResource
             'description' => $this->description,
             'status' => $this->status?->value ?? (string) $this->status,
             'contactMethod' => $canSeeContact ? $this->contact_method : null,
+            'contactValue' => $canSeeContact ? ($this->contact_value ?? $this->phone) : null,
             'phone' => $canSeeContact ? $this->phone : null,
             'cancelReason' => ($isHelper || $isOwner) ? $this->cancel_reason : null,
             'rejectionReason' => ($isHelper || $isOwner) ? $this->rejection_reason : null,
@@ -41,6 +42,8 @@ class HelpOfferResource extends JsonResource
             'acceptedAt' => $this->accepted_at?->toIso8601String(),
             'contactedAt' => $this->contacted_at?->toIso8601String(),
             'agreedAt' => $this->agreed_at?->toIso8601String(),
+            'helperAgreedAt' => $this->helper_agreed_at?->toIso8601String(),
+            'receiverAgreedAt' => $this->receiver_agreed_at?->toIso8601String(),
             'helperConfirmedAt' => $this->helper_confirmed_at?->toIso8601String(),
             'receiverConfirmedAt' => $this->receiver_confirmed_at?->toIso8601String(),
             'completedAt' => $this->completed_at?->toIso8601String(),
@@ -49,8 +52,12 @@ class HelpOfferResource extends JsonResource
             'can' => [
                 'accept' => $isOwner && ($this->status?->value ?? $this->status) === 'pending',
                 'reject' => $isOwner && ($this->status?->value ?? $this->status) === 'pending',
-                'confirmProvided' => $isHelper && ($this->status?->value ?? $this->status) === 'agreed',
-                'confirmReceived' => $isOwner && ($this->status?->value ?? $this->status) === 'agreed',
+                'contact' => ($isHelper || $isOwner) && ($this->status?->value ?? $this->status) === 'accepted',
+                'agree' => ($isHelper || $isOwner)
+                    && in_array(($this->status?->value ?? $this->status), ['contacting', 'agreed'], true)
+                    && (($isHelper && $this->helper_agreed_at === null) || ($isOwner && $this->receiver_agreed_at === null)),
+                'confirmProvided' => $isHelper && ($this->status?->value ?? $this->status) === 'agreed' && $this->helper_confirmed_at === null,
+                'confirmReceived' => $isOwner && ($this->status?->value ?? $this->status) === 'agreed' && $this->receiver_confirmed_at === null,
             ],
         ];
     }

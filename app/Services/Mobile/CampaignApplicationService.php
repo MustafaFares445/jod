@@ -283,10 +283,15 @@ class CampaignApplicationService
                 return null;
             }
 
-            $wasActive = ! in_array($application->applicant_status, self::INACTIVE_STATUSES, true);
-            if ($wasActive) {
-                $application->update(['applicant_status' => 'withdrawn']);
+            $withdrawableStatuses = ['pending', 'under_review', 'accepted', 'approved', 'contacting'];
+            if (! in_array($application->applicant_status, $withdrawableStatuses, true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['This volunteer application can no longer be withdrawn.'],
+                ]);
             }
+
+            $wasActive = true;
+            $application->update(['applicant_status' => 'withdrawn']);
 
             if ($campaign !== null) {
                 $this->syncApplicantCount($campaign);

@@ -22,7 +22,14 @@ class FollowingFeedService
         $organizationIds = PublisherFollow::query()->where('follower_user_id', $viewer->id)->where('target_type', 'organization')->pluck('target_id');
 
         $posts = Post::query()
-            ->with(['organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images', 'videos'])
+            ->with([
+                'organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images', 'videos',
+                'likes' => fn ($query) => $query->where('user_id', $viewer->id),
+                'saves' => fn ($query) => $query->where('user_id', $viewer->id),
+                'campaignApplications' => fn ($query) => $query->where('created_by', $viewer->id),
+                'volunteerApplications' => fn ($query) => $query->where('created_by', $viewer->id),
+                'campaignDonations' => fn ($query) => $query->where('created_by', $viewer->id)->latest('created_at'),
+            ])
             ->where('status', 'published')
             ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->where(function ($query): void {
@@ -42,7 +49,13 @@ class FollowingFeedService
             ->map(fn (Post $post) => ['contentType' => 'post', 'sortAt' => $post->published_at ?? $post->created_at, 'model' => $post]);
 
         $campaigns = Campaign::query()
-            ->with(['organization.logoMedia', 'imageMedia', 'category'])
+            ->with([
+                'organization.logoMedia',
+                'imageMedia',
+                'category',
+                'likes' => fn ($query) => $query->where('user_id', $viewer->id),
+            ])
+            ->withCount('likes')
             ->where('status', 'active')
             ->where(function ($query): void {
                 $query->whereNull('end_date')->orWhereDate('end_date', '>=', now()->toDateString());

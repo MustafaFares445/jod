@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\Organization;
+use App\Models\Campaign;
+use App\Models\CampaignLike;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\Report;
@@ -37,7 +39,41 @@ test('like and unlike are idempotent for published posts', function () {
     }
 });
 
-test('like preserves the existing reactions counter and changes it by one only', function () {
+test('like preserves the existing reactions counter and changes it by one only', function () {test('campaign likes work without a linked campaign post and expose viewer state', function () {
+    $user = User::factory()->create();
+    $organization = Organization::factory()->create([
+        'status' => 'active',
+        'verification_status' => 'verified',
+    ]);
+    $campaign = Campaign::factory()->create([
+        'organization_id' => $organization->id,
+        'status' => 'active',
+        'start_date' => now()->subDay(),
+        'end_date' => now()->addDays(10),
+    ]);
+    Sanctum::actingAs($user);
+
+    $this->postJson("/api/mobile/campaigns/{$campaign->id}/like")
+        ->assertOk()
+        ->assertJsonPath('data.campaignId', (string) $campaign->id)
+        ->assertJsonPath('data.isLiked', true)
+        ->assertJsonPath('data.likesCount', 1);
+
+    expect(CampaignLike::query()->where('user_id', $user->id)->where('campaign_id', $campaign->id)->count())->toBe(1);
+
+    $this->getJson("/api/mobile/discovery/campaigns/{$campaign->id}")
+        ->assertOk()
+        ->assertJsonPath('data.id', (string) $campaign->id)
+        ->assertJsonPath('data.isLiked', true)
+        ->assertJsonPath('data.stats.likes', 1);
+
+    $this->deleteJson("/api/mobile/campaigns/{$campaign->id}/like")
+        ->assertOk()
+        ->assertJsonPath('data.isLiked', false)
+        ->assertJsonPath('data.likesCount', 0);
+});
+
+
     $user = User::factory()->create();
     $post = mobile_engagement_test_createPost(['reactions_count' => 46]);
     Sanctum::actingAs($user);

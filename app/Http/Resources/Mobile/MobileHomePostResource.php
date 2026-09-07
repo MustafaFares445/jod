@@ -83,9 +83,15 @@ class MobileHomePostResource extends JsonResource
             $offer = $this->helpOffers()->where('helper_user_id', $viewerId)->whereIn('status', $activeStatuses)->latest('created_at')->first();
             if ($offer !== null) $myOffer = ['id' => (string) $offer->id, 'status' => $offer->status?->value ?? (string) $offer->status];
         }
+        $helpStatusEnum = HelpRequestStatus::tryFrom((string) $helpStatus);
+
         return [
             'helpStatus' => $helpStatus,
-            'canOfferHelp' => $viewerId !== null && (string) $viewerId !== (string) $this->author_id && $helpStatus !== HelpRequestStatus::Fulfilled->value && $myOffer === null,
+            'canOfferHelp' => $viewerId !== null
+                && (string) $viewerId !== (string) $this->author_id
+                && $helpStatusEnum !== null
+                && ! $helpStatusEnum->isTerminal()
+                && $myOffer === null,
             'activeOffersCount' => $activeOffersCount,
             'myOffer' => $myOffer,
         ];
@@ -143,26 +149,41 @@ class MobileHomePostResource extends JsonResource
         return match ($ctaType) { 'apply' => 'قدّم الآن', 'donate' => 'تبرّع الآن', 'contact' => $this->type === 'service_offer' ? 'تواصل' : 'تقديم مساعدة', 'details' => 'عرض التفاصيل', default => '' };
     }
 
+    private function workflowCtaState(mixed $status): string
+    {
+        return match ((string) $status) {
+            'pending', 'under_review' => 'submitted',
+            'accepted', 'approved' => 'accepted',
+            'contacting' => 'contacting',
+            'agreed' => 'agreed',
+            'completed' => 'completed',
+            default => 'open',
+        };
+    }
+
     private function ctaState(string $ctaType): ?string
     {
         if ($ctaType === 'contact' && $this->type === 'help_request') {
-            return ($this->help_status?->value ?? $this->help_status) === HelpRequestStatus::Fulfilled->value ? 'closed' : 'open';
+            $helpStatus = HelpRequestStatus::tryFrom((string) ($this->help_status?->value ?? $this->help_status ?? HelpRequestStatus::Open->value));
+            return $helpStatus?->isTerminal() === true ? 'closed' : 'open';
         }
         if (! in_array($ctaType, ['apply', 'donate'], true)) return null;
 
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
         if ($ctaType === 'donate') {
-            return $campaign === null || $campaign->status !== 'active' ? 'closed' : 'open';
+            if ($campaign === null || $campaign->status !== 'active') return 'closed';
+            $donation = $this->relationLoaded('campaignDonations') ? $this->campaignDonations->first() : null;
+            return $this->workflowCtaState($donation?->status?->value ?? $donation?->status);
         }
 
         if ($campaign !== null) {
             if ($campaign->status !== 'active') return 'closed';
-            if ($this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) return 'submitted';
-            return 'open';
+            $application = $this->relationLoaded('campaignApplications') ? $this->campaignApplications->first() : null;
+            return $this->workflowCtaState($application?->applicant_status);
         }
 
         if (! filled($this->organization_id)) return 'closed';
-        if ($this->relationLoaded('volunteerApplications') && $this->volunteerApplications->isNotEmpty()) return 'submitted';
-        return 'open';
+        $application = $this->relationLoaded('volunteerApplications') ? $this->volunteerApplications->first() : null;
+        return $this->workflowCtaState($application?->applicant_status);
     }
 }

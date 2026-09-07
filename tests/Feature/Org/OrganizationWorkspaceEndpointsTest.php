@@ -140,6 +140,56 @@ test('donor crud and filtering', function () {
         ->assertJsonPath('message', 'Data deleted successfully.');
 });
 
+test('organization completes campaign donation workflow using the confirmed received amount', function () {
+    $donor = User::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'organization_id' => $this->organization->id,
+        'status' => 'active',
+        'goal_amount' => 1000,
+        'raised_amount' => 100,
+        'donors_count' => 3,
+    ]);
+    $donation = Donation::factory()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => $campaign->id,
+        'campaign_title' => $campaign->title,
+        'amount_or_type' => '50.00',
+        'status' => 'pending',
+        'source' => 'mobile_app',
+        'created_by' => $donor->id,
+    ]);
+
+    $this->patchJson("/api/v1/org/donations/{$donation->id}/accept")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'accepted')
+        ->assertJsonPath('data.acceptedAt', fn ($value) => filled($value));
+
+    $this->patchJson("/api/v1/org/donations/{$donation->id}/contact")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'contacting');
+
+    $this->patchJson("/api/v1/org/donations/{$donation->id}/agree")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'agreed');
+
+    $this->patchJson("/api/v1/org/donations/{$donation->id}/complete", ['amount' => 40.25])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'completed')
+        ->assertJsonPath('data.requestedAmount', 50)
+        ->assertJsonPath('data.confirmedAmount', 40.25)
+        ->assertJsonPath('data.amount', 40.25);
+
+    $this->assertDatabaseHas('donations', [
+        'id' => $donation->id,
+        'status' => 'completed',
+        'confirmed_amount' => '40.25',
+    ]);
+
+    $campaign->refresh();
+    expect((float) $campaign->raised_amount)->toBe(140.25);
+    expect($campaign->donors_count)->toBe(4);
+});
+
 test('donor list filters organization donations by campaign and workflow status', function () {
     $campaign = Campaign::factory()->create(['organization_id' => $this->organization->id]);
     $otherCampaign = Campaign::factory()->create(['organization_id' => $this->organization->id]);
@@ -271,6 +321,47 @@ test('applicant list filters campaign applications versus standalone volunteer p
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.targetType', 'post')
         ->assertJsonPath('data.0.postId', $post->id);
+});
+
+test('organization accepts contacts and completes a volunteer application', function () {
+    $applicantUser = User::factory()->create();
+    $campaign = Campaign::factory()->create([
+        'organization_id' => $this->organization->id,
+        'status' => 'active',
+    ]);
+    $application = CampaignApplication::query()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => $campaign->id,
+        'name' => $applicantUser->name,
+        'email' => $applicantUser->email,
+        'campaign_title' => $campaign->title,
+        'applicant_status' => 'pending',
+        'applied_at' => now(),
+        'source' => 'mobile_app',
+        'campaign_ref' => $campaign->id,
+        'request_type' => 'volunteer',
+        'created_by' => $applicantUser->id,
+    ]);
+
+    $this->patchJson("/api/v1/org/applicants/{$application->id}/accept")
+        ->assertOk()
+        ->assertJsonPath('data.applicantStatus', 'accepted')
+        ->assertJsonPath('data.can.contact', true);
+
+    $this->patchJson("/api/v1/org/applicants/{$application->id}/contact")
+        ->assertOk()
+        ->assertJsonPath('data.applicantStatus', 'contacting')
+        ->assertJsonPath('data.can.complete', true);
+
+    $this->patchJson("/api/v1/org/applicants/{$application->id}/complete")
+        ->assertOk()
+        ->assertJsonPath('data.applicantStatus', 'completed');
+
+    $this->assertDatabaseHas('notifications', [
+        'recipient_id' => $applicantUser->id,
+        'event_type' => 'application.completed',
+        'category' => 'applicant',
+    ]);
 });
 
 test('applicant phone must be a Syrian mobile number', function () {

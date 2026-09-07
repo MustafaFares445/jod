@@ -22,6 +22,7 @@ class CampaignService
 
         $query = Campaign::query()
             ->with($this->mobileDiscoveryRelations($viewer))
+            ->withCount('likes')
             ->where('status', 'active')
             ->when(filled($params['status'] ?? null), fn (Builder $builder) => $builder->where('status', $params['status']))
             ->when(filled($params['audience'] ?? null), fn (Builder $builder) => $builder->where('audience', $params['audience']))
@@ -58,7 +59,12 @@ class CampaignService
 
     public function findPublicCampaign(string $id, ?User $viewer = null): ?Campaign
     {
-        return Campaign::query()->with($this->mobileDiscoveryRelations($viewer))->whereKey($id)->where('status', 'active')->first();
+        return Campaign::query()
+            ->with($this->mobileDiscoveryRelations($viewer))
+            ->withCount('likes')
+            ->whereKey($id)
+            ->where('status', 'active')
+            ->first();
     }
 
     public function paginate(array $params, string $organizationId): LengthAwarePaginator
@@ -147,23 +153,25 @@ class CampaignService
 
     private function mobileDiscoveryRelations(?User $viewer = null): array
     {
-        return [
+        $relations = [
             'organization.logoMedia',
             'creator',
             'category',
             'imageMedia',
-            'posts' => static function ($relation) use ($viewer): void {
+            'posts' => static function ($relation): void {
                 $relation
                     ->where('status', 'published')
                     ->orderByDesc('published_at')
                     ->orderByDesc('created_at')
                     ->with('images');
-
-                if ($viewer !== null) {
-                    $relation->with(['likes' => static fn ($likes) => $likes->where('user_id', $viewer->id)]);
-                }
             },
         ];
+
+        if ($viewer !== null) {
+            $relations['likes'] = static fn ($likes) => $likes->where('user_id', $viewer->id);
+        }
+
+        return $relations;
     }
 
     private function normalizeDiscoverySort(array $params): string

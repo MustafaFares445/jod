@@ -9,7 +9,7 @@ use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-test('help offer needs both confirmations and does not auto fulfill post', function () {
+test('help offer requires bilateral agreement and auto fulfills after both completion confirmations', function () {
     $owner = User::factory()->create();
     $helper = User::factory()->create();
     $post = Post::factory()->published()->create([
@@ -25,7 +25,8 @@ test('help offer needs both confirmations and does not auto fulfill post', funct
         'amount' => 300000,
         'description' => 'I can cover part of the need.',
         'contactMethod' => 'whatsapp',
-        'phone' => '0912345678',
+        'contactValue' => '+963912345678',
+        'phone' => '+963912345678',
     ])->assertOk()
         ->assertJsonPath('data.status', 'pending');
 
@@ -45,7 +46,16 @@ test('help offer needs both confirmations and does not auto fulfill post', funct
         ->assertJsonPath('data.status', 'contacting');
     $this->patchJson("/api/mobile/help-offers/{$offerId}/agree")
         ->assertOk()
-        ->assertJsonPath('data.status', 'agreed');
+        ->assertJsonPath('data.status', 'contacting')
+        ->assertJsonPath('data.helperAgreedAt', fn ($value) => filled($value));
+
+    Sanctum::actingAs($owner);
+    $this->patchJson("/api/mobile/help-offers/{$offerId}/agree")
+        ->assertOk()
+        ->assertJsonPath('data.status', 'agreed')
+        ->assertJsonPath('data.receiverAgreedAt', fn ($value) => filled($value));
+
+    Sanctum::actingAs($helper);
     $this->patchJson("/api/mobile/help-offers/{$offerId}/confirm-provided")
         ->assertOk()
         ->assertJsonPath('data.status', 'agreed');
@@ -55,11 +65,7 @@ test('help offer needs both confirmations and does not auto fulfill post', funct
         ->assertOk()
         ->assertJsonPath('data.status', 'completed');
 
-    expect($post->refresh()->help_status->value)->toBe('open');
-
-    $this->patchJson("/api/mobile/posts/{$post->id}/help-status", ['status' => 'fulfilled'])
-        ->assertOk()
-        ->assertJsonPath('data.helpStatus', 'fulfilled');
+    expect($post->refresh()->help_status->value)->toBe('fulfilled');
 });
 
 test('help offers reject self help duplicates and fulfilled requests', function () {
@@ -74,16 +80,22 @@ test('help offers reject self help duplicates and fulfilled requests', function 
     $this->postJson("/api/mobile/posts/{$post->id}/help-offers", [
         'type' => 'food',
         'description' => 'self offer',
+        'contactMethod' => 'email',
+        'contactValue' => 'owner@example.com',
     ])->assertUnprocessable();
 
     Sanctum::actingAs($helper);
     $this->postJson("/api/mobile/posts/{$post->id}/help-offers", [
         'type' => 'food',
         'description' => 'First offer',
+        'contactMethod' => 'email',
+        'contactValue' => 'helper@example.com',
     ])->assertOk();
     $this->postJson("/api/mobile/posts/{$post->id}/help-offers", [
         'type' => 'food',
         'description' => 'Duplicate offer',
+        'contactMethod' => 'email',
+        'contactValue' => 'helper@example.com',
     ])->assertUnprocessable();
 
     Sanctum::actingAs($owner);
@@ -93,6 +105,8 @@ test('help offers reject self help duplicates and fulfilled requests', function 
     Sanctum::actingAs($anotherHelper);
     $this->postJson("/api/mobile/posts/{$post->id}/help-offers", [
         'type' => 'service',
+        'contactMethod' => 'email',
+        'contactValue' => 'another@example.com',
     ])->assertUnprocessable();
 });
 
@@ -108,6 +122,8 @@ test('cancelled accepted offer reopens request when no other progressing offer r
     $response = $this->postJson("/api/mobile/posts/{$post->id}/help-offers", [
         'type' => 'transportation',
         'description' => 'I can provide transport.',
+        'contactMethod' => 'phone',
+        'contactValue' => '+963923456789',
     ])->assertOk();
     $offerId = (string) $response->json('data.id');
 

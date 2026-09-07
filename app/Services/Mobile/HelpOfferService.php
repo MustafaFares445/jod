@@ -44,7 +44,11 @@ class HelpOfferService
                 'post_id' => $post->id, 'helper_user_id' => $helper->id, 'post_owner_id' => $post->author_id,
                 'type' => $attributes['type'], 'amount' => $attributes['amount'] ?? null,
                 'description' => $attributes['description'] ?? null, 'status' => HelpOfferStatus::Pending,
-                'contact_method' => $attributes['contactMethod'] ?? null, 'phone' => $attributes['phone'] ?? $helper->phone,
+                'contact_method' => $attributes['contactMethod'],
+                'contact_value' => $attributes['contactValue'],
+                'phone' => in_array($attributes['contactMethod'], ['phone', 'whatsapp'], true)
+                    ? ($attributes['contactValue'] ?? $attributes['phone'] ?? $helper->phone)
+                    : ($attributes['phone'] ?? null),
             ]);
         });
         $offer->load('post', 'helper', 'postOwner');
@@ -96,9 +100,34 @@ class HelpOfferService
 
     public function markAgreed(User $actor, string $offerId): HelpOffer
     {
-        $offer = $this->transition($actor, $offerId, 'coordinate', [HelpOfferStatus::Contacting], HelpOfferStatus::Agreed, ['agreed_at' => now()]);
+        $completedAgreement = false;
+        $offer = DB::transaction(function () use ($actor, $offerId, &$completedAgreement): HelpOffer {
+            $offer = HelpOffer::query()->whereKey($offerId)->lockForUpdate()->firstOrFail();
+            Gate::forUser($actor)->authorize('coordinate', $offer);
+            if (! in_array($offer->status, [HelpOfferStatus::Contacting, HelpOfferStatus::Agreed], true)) {
+                $this->throwInvalidTransition($offer, HelpOfferStatus::Agreed);
+            }
+
+            $column = (string) $actor->id === (string) $offer->helper_user_id
+                ? 'helper_agreed_at'
+                : 'receiver_agreed_at';
+            if ($offer->{$column} === null) $offer->forceFill([$column => now()])->save();
+            $offer->refresh();
+
+            if ($offer->helper_agreed_at !== null && $offer->receiver_agreed_at !== null && $offer->status !== HelpOfferStatus::Agreed) {
+                $offer->forceFill(['status' => HelpOfferStatus::Agreed, 'agreed_at' => now()])->save();
+                $completedAgreement = true;
+            }
+
+            return $offer->load(['post', 'helper', 'postOwner']);
+        });
+
         $this->helpStatus->sync($offer->post);
-        $this->notifyOtherParticipant($actor, $offer, NotificationEventType::HelpOfferAgreed, 'تم الاتفاق على المساعدة', 'تم تسجيل الاتفاق على طريقة تقديم المساعدة خارج JOD.');
+        if ($completedAgreement) {
+            $this->notifyBoth($offer, NotificationEventType::HelpOfferAgreed, 'تم الاتفاق على المساعدة', 'أكد الطرفان الوصول إلى اتفاق. يمكن الآن تأكيد تقديم واستلام المساعدة.');
+        } else {
+            $this->notifyOtherParticipant($actor, $offer, NotificationEventType::HelpOfferAgreed, 'بانتظار تأكيد الاتفاق', 'أكد الطرف الآخر الوصول إلى اتفاق. أكد الاتفاق من طرفك للانتقال إلى التنفيذ.');
+        }
         return $offer;
     }
 
@@ -164,8 +193,8 @@ class HelpOfferService
             return $offer->load(['post', 'helper', 'postOwner']);
         });
         if ($completedNow) {
-            $this->helpStatus->sync($offer->post);
-            $this->notifyBoth($offer, NotificationEventType::HelpOfferCompleted, 'تم إكمال عرض المساعدة', 'أكد الطرفان تقديم واستلام المساعدة. يمكنك إبقاء الطلب مفتوحاً أو تحديد أنه تمت تلبيته بالكامل.');
+            $this->helpStatus->fulfill($offer->post);
+            $this->notifyBoth($offer, NotificationEventType::HelpOfferCompleted, 'تم إكمال عرض المساعدة', 'أكد الطرفان تقديم واستلام المساعدة وتم تسجيل الطلب كحاجة تمت تلبيتها.');
         } else {
             $this->notifyOtherParticipant($actor, $offer, $event, 'تم تسجيل تأكيد جديد', 'أكد الطرف الآخر تنفيذ جانبه من عملية المساعدة.');
         }

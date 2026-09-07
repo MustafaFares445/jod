@@ -43,7 +43,7 @@ class SearchController extends Controller
             ? $this->posts($params, $limit, $request, $viewer)
             : [[], 0];
         [$campaigns, $campaignsTotal] = in_array($type, ['all', 'campaigns'], true)
-            ? $this->campaigns($params, $limit, $request)
+            ? $this->campaigns($params, $limit, $request, $viewer)
             : [[], 0];
 
         return MobileApiResponse::success([
@@ -236,7 +236,7 @@ class SearchController extends Controller
     }
 
     /** @return array{0: list<array<string, mixed>>, 1: int} */
-    private function campaigns(array $params, int $limit, GlobalSearchRequest $request): array
+    private function campaigns(array $params, int $limit, GlobalSearchRequest $request, ?User $viewer): array
     {
         $search = trim((string) ($params['search'] ?? ''));
         $location = trim((string) ($params['location'] ?? ''));
@@ -244,16 +244,8 @@ class SearchController extends Controller
         $sort = (string) ($params['sort'] ?? 'newest');
 
         $query = Campaign::query()
-            ->with([
-                'organization.logoMedia',
-                'creator',
-                'imageMedia',
-                'posts' => static fn (Relation $relation) => $relation
-                    ->where('status', 'published')
-                    ->orderByDesc('published_at')
-                    ->orderByDesc('created_at')
-                    ->with('images'),
-            ])
+            ->with($this->campaignRelations($viewer))
+            ->withCount('likes')
             ->where('status', 'active')
             ->when($location !== '', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
             ->when($category !== '', fn (Builder $builder) => $builder->where('category', $category))
@@ -278,6 +270,27 @@ class SearchController extends Controller
     }
 
     /** @return array<int|string, mixed> */
+    private function campaignRelations(?User $viewer): array
+    {
+        $relations = [
+            'organization.logoMedia',
+            'creator',
+            'imageMedia',
+            'posts' => static fn (Relation $relation) => $relation
+                ->where('status', 'published')
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->with('images'),
+        ];
+
+        if ($viewer !== null) {
+            $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
+        }
+
+        return $relations;
+    }
+
+    /** @return array<int|string, mixed> */
     private function postRelations(?User $viewer): array
     {
         $relations = ['organization.logoMedia', 'campaign', 'category', 'author.avatarMedia', 'images'];
@@ -290,6 +303,7 @@ class SearchController extends Controller
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['campaignApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
         $relations['volunteerApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
+        $relations['campaignDonations'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id)->latest('created_at');
 
         return $relations;
     }

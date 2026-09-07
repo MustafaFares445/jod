@@ -27,6 +27,7 @@ class SavedPostService
                 'post.images',
                 'post.campaignApplications' => static fn (HasMany $relation) => $relation->where('created_by', $user->id),
                 'post.volunteerApplications' => static fn (HasMany $relation) => $relation->where('created_by', $user->id),
+                'post.campaignDonations' => static fn (HasMany $relation) => $relation->where('created_by', $user->id)->latest('created_at'),
             ])
             ->where('user_id', $user->id)
             ->whereHas('post', fn (Builder $query) => $query->where('status', 'published'))

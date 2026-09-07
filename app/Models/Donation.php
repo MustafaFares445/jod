@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'organization_id', 'campaign_id', 'name', 'email', 'phone', 'campaign_title',
-    'amount_or_type', 'donated_at', 'city', 'source', 'payment_method', 'status',
-    'contact_method', 'notes', 'cancel_reason', 'contacted_at', 'agreed_at',
+    'amount_or_type', 'confirmed_amount', 'donated_at', 'city', 'source', 'payment_method', 'status',
+    'contact_method', 'notes', 'cancel_reason', 'accepted_at', 'contacted_at', 'agreed_at',
     'completed_at', 'cancelled_at', 'campaign_ref', 'assigned_to', 'internal_notes',
     'created_by', 'confirmed_by', 'is_anonymous',
 ])]
@@ -27,7 +27,9 @@ class Donation extends Model
         return [
             'status' => DonationStatus::class,
             'donated_at' => 'datetime',
+            'accepted_at' => 'datetime',
             'contacted_at' => 'datetime',
+            'confirmed_amount' => 'decimal:2',
             'agreed_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',

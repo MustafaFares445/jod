@@ -15,7 +15,8 @@ class HelpOfferRequest extends FormRequest
             'type' => ['required', 'string', Rule::in(['financial', 'supplies', 'service', 'transportation', 'medicine', 'food', 'other'])],
             'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999999.99', 'required_if:type,financial'],
             'description' => ['nullable', 'string', 'max:3000'],
-            'contactMethod' => ['nullable', 'string', Rule::in(['phone', 'whatsapp', 'email', 'other'])],
+            'contactMethod' => ['required', 'string', Rule::in(['phone', 'whatsapp', 'email', 'other'])],
+            'contactValue' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
         ];
     }

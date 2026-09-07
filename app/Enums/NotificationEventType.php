@@ -7,6 +7,7 @@ namespace App\Enums;
 enum NotificationEventType: string
 {
     case DonationIntentCreated = 'donation.intent_created';
+    case DonationAccepted = 'donation.accepted';
     case DonationContactStarted = 'donation.contact_started';
     case DonationAgreed = 'donation.agreed';
     case DonationCompleted = 'donation.completed';
@@ -32,6 +33,8 @@ enum NotificationEventType: string
 
     case ApplicationSubmitted = 'application.submitted';
     case ApplicationAccepted = 'application.accepted';
+    case ApplicationContactStarted = 'application.contact_started';
+    case ApplicationCompleted = 'application.completed';
     case ApplicationRejected = 'application.rejected';
     case ApplicationWithdrawn = 'application.withdrawn';
 
@@ -64,14 +67,15 @@ enum NotificationEventType: string
     public function category(): string
     {
         return match ($this) {
-            self::DonationIntentCreated, self::DonationContactStarted, self::DonationAgreed,
+            self::DonationIntentCreated, self::DonationAccepted, self::DonationContactStarted, self::DonationAgreed,
             self::DonationCompleted, self::DonationCancelled, self::DonationReceived => 'donation',
             self::HelpOfferCreated, self::HelpOfferAccepted, self::HelpOfferRejected,
             self::HelpOfferContactStarted, self::HelpOfferAgreed, self::HelpOfferHelperConfirmed,
             self::HelpOfferReceiverConfirmed, self::HelpOfferCompleted, self::HelpOfferCancelled,
             self::HelpRequestFulfilled, self::HelpRequestReopened => 'help',
             self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed, self::CampaignPublished => 'campaign',
-            self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
+            self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationContactStarted,
+            self::ApplicationCompleted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
             self::PostSubmitted, self::PostPublished, self::PostBlocked => 'post',
             self::ReportSubmitted, self::ReportInProgress, self::ReportClosed => 'report',
             self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',

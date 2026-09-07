@@ -154,6 +154,10 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::delete('videos/uploads/{upload}', [App\Http\Controllers\API\Org\OrganizationVideoUploadController::class, 'cancel']);
 
         Route::apiResource('donors', DonorController::class);
+        Route::patch('applicants/{applicant}/accept', [ApplicantController::class, 'accept']);
+        Route::patch('applicants/{applicant}/contact', [ApplicantController::class, 'contact']);
+        Route::patch('applicants/{applicant}/complete', [ApplicantController::class, 'complete']);
+        Route::patch('applicants/{applicant}/reject', [ApplicantController::class, 'reject']);
         Route::apiResource('applicants', ApplicantController::class);
 
         Route::apiResource('notifications', App\Http\Controllers\API\Org\NotificationController::class);

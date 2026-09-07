@@ -7,6 +7,7 @@ namespace App\Enums;
 enum DonationStatus: string
 {
     case Pending = 'pending';
+    case Accepted = 'accepted';
     case Contacting = 'contacting';
     case Agreed = 'agreed';
     case Completed = 'completed';

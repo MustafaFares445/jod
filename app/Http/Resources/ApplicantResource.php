@@ -15,6 +15,8 @@ class ApplicantResource extends JsonResource
             && $this->request_type === 'volunteer'
             && filled($this->campaign_ref);
 
+        $status = (string) $this->applicant_status;
+
         return [
             'id' => (string) $this->id,
             'campaignId' => $this->campaign_id !== null ? (string) $this->campaign_id : null,
@@ -25,10 +27,17 @@ class ApplicantResource extends JsonResource
             'phone' => $this->phone,
             'city' => $this->city,
             'campaignTitle' => $this->campaign_title,
-            'applicantStatus' => $this->applicant_status,
+            'applicantStatus' => $status,
             'requestType' => $this->request_type,
             'source' => $this->source,
+            'can' => [
+                'accept' => in_array($status, ['pending', 'under_review'], true),
+                'contact' => in_array($status, ['accepted', 'approved'], true),
+                'complete' => $status === 'contacting',
+                'reject' => in_array($status, ['pending', 'under_review', 'accepted', 'approved'], true),
+            ],
             'appliedAt' => $this->applied_at?->toIso8601String(),
+            'updatedAt' => $this->updated_at?->toIso8601String(),
         ];
     }
 }

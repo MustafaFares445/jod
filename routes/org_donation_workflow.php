@@ -11,6 +11,7 @@ Route::middleware(['auth:sanctum', 'access-token', 'org-active'])
     ->group(function (): void {
         Route::get('/', [DonationWorkflowController::class, 'index'])->name('index');
         Route::get('{donation}', [DonationWorkflowController::class, 'show'])->name('show');
+        Route::patch('{donation}/accept', [DonationWorkflowController::class, 'accept'])->name('accept');
         Route::patch('{donation}/contact', [DonationWorkflowController::class, 'contact'])->name('contact');
         Route::patch('{donation}/agree', [DonationWorkflowController::class, 'agree'])->name('agree');
         Route::patch('{donation}/complete', [DonationWorkflowController::class, 'complete'])->name('complete');

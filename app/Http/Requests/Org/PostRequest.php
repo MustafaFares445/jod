@@ -18,9 +18,9 @@ class PostRequest extends FormRequest
 
     public function rules(): array
     {
-        $campaignRelatedTypes = ['campaign_teaser', 'campaign_update', 'campaign_summary'];
+        $campaignRequiredTypes = ['campaign_teaser', 'campaign_update', 'campaign_summary', 'donation_campaign'];
         $allowedTypes = [
-            'general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary',
+            'general', 'job_opportunity', 'campaign_teaser', 'campaign_update', 'campaign_summary', 'donation_campaign',
             'service_offer', 'volunteer_opportunity', 'awareness', 'help_request',
         ];
         $isUpdate = $this->route('post') !== null;
@@ -44,7 +44,7 @@ class PostRequest extends FormRequest
             'status' => [$isUpdate ? 'prohibited' : 'sometimes', Rule::in(['draft', 'published'])],
             'location' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
             'campaignTitle' => [
-                Rule::requiredIf(fn (): bool => in_array($type, $campaignRelatedTypes, true)),
+                Rule::requiredIf(fn (): bool => in_array($type, $campaignRequiredTypes, true)),
                 'nullable', 'string', 'max:255',
                 Rule::exists('campaigns', 'title')->where('organization_id', $organizationId),
             ],

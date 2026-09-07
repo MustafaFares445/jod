@@ -38,6 +38,7 @@ class PersonalizedFeedService
             'saves' => fn ($query) => $query->where('user_id', $viewer->id),
             'campaignApplications' => fn ($query) => $query->where('created_by', $viewer->id),
             'volunteerApplications' => fn ($query) => $query->where('created_by', $viewer->id),
+            'campaignDonations' => fn ($query) => $query->where('created_by', $viewer->id)->latest('created_at'),
         ])->where('status', 'published')
             ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->where(function ($query): void {
@@ -57,7 +58,14 @@ class PersonalizedFeedService
         $campaignCandidates = collect();
         if ($type !== FeedType::Urgent) {
             $campaignQuery = Campaign::query()
-                ->with(['organization.logoMedia', 'imageMedia', 'category', 'creator'])
+                ->with([
+                    'organization.logoMedia',
+                    'imageMedia',
+                    'category',
+                    'creator',
+                    'likes' => fn ($query) => $query->where('user_id', $viewer->id),
+                ])
+                ->withCount('likes')
                 ->where('status', 'active')
                 ->where(function ($query): void {
                     $query->whereNull('end_date')->orWhereDate('end_date', '>=', now()->toDateString());

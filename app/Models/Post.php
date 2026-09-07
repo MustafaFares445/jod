@@ -102,6 +102,12 @@ class Post extends Model
             ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
     }
 
+    public function campaignDonations(): HasMany
+    {
+        return $this->hasMany(Donation::class, 'campaign_id', 'campaign_id')
+            ->where('status', '!=', 'cancelled');
+    }
+
     public function volunteerApplications(): HasMany
     {
         return $this->hasMany(CampaignApplication::class, 'campaign_ref', 'id')

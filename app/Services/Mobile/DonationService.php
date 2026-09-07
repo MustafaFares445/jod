@@ -124,7 +124,7 @@ class DonationService
             $user,
             NotificationEventType::DonationIntentCreated,
             'تم تسجيل طلب التبرع',
-            "تم تسجيل رغبتك بالتبرع بقيمة {$formattedAmount} لحملة {$campaign->title}. بانتظار تواصل المنظمة.",
+            "تم تسجيل رغبتك بالتبرع بقيمة {$formattedAmount} لحملة {$campaign->title}. بانتظار موافقة المنظمة، ثم يبدأ التواصل والتنسيق.",
             'donation',
             'normal',
             $campaign->title,
@@ -157,9 +157,20 @@ class DonationService
         return $this->createIntent($user, $campaignId, $attributes);
     }
 
+    public function accept(User $actor, string $donationId): Donation
+    {
+        $donation = $this->transitionForOrganization($actor, $donationId, DonationStatus::Pending, DonationStatus::Accepted, [
+            'accepted_at' => now(),
+        ]);
+
+        $this->notifyDonor($donation, NotificationEventType::DonationAccepted, 'تم قبول طلب التبرع', 'وافقت المنظمة على طلب تبرعك. الخطوة التالية هي بدء التواصل لتنسيق التبرع.');
+
+        return $donation;
+    }
+
     public function markContacting(User $actor, string $donationId): Donation
     {
-        $donation = $this->transitionForOrganization($actor, $donationId, DonationStatus::Pending, DonationStatus::Contacting, [
+        $donation = $this->transitionForOrganization($actor, $donationId, DonationStatus::Accepted, DonationStatus::Contacting, [
             'contacted_at' => now(),
         ]);
 
@@ -179,11 +190,15 @@ class DonationService
         return $donation;
     }
 
-    public function complete(User $actor, string $donationId): Donation
+    public function complete(User $actor, string $donationId, float $confirmedAmount): Donation
     {
         $goalReached = false;
 
-        $donation = DB::transaction(function () use ($actor, $donationId, &$goalReached): Donation {
+        if ($confirmedAmount <= 0) {
+            throw ValidationException::withMessages(['amount' => ['The confirmed received amount must be greater than zero.']]);
+        }
+
+        $donation = DB::transaction(function () use ($actor, $donationId, $confirmedAmount, &$goalReached): Donation {
             $donation = Donation::query()->whereKey($donationId)->lockForUpdate()->firstOrFail();
             $this->authorizeOrganizationUpdate($actor, $donation);
 
@@ -196,7 +211,7 @@ class DonationService
 
             $campaign = Campaign::query()->whereKey($donation->campaign_id)->lockForUpdate()->firstOrFail();
             $previousRaised = (float) $campaign->raised_amount;
-            $amount = (float) $donation->amount_or_type;
+            $amount = round($confirmedAmount, 2);
 
             $hasPreviousCompletedDonation = Donation::query()
                 ->where('campaign_id', $campaign->id)
@@ -207,6 +222,7 @@ class DonationService
 
             $donation->forceFill([
                 'status' => DonationStatus::Completed,
+                'confirmed_amount' => $amount,
                 'completed_at' => now(),
                 'confirmed_by' => $actor->id,
             ])->save();
@@ -248,7 +264,7 @@ class DonationService
             $donation = Donation::query()->whereKey($donationId)->lockForUpdate()->firstOrFail();
             $this->authorizeOrganizationUpdate($actor, $donation);
 
-            if (! in_array($donation->status, [DonationStatus::Pending, DonationStatus::Contacting, DonationStatus::Agreed], true)) {
+            if (! in_array($donation->status, [DonationStatus::Pending, DonationStatus::Accepted, DonationStatus::Contacting, DonationStatus::Agreed], true)) {
                 throw $this->invalidTransition($donation, DonationStatus::Cancelled);
             }
 

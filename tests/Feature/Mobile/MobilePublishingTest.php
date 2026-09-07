@@ -53,7 +53,6 @@ test('my posts filters active as internal published', function () {
     $response->assertJsonPath('data.0.status', 'active');
     $response->assertJsonMissing(['title' => 'Draft post']);
 });
-test('create draft allows incomplete fields and assigns owner', function () {
 test('user can create and submit a service offer post', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
@@ -71,7 +70,7 @@ test('user can create and submit a service offer post', function () {
         ->assertJsonPath('data.status', 'pending');
 });
 
-
+test('create draft allows incomplete fields and assigns owner', function () {
     $user = User::factory()->create();
     Sanctum::actingAs($user);
 
@@ -105,10 +104,10 @@ test('create submitted post requires full validation and becomes pending', funct
         ->assertJsonValidationErrors(['title', 'details', 'city'], 'error.details');
 
     $response = $this->postJson('/api/mobile/posts', [
-        'type' => 'donation_campaign',
+        'type' => 'help_request',
         'title' => 'Food support needed',
         'details' => 'Family needs food support this week.',
-        'city' => 'Amman',
+        'city' => 'Damascus',
         'categoryId' => $category->id,
         'saveAsDraft' => false,
     ]);
@@ -120,12 +119,25 @@ test('create submitted post requires full validation and becomes pending', funct
 
     $this->assertDatabaseHas('posts', [
         'author_id' => $user->id,
-        'type' => 'donation_campaign',
+        'type' => 'help_request',
         'status' => 'pending',
-        'location' => 'Amman',
+        'location' => 'Damascus',
         'category_id' => $category->id,
     ]);
 });
+test('personal user cannot create a donation campaign post', function () {
+    Sanctum::actingAs(User::factory()->create());
+
+    $this->postJson('/api/mobile/posts', [
+        'type' => 'donation_campaign',
+        'title' => 'Donation campaign attempt',
+        'details' => 'Personal users must not be able to publish donation campaigns.',
+        'city' => 'Damascus',
+        'saveAsDraft' => false,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['type'], 'error.details');
+});
+
 test('create rejects non empty images until uploads are supported', function () {
     Sanctum::actingAs(User::factory()->create());
 

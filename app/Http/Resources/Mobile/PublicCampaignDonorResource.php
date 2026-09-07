@@ -19,7 +19,7 @@ class PublicCampaignDonorResource extends JsonResource
             'id' => (string) $this->id,
             'name' => $isAnonymous ? 'مجهول' : (string) ($creator?->name ?? $this->name ?? 'متبرع'),
             'avatarUrl' => $isAnonymous ? null : ($creator?->relationLoaded('avatarMedia') ? $creator->avatarMedia?->publicUrl() : null),
-            'amount' => (float) $this->amount_or_type,
+            'amount' => (float) ($this->confirmed_amount ?? $this->amount_or_type),
             'donatedAt' => ($this->completed_at ?? $this->donated_at ?? $this->created_at)?->toIso8601String(),
             'isAnonymous' => $isAnonymous,
         ];

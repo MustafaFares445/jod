@@ -22,7 +22,7 @@ class DonationWorkflowController extends Controller
     {
         $this->authorize('viewAny', Donation::class);
         $validated = validator($request->query(), [
-            'status' => ['sometimes', 'string', Rule::in(['pending', 'contacting', 'agreed', 'completed', 'cancelled'])],
+            'status' => ['sometimes', 'string', Rule::in(['pending', 'accepted', 'contacting', 'agreed', 'completed', 'cancelled'])],
             'campaignId' => ['sometimes', 'string', 'exists:campaigns,id'],
             'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ])->validate();
@@ -43,6 +43,11 @@ class DonationWorkflowController extends Controller
         return DonorResource::make($donation->load('campaign.organization'));
     }
 
+    public function accept(Request $request, string $donation): DonorResource
+    {
+        return DonorResource::make($this->service->accept($this->user($request), $donation));
+    }
+
     public function contact(Request $request, string $donation): DonorResource
     {
         return DonorResource::make($this->service->markContacting($this->user($request), $donation));
@@ -55,7 +60,11 @@ class DonationWorkflowController extends Controller
 
     public function complete(Request $request, string $donation): DonorResource
     {
-        return DonorResource::make($this->service->complete($this->user($request), $donation));
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999999.99'],
+        ]);
+
+        return DonorResource::make($this->service->complete($this->user($request), $donation, (float) $validated['amount']));
     }
 
     public function cancel(DonationCancelRequest $request, string $donation): DonorResource

@@ -11,6 +11,7 @@ use App\Models\Post;
 use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
 
 class ApplicantService
 {
@@ -116,6 +117,103 @@ class ApplicantService
                     $organizationId,
                 );
             }
+        }
+
+        return $application->refresh();
+    }
+
+    public function accept(CampaignApplication $application, string $organizationId): CampaignApplication
+    {
+        return $this->transition(
+            $application,
+            $organizationId,
+            ['pending', 'under_review'],
+            'accepted',
+            NotificationEventType::ApplicationAccepted,
+            'تم قبول طلب التطوع',
+            'وافقت المنظمة على طلب تطوعك. الخطوة التالية هي بدء التواصل معك.',
+        );
+    }
+
+    public function contact(CampaignApplication $application, string $organizationId): CampaignApplication
+    {
+        return $this->transition(
+            $application,
+            $organizationId,
+            ['accepted', 'approved'],
+            'contacting',
+            NotificationEventType::ApplicationContactStarted,
+            'بدأ التواصل بخصوص طلب التطوع',
+            'بدأت المنظمة التواصل معك لتنسيق تفاصيل التطوع.',
+        );
+    }
+
+    public function complete(CampaignApplication $application, string $organizationId): CampaignApplication
+    {
+        return $this->transition(
+            $application,
+            $organizationId,
+            ['contacting'],
+            'completed',
+            NotificationEventType::ApplicationCompleted,
+            'اكتمل طلب التطوع',
+            'أكدت المنظمة اكتمال مشاركتك التطوعية. ستظهر الآن ضمن طلبات التطوع المكتملة.',
+        );
+    }
+
+    public function reject(CampaignApplication $application, string $organizationId): CampaignApplication
+    {
+        return $this->transition(
+            $application,
+            $organizationId,
+            ['pending', 'under_review', 'accepted', 'approved'],
+            'rejected',
+            NotificationEventType::ApplicationRejected,
+            'تم رفض طلب التطوع',
+            'لم توافق المنظمة على طلب التطوع أو تم إيقافه قبل بدء التنفيذ.',
+        );
+    }
+
+    /** @param list<string> $allowedFrom */
+    private function transition(
+        CampaignApplication $application,
+        string $organizationId,
+        array $allowedFrom,
+        string $nextStatus,
+        NotificationEventType $eventType,
+        string $title,
+        string $message,
+    ): CampaignApplication {
+        if ((string) $application->organization_id !== $organizationId) {
+            abort(404);
+        }
+
+        $currentStatus = (string) $application->applicant_status;
+        if ($currentStatus === $nextStatus) {
+            return $application->refresh();
+        }
+
+        if (! in_array($currentStatus, $allowedFrom, true)) {
+            throw ValidationException::withMessages([
+                'applicantStatus' => ["Application cannot transition from {$currentStatus} to {$nextStatus}."],
+            ]);
+        }
+
+        $application->update(['applicant_status' => $nextStatus]);
+        $this->syncApplicationTargetCount($application);
+
+        if (filled($application->created_by)) {
+            $this->notifications->notifyUser(
+                (string) $application->created_by,
+                $eventType,
+                $title,
+                $message,
+                'applicant',
+                'high',
+                $application->campaign_title,
+                '/applications/'.$application->id,
+                $organizationId,
+            );
         }
 
         return $application->refresh();

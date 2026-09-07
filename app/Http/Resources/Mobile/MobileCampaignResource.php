@@ -16,9 +16,9 @@ class MobileCampaignResource extends JsonResource
     {
         $publisher = $this->publisher();
         $images = $this->images();
-        $engagementPost = $this->engagementPost($request);
-        $isLiked = $engagementPost?->relationLoaded('likes') === true && $engagementPost->likes->isNotEmpty();
-        $likesCount = (int) ($engagementPost?->reactions_count ?? 0);
+        $engagementPost = $this->engagementPost();
+        $isLiked = $this->relationLoaded('likes') && $this->likes->isNotEmpty();
+        $likesCount = (int) ($this->likes_count ?? 0);
 
         $data = [
             'id' => (string) $this->id,
@@ -59,22 +59,15 @@ class MobileCampaignResource extends JsonResource
         return $data;
     }
 
-    private function engagementPost(Request $request): ?Post
+    private function engagementPost(): ?Post
     {
-        $post = $this->relationLoaded('posts')
+        return $this->relationLoaded('posts')
             ? $this->posts->first()
             : $this->resource->posts()
                 ->where('status', 'published')
                 ->orderByDesc('published_at')
                 ->orderByDesc('created_at')
                 ->first();
-
-        $viewer = $request->user('sanctum');
-        if ($post !== null && $viewer !== null && ! $post->relationLoaded('likes')) {
-            $post->load(['likes' => static fn ($likes) => $likes->where('user_id', $viewer->id)]);
-        }
-
-        return $post;
     }
 
     private function publisher(): array

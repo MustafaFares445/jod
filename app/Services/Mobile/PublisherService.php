@@ -103,6 +103,7 @@ class PublisherService
         $relations['saves'] = static fn (Relation $relation) => $relation->where('user_id', $viewer->id);
         $relations['campaignApplications'] = static fn (Relation $relation) => $relation->where('created_by', $viewer->id);
         $relations['volunteerApplications'] = static fn (Relation $relation) => $relation->where('created_by', $viewer->id);
+        $relations['campaignDonations'] = static fn (Relation $relation) => $relation->where('created_by', $viewer->id)->latest('created_at');
 
         return $relations;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Mobile\AuthController;
 use App\Http\Controllers\Mobile\CampaignApplicationController;
+use App\Http\Controllers\Mobile\CampaignEngagementController;
 use App\Http\Controllers\Mobile\DiscoveryController;
 use App\Http\Controllers\Mobile\DonationController;
 use App\Http\Controllers\Mobile\FeedController;
@@ -146,6 +147,8 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
     Route::post('publishers/{targetType}/{targetId}/hide', [RecommendationFeedbackController::class, 'hidePublisher'])->name('publishers.hide');
     Route::delete('publishers/{targetType}/{targetId}/hide', [RecommendationFeedbackController::class, 'unhidePublisher'])->name('publishers.unhide');
 
+    Route::post('campaigns/{campaign}/like', [CampaignEngagementController::class, 'like'])->name('campaigns.like');
+    Route::delete('campaigns/{campaign}/like', [CampaignEngagementController::class, 'unlike'])->name('campaigns.unlike');
     Route::post('campaigns/{campaign}/applications', [CampaignApplicationController::class, 'store'])->name('campaigns.applications.store');
     Route::post('posts/{post}/applications', [CampaignApplicationController::class, 'storeForPost'])->name('posts.applications.store');
     Route::post('campaigns/{campaign}/donations', [DonationController::class, 'store'])->name('campaigns.donations.store');

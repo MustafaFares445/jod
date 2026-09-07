@@ -73,6 +73,11 @@ class Campaign extends Model
         return $this->hasMany(Post::class);
     }
 
+    public function likes(): HasMany
+    {
+        return $this->hasMany(CampaignLike::class);
+    }
+
     public function media(): HasMany
     {
         return $this->hasMany(Media::class, 'model_id')

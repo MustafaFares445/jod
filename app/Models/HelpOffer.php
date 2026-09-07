@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'post_id', 'helper_user_id', 'post_owner_id', 'type', 'amount', 'description',
-    'status', 'contact_method', 'phone', 'cancel_reason', 'rejection_reason',
-    'accepted_at', 'contacted_at', 'agreed_at', 'helper_confirmed_at',
+    'status', 'contact_method', 'contact_value', 'phone', 'cancel_reason', 'rejection_reason',
+    'accepted_at', 'contacted_at', 'agreed_at', 'helper_agreed_at', 'receiver_agreed_at', 'helper_confirmed_at',
     'receiver_confirmed_at', 'completed_at', 'cancelled_at', 'rejected_at',
 ])]
 class HelpOffer extends Model
@@ -33,6 +33,8 @@ class HelpOffer extends Model
             'accepted_at' => 'datetime',
             'contacted_at' => 'datetime',
             'agreed_at' => 'datetime',
+            'helper_agreed_at' => 'datetime',
+            'receiver_agreed_at' => 'datetime',
             'helper_confirmed_at' => 'datetime',
             'receiver_confirmed_at' => 'datetime',
             'completed_at' => 'datetime',
