@@ -71,7 +71,13 @@ class PostImageService
                 Storage::disk($storedFile['disk'])->delete($storedFile['path']);
             }
 
-            throw $exception;
+            if ($exception instanceof ValidationException) {
+                throw $exception;
+            }
+
+            throw ValidationException::withMessages([
+                'images' => ['تعذر رفع صور المنشور. لم يتم حفظ المنشور أو الصور. حاول مرة أخرى.'],
+            ]);
         }
     }
 

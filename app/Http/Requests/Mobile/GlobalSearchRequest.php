@@ -31,7 +31,7 @@ class GlobalSearchRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'searchQueries' => ['nullable', 'string', 'max:255'],
             'filter.search' => ['nullable', 'string', 'max:255'],
-            'type' => ['nullable', 'string', Rule::in(['all', 'accounts', 'posts', 'campaigns'])],
+            'type' => ['nullable', 'string', Rule::in(['all', 'accounts', 'organizations', 'groups', 'posts', 'campaigns'])],
             'location' => ['nullable', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:255'],
             'sort' => ['nullable', 'string', Rule::in(['newest', 'oldest'])],

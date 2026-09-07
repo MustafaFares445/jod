@@ -14,6 +14,8 @@ use App\Services\MediaService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class MediaController extends Controller
 {
@@ -25,12 +27,21 @@ class MediaController extends Controller
         $target = $this->service->resolveTarget($mediaModel, $modelId);
         $this->authorizeTarget($mediaModel, $target, $prop);
 
-        $media = $this->service->upload(
-            $mediaModel,
-            $modelId,
-            $prop,
-            $request->file('file'),
-        );
+        try {
+            $media = $this->service->upload(
+                $mediaModel,
+                $modelId,
+                $prop,
+                $request->file('file'),
+            );
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+            throw ValidationException::withMessages([
+                'file' => ['تعذر رفع الصورة أو الملف. لم يتم حفظ التغيير. حاول مرة أخرى.'],
+            ]);
+        }
         $this->markPostUpdated($target);
 
         return MediaResource::make($media)
@@ -49,13 +60,22 @@ class MediaController extends Controller
         $target = $this->service->resolveTarget($mediaModel, $modelId);
         $this->authorizeTarget($mediaModel, $target, $prop);
 
-        $media = $this->service->replace(
-            $mediaModel,
-            $modelId,
-            $prop,
-            $mediaId,
-            $request->file('file'),
-        );
+        try {
+            $media = $this->service->replace(
+                $mediaModel,
+                $modelId,
+                $prop,
+                $mediaId,
+                $request->file('file'),
+            );
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+            throw ValidationException::withMessages([
+                'file' => ['تعذر استبدال الصورة أو الملف. بقي الملف السابق دون تغيير. حاول مرة أخرى.'],
+            ]);
+        }
         $this->markPostUpdated($target);
 
         return MediaResource::make($media);

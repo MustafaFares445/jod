@@ -31,6 +31,7 @@ class OrganizationController extends Controller
         $sortBy = (string) ($request->query('sortBy') ?? '');
 
         $query = Organization::query()
+            ->with('logoMedia')
             ->withCount([
                 'campaigns as actual_campaigns_count',
                 'posts as actual_posts_count',
@@ -120,13 +121,13 @@ class OrganizationController extends Controller
             'verification_status' => $this->verificationStatusFor($status),
         ]);
 
-        return OrganizationResource::make($organization)->response()->setStatusCode(201);
+        return OrganizationResource::make($organization->load('logoMedia'))->response()->setStatusCode(201);
     }
 
     public function show(Organization $organization): OrganizationResource
     {
         $this->authorize('view', $organization);
-        $organization->loadCount([
+        $organization->loadMissing('logoMedia')->loadCount([
             'campaigns as actual_campaigns_count',
             'posts as actual_posts_count',
         ]);
@@ -176,7 +177,7 @@ class OrganizationController extends Controller
             'social_media' => $data['socialMedia'] ?? $organization->social_media,
         ]);
 
-        return OrganizationResource::make($organization->refresh());
+        return OrganizationResource::make($organization->refresh()->load('logoMedia'));
     }
 
     public function destroy(Organization $organization): Response
@@ -198,7 +199,7 @@ class OrganizationController extends Controller
 
         $this->applyAccountStatus($organization, $data['status']);
 
-        return OrganizationResource::make($organization->refresh());
+        return OrganizationResource::make($organization->refresh()->load('logoMedia'));
     }
 
     public function updateVerification(Request $request, Organization $organization): OrganizationResource
@@ -214,7 +215,7 @@ class OrganizationController extends Controller
             $data['verificationStatus'] === 'verified' ? 'active' : 'inactive',
         );
 
-        return OrganizationResource::make($organization->refresh());
+        return OrganizationResource::make($organization->refresh()->load('logoMedia'));
     }
 
     public function accept(Request $request, Organization $organization): OrganizationResource
@@ -238,7 +239,7 @@ class OrganizationController extends Controller
             );
         }
 
-        return OrganizationResource::make($organization->refresh());
+        return OrganizationResource::make($organization->refresh()->load('logoMedia'));
     }
 
     private function applyAccountStatus(Organization $organization, string $status, bool $notify = true): void

@@ -11,12 +11,16 @@ class OrganizationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $logo = $this->relationLoaded('logoMedia') ? $this->logoMedia : null;
+
         return [
             'id' => (string) $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
             'location' => $this->location,
+            'image' => $logo?->publicUrl(),
+            'logo' => $logo ? MediaResource::make($logo)->resolve($request) : null,
             'verificationStatus' => $this->verification_status,
             'status' => $this->status,
             'campaignsCount' => (int) ($this->actual_campaigns_count ?? $this->campaigns_count ?? 0),

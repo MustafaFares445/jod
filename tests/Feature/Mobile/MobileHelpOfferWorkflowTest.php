@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -29,6 +30,7 @@ test('help offer needs both confirmations and does not auto fulfill post', funct
         ->assertJsonPath('data.status', 'pending');
 
     $offerId = (string) $created->json('data.id');
+    expect(Str::isUuid($offerId))->toBeTrue();
     expect($post->refresh()->help_status->value)->toBe('open');
 
     Sanctum::actingAs($owner);

@@ -22,7 +22,7 @@ class UserPostService
 
     public function paginate(User $user, array $params): LengthAwarePaginator
     {
-        $query = Post::query()->with('images')->where('author_id', $user->id);
+        $query = Post::query()->with($this->viewerRelations((string) $user->id))->where('author_id', $user->id);
         $status = $params['filter']['status'] ?? null;
         if ($status) $query->where('status', $status);
 
@@ -30,9 +30,15 @@ class UserPostService
         return $query->orderBy($column, $direction)->orderBy('id')->paginate((int) ($params['perPage'] ?? 20));
     }
 
-    public function create(User $user, array $data): Post
+    public function show(Post $post, User $viewer): Post
     {
-        return DB::transaction(function () use ($user, $data): Post {
+        return $this->loadViewerState($post, (string) $viewer->id);
+    }
+
+    /** @param list<\Illuminate\Http\UploadedFile> $images */
+    public function create(User $user, array $data, array $images = []): Post
+    {
+        return DB::transaction(function () use ($user, $data, $images): Post {
             $isDraft = (bool) ($data['saveAsDraft'] ?? false);
             $post = Post::query()->create([
                 'title' => $data['title'] ?? null,
@@ -42,13 +48,16 @@ class UserPostService
                 'status' => $isDraft ? 'draft' : 'pending',
                 'location' => $this->locationFromData($data),
                 'category_id' => $data['categoryId'] ?? null,
+                'audience' => $data['audience'] ?? 'general',
                 'author_id' => $user->id,
                 'updated_by' => $user->id,
                 'submitted_at' => $isDraft ? null : now(),
             ]);
 
             if (! $isDraft) $this->notifyAdminsForReview($post, $user);
-            return $post->load('images');
+            if ($images !== []) $post = $this->imageService->add($post, $images);
+
+            return $this->loadViewerState($post, (string) $user->id);
         });
     }
 
@@ -63,12 +72,13 @@ class UserPostService
         if (array_key_exists('type', $data)) $attributes['type'] = $data['type'];
         if (array_key_exists('cityId', $data) || array_key_exists('city', $data)) $attributes['location'] = $this->locationFromData($data);
         if (array_key_exists('categoryId', $data)) $attributes['category_id'] = $data['categoryId'];
+        if (array_key_exists('audience', $data)) $attributes['audience'] = $data['audience'];
 
         if ($attributes !== []) {
             $attributes['updated_by'] = $post->author_id;
             $post->update($attributes);
         }
-        return $post->refresh()->load('images');
+        return $this->loadViewerState($post->refresh(), (string) $post->author_id);
     }
 
     public function submit(Post $post): Post
@@ -94,7 +104,7 @@ class UserPostService
 
             $author = User::query()->find($lockedPost->author_id);
             if ($author !== null) $this->notifyAdminsForReview($lockedPost, $author);
-            return $lockedPost->refresh()->load('images');
+            return $this->loadViewerState($lockedPost->refresh(), (string) $lockedPost->author_id);
         });
     }
 
@@ -136,6 +146,21 @@ class UserPostService
         }
 
         return $data['city'] ?? null;
+    }
+
+    /** @return array<int|string, mixed> */
+    private function viewerRelations(string $viewerId): array
+    {
+        return [
+            'images',
+            'likes' => static fn ($query) => $query->where('user_id', $viewerId),
+            'saves' => static fn ($query) => $query->where('user_id', $viewerId),
+        ];
+    }
+
+    private function loadViewerState(Post $post, string $viewerId): Post
+    {
+        return $post->load($this->viewerRelations($viewerId));
     }
 
     private function normalizeSort(string $sort): array

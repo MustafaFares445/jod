@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\HelpOfferStatus;
+use App\Models\Concerns\HasStringPrimaryKey;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class HelpOffer extends Model
 {
-    use HasFactory;
+    use HasFactory, HasStringPrimaryKey;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected function casts(): array
     {

@@ -13,6 +13,8 @@ use App\Services\MediaService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class UserAvatarController extends Controller
 {
@@ -25,10 +27,19 @@ class UserAvatarController extends Controller
         $user->loadMissing('avatarMedia');
         $file = $request->file('file');
 
-        if ($user->avatarMedia !== null) {
-            $this->mediaService->replace(MediaModel::USER, (string) $user->id, 'avatar', (string) $user->avatarMedia->id, $file);
-        } else {
-            $this->mediaService->upload(MediaModel::USER, (string) $user->id, 'avatar', $file);
+        try {
+            if ($user->avatarMedia !== null) {
+                $this->mediaService->replace(MediaModel::USER, (string) $user->id, 'avatar', (string) $user->avatarMedia->id, $file);
+            } else {
+                $this->mediaService->upload(MediaModel::USER, (string) $user->id, 'avatar', $file);
+            }
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+            throw ValidationException::withMessages([
+                'file' => ['تعذر رفع صورة الملف الشخصي. لم يتم تغيير الصورة الحالية. حاول مرة أخرى.'],
+            ]);
         }
 
         return MobileApiResponse::success(

@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class MediaService
 {
@@ -50,6 +51,9 @@ class MediaService
         }
 
         $path = $file->store($this->directory($model, $modelId, $prop), 'public');
+        if ($path === false) {
+            throw new RuntimeException('Unable to store uploaded media.');
+        }
 
         try {
             $media = Media::query()->create([
@@ -79,6 +83,9 @@ class MediaService
         $this->assertProp($model, $prop);
         $media = $this->findScoped($model, $modelId, $prop, $mediaId);
         $newPath = $file->store($this->directory($model, $modelId, $prop), 'public');
+        if ($newPath === false) {
+            throw new RuntimeException('Unable to store replacement media.');
+        }
         $oldDisk = $media->disk;
         $oldPath = $media->path;
         $oldPreviewDisk = $media->preview_disk;

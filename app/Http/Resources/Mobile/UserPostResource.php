@@ -38,6 +38,8 @@ class UserPostResource extends JsonResource
             'commentsCount' => 0,
             'sharesCount' => 0,
             'stats' => ['likes' => (int) $this->reactions_count, 'comments' => 0, 'shares' => 0],
+            'isLiked' => $this->relationLoaded('likes') && $this->likes->isNotEmpty(),
+            'isSaved' => $this->relationLoaded('saves') && $this->saves->isNotEmpty(),
             'status' => $this->status,
             'blockReason' => $this->block_reason,
             'submittedAt' => $this->submitted_at?->toISOString(),

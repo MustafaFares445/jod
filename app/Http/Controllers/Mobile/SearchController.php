@@ -6,10 +6,12 @@ namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mobile\GlobalSearchRequest;
+use App\Http\Resources\Mobile\GroupResource;
 use App\Http\Resources\Mobile\MobileCampaignResource;
 use App\Http\Resources\Mobile\MobileHomePostResource;
 use App\Http\Resources\Mobile\MobilePublisherResource;
 use App\Models\Campaign;
+use App\Models\Group;
 use App\Models\Organization;
 use App\Models\Post;
 use App\Models\User;
@@ -31,6 +33,12 @@ class SearchController extends Controller
         [$accounts, $accountsTotal] = in_array($type, ['all', 'accounts'], true)
             ? $this->accounts($params, $limit, $request)
             : [[], 0];
+        [$organizations, $organizationsTotal] = in_array($type, ['all', 'organizations'], true)
+            ? $this->organizations($params, $limit, $request)
+            : [[], 0];
+        [$groups, $groupsTotal] = in_array($type, ['all', 'groups'], true)
+            ? $this->groups($params, $limit, $request)
+            : [[], 0];
         [$posts, $postsTotal] = in_array($type, ['all', 'posts'], true)
             ? $this->posts($params, $limit, $request, $viewer)
             : [[], 0];
@@ -40,11 +48,15 @@ class SearchController extends Controller
 
         return MobileApiResponse::success([
             'accounts' => $accounts,
+            'organizations' => $organizations,
+            'groups' => $groups,
             'posts' => $posts,
             'campaigns' => $campaigns,
         ], 'Search results retrieved successfully.', [
             'counts' => [
                 'accounts' => $accountsTotal,
+                'organizations' => $organizationsTotal,
+                'groups' => $groupsTotal,
                 'posts' => $postsTotal,
                 'campaigns' => $campaignsTotal,
             ],
@@ -108,6 +120,76 @@ class SearchController extends Controller
             ->sortBy(fn (array $account): string => mb_strtolower((string) ($account['name'] ?? '')))
             ->take($limit)
             ->values()
+            ->all();
+
+        return [$results, $total];
+    }
+
+    /** @return array{0: list<array<string, mixed>>, 1: int} */
+    private function organizations(array $params, int $limit, GlobalSearchRequest $request): array
+    {
+        $search = trim((string) ($params['search'] ?? ''));
+        $location = trim((string) ($params['location'] ?? ''));
+
+        $query = Organization::query()
+            ->with('logoMedia')
+            ->where('status', 'active')
+            ->when($search !== '', function (Builder $builder) use ($search): void {
+                $builder->where(function (Builder $inner) use ($search): void {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when($location !== '', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"));
+
+        $total = $query->count();
+        $results = $query->orderBy('name')->limit($limit)->get()
+            ->map(fn (Organization $organization): array => [
+                'accountType' => 'organization',
+                ...MobilePublisherResource::make($organization)->resolve($request),
+            ])
+            ->values()
+            ->all();
+
+        return [$results, $total];
+    }
+
+    /** @return array{0: list<array<string, mixed>>, 1: int} */
+    private function groups(array $params, int $limit, GlobalSearchRequest $request): array
+    {
+        $search = trim((string) ($params['search'] ?? ''));
+        $location = trim((string) ($params['location'] ?? ''));
+        $category = trim((string) ($params['category'] ?? ''));
+        $sort = (string) ($params['sort'] ?? 'newest');
+
+        $query = Group::query()
+            ->where('status', 'active')
+            ->with([
+                'owner.avatarMedia', 'organization', 'avatarMedia', 'coverMedia',
+                'memberships' => fn ($membership) => $membership->where('status', 'active')->with('user.avatarMedia'),
+            ])
+            ->withCount([
+                'activeMembers as active_members_count',
+                'posts as posts_count' => fn (Builder $builder) => $builder->where('status', 'published'),
+                'posts as posts_this_week_count' => fn (Builder $builder) => $builder->where('status', 'published')->where('created_at', '>=', now()->subDays(7)),
+            ])
+            ->when($search !== '', function (Builder $builder) use ($search): void {
+                $builder->where(function (Builder $inner) use ($search): void {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            })
+            ->when($location !== '', fn (Builder $builder) => $builder->where('location', 'like', "%{$location}%"))
+            ->when($category !== '', fn (Builder $builder) => $builder->where('category', $category));
+
+        $total = $query->count();
+        $sort === 'oldest' ? $query->orderBy('created_at') : $query->orderByDesc('created_at');
+
+        $results = $query->limit($limit)->get()
+            ->map(fn (Group $group): array => GroupResource::make($group)->resolve($request))
             ->all();
 
         return [$results, $total];

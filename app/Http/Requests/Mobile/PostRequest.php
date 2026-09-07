@@ -45,7 +45,8 @@ class PostRequest extends FormRequest
             'city' => [$submitting ? 'required_without:cityId' : 'nullable', 'nullable', 'string', Rule::in(SyrianGovernorates::names())],
             'categoryId' => [$requiredWhenSubmitting, 'string', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('status', 'active'))],
             'audience' => ['sometimes', 'string', Rule::enum(ContentAudience::class)],
-            'images' => ['prohibited'],
+            'images' => ['sometimes', 'array', 'max:10'],
+            'images.*' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'saveAsDraft' => ['sometimes', 'boolean'],
         ];
     }

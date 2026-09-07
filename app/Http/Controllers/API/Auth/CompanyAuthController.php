@@ -24,7 +24,9 @@ class CompanyAuthController extends Controller
 
     public function register(CompanyRegisterRequest $request): JsonResponse
     {
-        $user = $this->companyRegistrationService->register($request->validated());
+        /** @var \Illuminate\Http\UploadedFile $logo */
+        $logo = $request->file('logo');
+        $user = $this->companyRegistrationService->register($request->validated(), $logo);
 
         $this->organizationPermissionSyncService->syncForUser($user);
         $user->refresh();

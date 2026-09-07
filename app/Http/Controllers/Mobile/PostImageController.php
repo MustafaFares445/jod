@@ -10,6 +10,7 @@ use App\Http\Requests\Mobile\PostImageUploadRequest;
 use App\Http\Resources\Mobile\UserPostResource;
 use App\Models\Post;
 use App\Services\Mobile\PostImageService;
+use App\Services\Mobile\UserPostService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\Gate;
 
 class PostImageController extends Controller
 {
-    public function __construct(private readonly PostImageService $service) {}
+    public function __construct(
+        private readonly PostImageService $service,
+        private readonly UserPostService $userPosts,
+    ) {}
 
     /**
      * Add images to an owned draft or rejected post.
@@ -34,6 +38,7 @@ class PostImageController extends Controller
         /** @var list<\Illuminate\Http\UploadedFile> $images */
         $images = $request->file('images', []);
         $post = $this->service->add($post, $images);
+        $post = $this->userPosts->show($post, $request->user());
 
         return MobileApiResponse::success(
             UserPostResource::make($post)->resolve($request),
@@ -54,6 +59,7 @@ class PostImageController extends Controller
         /** @var list<string> $imageIds */
         $imageIds = $request->validated('imageIds');
         $post = $this->service->reorder($post, $imageIds);
+        $post = $this->userPosts->show($post, $request->user());
 
         return MobileApiResponse::success(
             UserPostResource::make($post)->resolve($request),
@@ -76,6 +82,8 @@ class PostImageController extends Controller
         if ($updatedPost === null) {
             return MobileApiResponse::error('not_found', 'The requested post image could not be found.', null, 404);
         }
+
+        $updatedPost = $this->userPosts->show($updatedPost, $request->user());
 
         return MobileApiResponse::success(
             UserPostResource::make($updatedPost)->resolve($request),
