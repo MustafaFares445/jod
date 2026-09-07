@@ -36,6 +36,8 @@ class PersonalizedFeedService
             'organization.logoMedia', 'campaign', 'category', 'requiredCapabilities', 'author.avatarMedia', 'images', 'videos',
             'likes' => fn ($query) => $query->where('user_id', $viewer->id),
             'saves' => fn ($query) => $query->where('user_id', $viewer->id),
+            'campaignApplications' => fn ($query) => $query->where('created_by', $viewer->id),
+            'volunteerApplications' => fn ($query) => $query->where('created_by', $viewer->id),
         ])->where('status', 'published')
             ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->where(function ($query): void {

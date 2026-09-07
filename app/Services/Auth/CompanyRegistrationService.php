@@ -69,7 +69,7 @@ class CompanyRegistrationService
 
                 $ownerRole = OrganizationRole::query()->create([
                     'organization_id' => $organization->id,
-                    'name' => 'المالك',
+                    'name' => 'المؤسس',
                     'description' => 'صلاحية كاملة لإدارة المؤسسة وجميع أقسامها.',
                     'permissions' => array_merge(
                         [PermissionNameResolver::resolve(PermissionGroup::DASHBOARD, PermissionAction::VIEW)],

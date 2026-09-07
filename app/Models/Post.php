@@ -102,6 +102,14 @@ class Post extends Model
             ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
     }
 
+    public function volunteerApplications(): HasMany
+    {
+        return $this->hasMany(CampaignApplication::class, 'campaign_ref', 'id')
+            ->whereNull('campaign_id')
+            ->where('request_type', 'volunteer')
+            ->whereNotIn('applicant_status', ['rejected', 'withdrawn']);
+    }
+
     public function likedByUsers(): BelongsToMany { return $this->belongsToMany(User::class, 'post_likes')->withTimestamps(); }
     public function savedByUsers(): BelongsToMany { return $this->belongsToMany(User::class, 'saved_posts')->withTimestamps(); }
 }

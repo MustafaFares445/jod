@@ -19,7 +19,7 @@ class NotificationFilterRequest extends FormRequest
             'filter.category' => ['sometimes', Rule::in(['all', 'campaign', 'post', 'account', 'report', 'system', 'donation', 'applicant', 'staff'])],
             'filter.recipientScope' => ['sometimes', Rule::in(['all', 'users', 'organizations'])],
             'filter.date' => ['sometimes', Rule::in(['all', 'today', 'last_7_days'])],
-            'sort' => ['sometimes', Rule::in(['sentAt', '-sentAt'])],
+            'sort' => ['sometimes', Rule::in(['createdAt', '-createdAt', 'sentAt', '-sentAt'])],
         ];
     }
 }

@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\NotificationEventType;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
+use App\Models\Post;
 use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -24,6 +25,21 @@ class ApplicantService
         $query = CampaignApplication::query()
             ->where('organization_id', $organizationId)
             ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', $campaignId))
+            ->when(($postId = $this->param($params, 'filter.postId')) && $postId !== 'all', function (Builder $builder) use ($postId): void {
+                $builder->whereNull('campaign_id')
+                    ->where('request_type', 'volunteer')
+                    ->where('campaign_ref', $postId);
+            })
+            ->when(($targetType = $this->param($params, 'filter.targetType')) && $targetType !== 'all', function (Builder $builder) use ($targetType): void {
+                if ($targetType === 'campaign') {
+                    $builder->whereNotNull('campaign_id');
+                    return;
+                }
+
+                $builder->whereNull('campaign_id')
+                    ->where('request_type', 'volunteer')
+                    ->whereNotNull('campaign_ref');
+            })
             ->when(($status = $this->param($params, 'filter.applicantStatus')) && $status !== 'all', fn (Builder $builder) => $builder->where('applicant_status', $status))
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
@@ -63,14 +79,18 @@ class ApplicantService
         $previousStatus = (string) $application->applicant_status;
         $nextStatus = (string) $attributes['applicantStatus'];
 
+        $standaloneVolunteerPost = $this->isStandaloneVolunteerPostApplication($application);
+
         $application->update([
-            'campaign_id' => $this->resolveCampaignId($attributes, $organizationId),
+            'campaign_id' => $standaloneVolunteerPost ? null : $this->resolveCampaignId($attributes, $organizationId),
             'name' => $attributes['name'],
             'phone' => $attributes['phone'],
             'campaign_title' => $attributes['campaignTitle'],
             'applicant_status' => $nextStatus,
             'applied_at' => $attributes['appliedAt'],
         ]);
+
+        $this->syncApplicationTargetCount($application);
 
         if ($previousStatus !== $nextStatus && filled($application->created_by)) {
             $eventType = match ($nextStatus) {
@@ -81,13 +101,14 @@ class ApplicantService
 
             if ($eventType !== null) {
                 $accepted = $eventType === NotificationEventType::ApplicationAccepted;
+                $targetLabel = $standaloneVolunteerPost ? 'فرصة' : 'حملة';
                 $this->notifications->notifyUser(
                     (string) $application->created_by,
                     $eventType,
                     $accepted ? 'تم قبول طلب التطوع' : 'تم رفض طلب التطوع',
                     $accepted
-                        ? "تم قبول طلبك للتطوع في حملة {$application->campaign_title}."
-                        : "لم يتم قبول طلبك للتطوع في حملة {$application->campaign_title}.",
+                        ? "تم قبول طلبك للتطوع في {$targetLabel} {$application->campaign_title}."
+                        : "لم يتم قبول طلبك للتطوع في {$targetLabel} {$application->campaign_title}.",
                     'applicant',
                     'high',
                     $application->campaign_title,
@@ -98,6 +119,37 @@ class ApplicantService
         }
 
         return $application->refresh();
+    }
+
+    private function isStandaloneVolunteerPostApplication(CampaignApplication $application): bool
+    {
+        return $application->campaign_id === null
+            && $application->request_type === 'volunteer'
+            && filled($application->campaign_ref);
+    }
+
+    private function syncApplicationTargetCount(CampaignApplication $application): void
+    {
+        if (filled($application->campaign_id)) {
+            $count = CampaignApplication::query()
+                ->where('campaign_id', $application->campaign_id)
+                ->whereNotIn('applicant_status', ['rejected', 'withdrawn'])
+                ->count();
+
+            Campaign::query()->whereKey($application->campaign_id)->update(['applicants_count' => $count]);
+            return;
+        }
+
+        if ($this->isStandaloneVolunteerPostApplication($application)) {
+            $count = CampaignApplication::query()
+                ->whereNull('campaign_id')
+                ->where('campaign_ref', $application->campaign_ref)
+                ->where('request_type', 'volunteer')
+                ->whereNotIn('applicant_status', ['rejected', 'withdrawn'])
+                ->count();
+
+            Post::query()->whereKey($application->campaign_ref)->update(['applications_count' => $count]);
+        }
     }
 
     private function resolveCampaignId(array $attributes, string $organizationId): ?string

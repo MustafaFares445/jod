@@ -27,10 +27,13 @@ class PostRequest extends FormRequest
         $organizationId = $this->user()?->organization_id;
         $type = (string) ($this->input('type') ?: $this->route('post')?->type);
         $isHelpRequest = $type === 'help_request';
+        $requiredCapabilitiesRule = $isHelpRequest
+            ? ($isUpdate && ! $this->has('type') ? 'sometimes' : 'required')
+            : 'prohibited';
 
         return [
             'title' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:255'],
-            'summary' => [$isUpdate ? 'sometimes' : 'required', 'string'],
+            'summary' => [$isUpdate ? 'sometimes' : 'required', 'string', 'max:10000'],
             'type' => [$isUpdate ? 'sometimes' : 'required', Rule::in($allowedTypes)],
             'categoryId' => [
                 $isUpdate ? 'sometimes' : 'required',
@@ -55,7 +58,7 @@ class PostRequest extends FormRequest
                 'nullable', 'string', 'min:8', 'max:1000',
             ],
             'expiresAt' => [$isHelpRequest ? 'sometimes' : 'prohibited', 'nullable', 'date', 'after:now'],
-            'requiredCapabilityIds' => [$isHelpRequest ? 'sometimes' : 'prohibited', 'array', 'max:20'],
+            'requiredCapabilityIds' => [$requiredCapabilitiesRule, 'array', 'min:1', 'max:20'],
             'requiredCapabilityIds.*' => ['string', 'distinct', Rule::exists('capabilities', 'id')->where('status', 'active')],
         ];
     }

@@ -17,6 +17,7 @@ class CampaignApplicationResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'campaignId' => $this->campaign_id ? (string) $this->campaign_id : null,
+            'postId' => $this->campaign_id === null && $this->request_type === 'volunteer' && $this->campaign_ref ? (string) $this->campaign_ref : null,
             'campaignTitle' => $this->campaign_title,
             'organizationName' => $this->campaign?->organization?->name ?? $this->organization?->name,
             'status' => $this->applicant_status,

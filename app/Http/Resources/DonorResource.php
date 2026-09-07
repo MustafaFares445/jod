@@ -11,10 +11,20 @@ class DonorResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $targetType = $this->campaign_id !== null
+            ? 'campaign'
+            : (filled($this->campaign_ref) ? 'post' : 'manual');
+        $targetId = $this->campaign_id !== null
+            ? (string) $this->campaign_id
+            : (filled($this->campaign_ref) ? (string) $this->campaign_ref : null);
+
         return [
             'id' => (string) $this->id,
             'campaignId' => $this->campaign_id !== null ? (string) $this->campaign_id : null,
             'campaignTitle' => $this->campaign_title,
+            'targetType' => $targetType,
+            'targetId' => $targetId,
+            'source' => $this->source,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,

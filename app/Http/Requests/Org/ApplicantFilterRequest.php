@@ -15,6 +15,8 @@ class ApplicantFilterRequest extends FormRequest
             'page' => ['sometimes', 'integer', 'min:1'],
             'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'filter.campaignId' => ['sometimes', 'string'],
+            'filter.postId' => ['sometimes', 'string'],
+            'filter.targetType' => ['sometimes', 'string', Rule::in(['campaign', 'post'])],
             'filter.applicantStatus' => ['sometimes', 'string', 'max:100'],
             'filter.search' => ['sometimes', 'string', 'max:255'],
             'sort' => ['sometimes', 'string', Rule::in(['donatedAt', '-donatedAt', 'name', '-name'])],

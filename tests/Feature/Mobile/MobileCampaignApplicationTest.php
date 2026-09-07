@@ -144,11 +144,67 @@ class MobileCampaignApplicationTest extends TestCase
             ->assertJsonValidationErrors(['campaign'], 'error.details');
     }
 
+    public function test_user_can_apply_to_standalone_organization_volunteer_post_by_post_id(): void
+    {
+        $organization = Organization::factory()->create();
+        $post = Post::factory()->published()->create([
+            'organization_id' => $organization->id,
+            'campaign_id' => null,
+            'type' => 'volunteer_opportunity',
+            'title' => 'Standalone volunteer opportunity',
+            'applications_count' => 0,
+        ]);
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson("/api/mobile/posts/{$post->id}/applications", [])
+            ->assertOk()
+            ->assertJsonPath('data.campaignId', null)
+            ->assertJsonPath('data.postId', $post->id)
+            ->assertJsonPath('data.status', 'pending');
+
+        $applicationId = $response->json('data.id');
+        $this->assertDatabaseHas('campaign_applications', [
+            'id' => $applicationId,
+            'campaign_id' => null,
+            'campaign_ref' => $post->id,
+            'created_by' => $user->id,
+            'request_type' => 'volunteer',
+        ]);
+        $this->assertSame(1, (int) $post->refresh()->applications_count);
+
+        $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+            ->assertOk()
+            ->assertJsonPath('data.cta.targetId', $post->id)
+            ->assertJsonPath('data.cta.state', 'submitted');
+
+        $this->deleteJson("/api/mobile/me/applications/{$applicationId}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'withdrawn');
+        $this->assertSame(0, (int) $post->refresh()->applications_count);
+        $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+            ->assertOk()
+            ->assertJsonPath('data.cta.state', 'open');
+    }
+
+    public function test_post_application_endpoint_delegates_linked_volunteer_post_to_campaign(): void
+    {
+        [$campaign, $post] = $this->volunteerCampaign();
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->postJson("/api/mobile/posts/{$post->id}/applications", [])
+            ->assertOk()
+            ->assertJsonPath('data.campaignId', $campaign->id)
+            ->assertJsonPath('data.postId', null)
+            ->assertJsonPath('data.status', 'pending');
+    }
+
     public function test_application_routes_require_authentication(): void
     {
         [$campaign] = $this->volunteerCampaign();
 
         $this->postJson("/api/mobile/campaigns/{$campaign->id}/applications", [])->assertUnauthorized();
+        $this->postJson('/api/mobile/posts/post-id/applications', [])->assertUnauthorized();
         $this->getJson('/api/mobile/me/applications')->assertUnauthorized();
     }
 

@@ -147,6 +147,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
     Route::delete('publishers/{targetType}/{targetId}/hide', [RecommendationFeedbackController::class, 'unhidePublisher'])->name('publishers.unhide');
 
     Route::post('campaigns/{campaign}/applications', [CampaignApplicationController::class, 'store'])->name('campaigns.applications.store');
+    Route::post('posts/{post}/applications', [CampaignApplicationController::class, 'storeForPost'])->name('posts.applications.store');
     Route::post('campaigns/{campaign}/donations', [DonationController::class, 'store'])->name('campaigns.donations.store');
 
     Route::prefix('help-offers')->name('help-offers.')->group(function (): void {

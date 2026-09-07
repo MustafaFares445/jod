@@ -261,6 +261,7 @@ class PostService
         $relations['likes'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['saves'] = static fn (Relation $builder) => $builder->where('user_id', $viewer->id);
         $relations['campaignApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
+        $relations['volunteerApplications'] = static fn (Relation $builder) => $builder->where('created_by', $viewer->id);
         return $relations;
     }
 
@@ -269,23 +270,49 @@ class PostService
         if ($state === 'submitted') {
             if ($viewer === null) { $query->whereRaw('1 = 0'); return; }
             $query->where('type', 'volunteer_opportunity')
-                ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'))
-                ->whereHas('campaignApplications', fn (Builder $application) => $application->where('created_by', $viewer->id));
+                ->where(function (Builder $applications) use ($viewer): void {
+                    $applications
+                        ->whereHas('campaignApplications', fn (Builder $application) => $application->where('created_by', $viewer->id))
+                        ->orWhereHas('volunteerApplications', fn (Builder $application) => $application->where('created_by', $viewer->id));
+                });
             return;
         }
         if ($state === 'closed') {
-            $query->whereIn('type', ['volunteer_opportunity', 'donation_campaign'])
-                ->where(function (Builder $campaignState): void {
-                    $campaignState->whereDoesntHave('campaign')->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
+            $query->where(function (Builder $interactive): void {
+                $interactive->where(function (Builder $donation): void {
+                    $donation->where('type', 'donation_campaign')
+                        ->where(function (Builder $campaignState): void {
+                            $campaignState->whereDoesntHave('campaign')
+                                ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
+                        });
+                })->orWhere(function (Builder $volunteer): void {
+                    $volunteer->where('type', 'volunteer_opportunity')
+                        ->whereNotNull('campaign_id')
+                        ->where(function (Builder $campaignState): void {
+                            $campaignState->whereDoesntHave('campaign')
+                                ->orWhereHas('campaign', fn (Builder $campaign) => $campaign->where('status', '!=', 'active'));
+                        });
                 });
+            });
             return;
         }
         $query->where(function (Builder $interactive) use ($viewer): void {
             $interactive->where(function (Builder $donation): void {
-                $donation->where('type', 'donation_campaign')->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
+                $donation->where('type', 'donation_campaign')
+                    ->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
             })->orWhere(function (Builder $volunteer) use ($viewer): void {
-                $volunteer->where('type', 'volunteer_opportunity')->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'));
-                if ($viewer !== null) $volunteer->whereDoesntHave('campaignApplications', fn (Builder $application) => $application->where('created_by', $viewer->id));
+                $volunteer->where('type', 'volunteer_opportunity')
+                    ->where(function (Builder $target): void {
+                        $target->whereHas('campaign', fn (Builder $campaign) => $campaign->where('status', 'active'))
+                            ->orWhere(function (Builder $standalone): void {
+                                $standalone->whereNull('campaign_id')->whereNotNull('organization_id');
+                            });
+                    });
+                if ($viewer !== null) {
+                    $volunteer
+                        ->whereDoesntHave('campaignApplications', fn (Builder $application) => $application->where('created_by', $viewer->id))
+                        ->whereDoesntHave('volunteerApplications', fn (Builder $application) => $application->where('created_by', $viewer->id));
+                }
             });
         });
     }

@@ -24,7 +24,11 @@ class MobileHomePostResource extends JsonResource
         $publisher = $this->publisher();
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
         $category = $this->relationLoaded('category') ? $this->category : null;
-        $targetId = in_array($ctaType, ['apply', 'donate'], true) ? ($campaign?->id ? (string) $campaign->id : null) : (string) $this->id;
+        $targetId = match ($ctaType) {
+            'apply' => (string) $this->id,
+            'donate' => $campaign?->id ? (string) $campaign->id : null,
+            default => (string) $this->id,
+        };
         $cta = ['type' => $ctaType, 'label' => $this->ctaLabel($ctaType)];
         if ($targetId !== null) $cta['targetId'] = $targetId;
         if ($ctaState !== null) $cta['state'] = $ctaState;
@@ -145,9 +149,20 @@ class MobileHomePostResource extends JsonResource
             return ($this->help_status?->value ?? $this->help_status) === HelpRequestStatus::Fulfilled->value ? 'closed' : 'open';
         }
         if (! in_array($ctaType, ['apply', 'donate'], true)) return null;
+
         $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
-        if ($campaign === null || $campaign->status !== 'active') return 'closed';
-        if ($ctaType === 'apply' && $this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) return 'submitted';
+        if ($ctaType === 'donate') {
+            return $campaign === null || $campaign->status !== 'active' ? 'closed' : 'open';
+        }
+
+        if ($campaign !== null) {
+            if ($campaign->status !== 'active') return 'closed';
+            if ($this->relationLoaded('campaignApplications') && $this->campaignApplications->isNotEmpty()) return 'submitted';
+            return 'open';
+        }
+
+        if (! filled($this->organization_id)) return 'closed';
+        if ($this->relationLoaded('volunteerApplications') && $this->volunteerApplications->isNotEmpty()) return 'submitted';
         return 'open';
     }
 }

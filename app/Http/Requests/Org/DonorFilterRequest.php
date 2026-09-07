@@ -16,6 +16,8 @@ class DonorFilterRequest extends FormRequest
             'perPage' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'filter.campaignId' => ['sometimes', 'string'],
             'filter.city' => ['sometimes', 'string', 'max:255'],
+            'filter.status' => ['sometimes', 'string', Rule::in(['pending', 'contacting', 'agreed', 'completed', 'cancelled'])],
+            'filter.sourceType' => ['sometimes', 'string', Rule::in(['campaign', 'manual'])],
             'filter.search' => ['sometimes', 'string', 'max:255'],
             'sort' => ['sometimes', 'string', Rule::in(['donatedAt', '-donatedAt', 'name', '-name'])],
             'sortBy' => ['sometimes', 'string', Rule::in(['date_newest', 'date_oldest', 'name_asc', 'name_desc'])],

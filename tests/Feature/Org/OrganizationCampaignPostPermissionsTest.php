@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Campaign;
+use App\Models\Capability;
 use App\Models\Category;
 use App\Models\Organization;
 use App\Models\OrganizationRole;
@@ -48,6 +49,58 @@ test('owner can still create draft campaign and post explicitly', function () {
     $this->assertDatabaseHas('campaigns', ['organization_id' => $organization->id, 'status' => 'draft']);
     $this->assertDatabaseHas('posts', ['organization_id' => $organization->id, 'status' => 'draft']);
 });
+test('organization can create post with summary longer than legacy varchar limit', function () {
+    [$owner, $organization] = organization_campaign_post_permissions_test_organizationUser(true);
+    $summary = str_repeat('محتوى طويل للمنشور ', 40);
+
+    $this->actingAs($owner)
+        ->postJson('/api/v1/org/posts', [
+            ...postPayload(),
+            'summary' => $summary,
+        ])
+        ->assertCreated();
+
+    $this->assertDatabaseHas('posts', [
+        'organization_id' => $organization->id,
+        'summary' => $summary,
+    ]);
+});
+
+test('help request creation requires at least one requested assistance capability', function () {
+    [$owner] = organization_campaign_post_permissions_test_organizationUser(true);
+    $payload = [
+        ...postPayload(),
+        'type' => 'help_request',
+    ];
+
+    $this->actingAs($owner)
+        ->postJson('/api/v1/org/posts', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('requiredCapabilityIds');
+
+    $capability = Capability::query()->create([
+        'name' => 'مساعدة غذائية',
+        'slug' => 'food-help-test',
+        'status' => 'active',
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($owner)
+        ->postJson('/api/v1/org/posts', [
+            ...$payload,
+            'requiredCapabilityIds' => [$capability->id],
+        ])
+        ->assertCreated();
+});
+
+test('organization notifications accept newest createdAt sorting used by dashboard', function () {
+    [$owner] = organization_campaign_post_permissions_test_organizationUser(true);
+
+    $this->actingAs($owner)
+        ->getJson('/api/v1/org/notifications?page=1&perPage=9&sort=-createdAt&filter%5Bmailbox%5D=inbox')
+        ->assertOk();
+});
+
 test('staff requires action specific campaign permission', function () {
     [$staff, $organization] = organization_campaign_post_permissions_test_organizationUser(false);
     $campaign = Campaign::factory()->create(['organization_id' => $organization->id, 'status' => 'draft']);

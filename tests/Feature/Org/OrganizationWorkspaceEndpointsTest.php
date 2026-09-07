@@ -140,6 +140,33 @@ test('donor crud and filtering', function () {
         ->assertJsonPath('message', 'Data deleted successfully.');
 });
 
+test('donor list filters organization donations by campaign and workflow status', function () {
+    $campaign = Campaign::factory()->create(['organization_id' => $this->organization->id]);
+    $otherCampaign = Campaign::factory()->create(['organization_id' => $this->organization->id]);
+
+    Donation::factory()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => $campaign->id,
+        'campaign_title' => $campaign->title,
+        'status' => 'contacting',
+        'created_by' => $this->user->id,
+    ]);
+    Donation::factory()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => $otherCampaign->id,
+        'campaign_title' => $otherCampaign->title,
+        'status' => 'completed',
+        'created_by' => $this->user->id,
+    ]);
+
+    $this->getJson("/api/v1/org/donors?filter%5BcampaignId%5D={$campaign->id}&filter%5Bstatus%5D=contacting")
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.campaignId', $campaign->id)
+        ->assertJsonPath('data.0.status', 'contacting')
+        ->assertJsonPath('data.0.targetType', 'campaign');
+});
+
 test('donor phone must be a Syrian mobile number', function () {
     $this->postJson('/api/v1/org/donors', [
         'name' => 'Invalid Donor',
@@ -195,6 +222,55 @@ test('applicant filtering and crud', function () {
     $this->deleteJson("/api/v1/org/applicants/{$created}")
         ->assertOk()
         ->assertJsonPath('message', 'Data deleted successfully.');
+});
+
+test('applicant list filters campaign applications versus standalone volunteer post applications', function () {
+    $campaign = Campaign::factory()->create(['organization_id' => $this->organization->id]);
+    $post = Post::factory()->published()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => null,
+        'type' => 'volunteer_opportunity',
+        'title' => 'Standalone volunteer opportunity',
+    ]);
+
+    CampaignApplication::query()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => $campaign->id,
+        'name' => 'Campaign Applicant',
+        'email' => 'campaign-applicant@example.com',
+        'campaign_title' => $campaign->title,
+        'applicant_status' => 'pending',
+        'applied_at' => now(),
+        'source' => 'mobile_app',
+        'campaign_ref' => $campaign->id,
+        'request_type' => 'volunteer',
+        'created_by' => $this->user->id,
+    ]);
+    CampaignApplication::query()->create([
+        'organization_id' => $this->organization->id,
+        'campaign_id' => null,
+        'name' => 'Post Applicant',
+        'email' => 'post-applicant@example.com',
+        'campaign_title' => $post->title,
+        'applicant_status' => 'pending',
+        'applied_at' => now(),
+        'source' => 'mobile_app',
+        'campaign_ref' => $post->id,
+        'request_type' => 'volunteer',
+        'created_by' => $this->user->id,
+    ]);
+
+    $this->getJson('/api/v1/org/applicants?filter%5BtargetType%5D=campaign')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.targetType', 'campaign')
+        ->assertJsonPath('data.0.campaignId', $campaign->id);
+
+    $this->getJson('/api/v1/org/applicants?filter%5BtargetType%5D=post')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.targetType', 'post')
+        ->assertJsonPath('data.0.postId', $post->id);
 });
 
 test('applicant phone must be a Syrian mobile number', function () {

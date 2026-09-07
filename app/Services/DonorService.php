@@ -19,7 +19,17 @@ class DonorService
 
         $query = Donation::query()
             ->where('organization_id', $organizationId)
+            ->when(($campaignId = $this->param($params, 'filter.campaignId')) && $campaignId !== 'all', fn (Builder $builder) => $builder->where('campaign_id', $campaignId))
             ->when(($city = $this->param($params, 'filter.city')) && $city !== 'all', fn (Builder $builder) => $builder->where('city', $city))
+            ->when(($status = $this->param($params, 'filter.status')) && $status !== 'all', fn (Builder $builder) => $builder->where('status', $status))
+            ->when(($sourceType = $this->param($params, 'filter.sourceType')) && $sourceType !== 'all', function (Builder $builder) use ($sourceType): void {
+                if ($sourceType === 'campaign') {
+                    $builder->whereNotNull('campaign_id');
+                    return;
+                }
+
+                $builder->whereNull('campaign_id');
+            })
             ->when($search !== '', function (Builder $builder) use ($search): void {
                 $builder->where(function (Builder $inner) use ($search): void {
                     $inner->where('name', 'like', "%{$search}%")

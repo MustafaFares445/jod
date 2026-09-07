@@ -43,6 +43,8 @@ class OrgNotificationService
             });
 
         match ($sort) {
+            'createdAt' => $query->orderBy('created_at'),
+            '-createdAt' => $query->orderByDesc('created_at'),
             'sentAt' => $query->orderBy('sent_at'),
             '-sentAt' => $query->orderByDesc('sent_at'),
             default => $query->orderByDesc('sent_at'),

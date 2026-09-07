@@ -39,6 +39,16 @@ class CampaignApplicationController extends Controller
         );
     }
 
+    public function storeForPost(CampaignApplicationRequest $request, string $post): JsonResponse
+    {
+        $application = $this->service->applyToPost($this->user($request), $post, $request->validated());
+
+        return MobileApiResponse::success(
+            CampaignApplicationResource::make($application)->resolve($request),
+            'Application submitted successfully.',
+        );
+    }
+
     public function show(Request $request, string $application): JsonResponse
     {
         $model = $this->service->findForUser($this->user($request), $application);
