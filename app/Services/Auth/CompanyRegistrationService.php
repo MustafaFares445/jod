@@ -38,7 +38,11 @@ class CompanyRegistrationService
         $storedLogo = null;
 
         try {
-            [$user, $organization] = DB::transaction(function () use ($data, $logo, &$storedLogo): array {
+            [$founderUsers, $organization] = DB::transaction(function () use ($data, $logo, &$storedLogo): array {
+                /** @var list<array{name: string, email: string, phone: string, password: string}> $founders */
+                $founders = array_values($data['founders']);
+                $primaryFounder = $founders[0];
+
                 $organization = Organization::query()->create([
                     'name' => $data['companyName'],
                     'email' => $data['companyEmail'],
@@ -48,26 +52,16 @@ class CompanyRegistrationService
                     'bank_account_number' => $data['bankAccountNumber'],
                     'location' => $data['location'],
                     'website' => $data['website'] ?? null,
-                    'owner_full_name' => $data['ownerName'],
-                    'owner_email' => $data['companyEmail'],
-                    'owner_phone' => $data['companyPhone'],
+                    // Compatibility fields continue to represent the primary founder.
+                    'owner_full_name' => $primaryFounder['name'],
+                    'owner_email' => $primaryFounder['email'],
+                    'owner_phone' => $primaryFounder['phone'],
                     'status' => 'pending',
                     'verification_status' => 'pending',
                     'last_active_at' => now(),
                 ]);
 
-                $user = User::query()->create([
-                    'name' => $data['ownerName'],
-                    'email' => $data['companyEmail'],
-                    'phone' => $data['companyPhone'],
-                    'password' => $data['password'],
-                    'user_type' => 'general',
-                    'organization_id' => $organization->id,
-                    'status' => 'active',
-                    'last_active_at' => now(),
-                ]);
-
-                $ownerRole = OrganizationRole::query()->create([
+                $founderRole = OrganizationRole::query()->create([
                     'organization_id' => $organization->id,
                     'name' => 'المؤسس',
                     'description' => 'صلاحية كاملة لإدارة المؤسسة وجميع أقسامها.',
@@ -77,20 +71,36 @@ class CompanyRegistrationService
                     ),
                     'is_active' => true,
                     'is_system' => true,
-                    'members_count' => 1,
+                    'members_count' => count($founders),
                 ]);
 
-                OrganizationStaff::query()->create([
-                    'organization_id' => $organization->id,
-                    'user_id' => $user->id,
-                    'organization_role_id' => $ownerRole->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'status' => 'active',
-                    'invited_at' => now(),
-                    'accepted_at' => now(),
-                ]);
+                $founderUsers = [];
+                foreach ($founders as $founder) {
+                    $user = User::query()->create([
+                        'name' => $founder['name'],
+                        'email' => $founder['email'],
+                        'phone' => $founder['phone'],
+                        'password' => $founder['password'],
+                        'user_type' => 'general',
+                        'organization_id' => $organization->id,
+                        'status' => 'active',
+                        'last_active_at' => now(),
+                    ]);
+
+                    OrganizationStaff::query()->create([
+                        'organization_id' => $organization->id,
+                        'user_id' => $user->id,
+                        'organization_role_id' => $founderRole->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'phone' => $user->phone,
+                        'status' => 'active',
+                        'invited_at' => now(),
+                        'accepted_at' => now(),
+                    ]);
+
+                    $founderUsers[] = $user;
+                }
 
                 try {
                     $storedLogo = $this->mediaService->upload(
@@ -106,7 +116,7 @@ class CompanyRegistrationService
                     ]);
                 }
 
-                return [$user, $organization];
+                return [$founderUsers, $organization];
             });
         } catch (Throwable $exception) {
             if ($storedLogo !== null) {
@@ -115,18 +125,23 @@ class CompanyRegistrationService
             throw $exception;
         }
 
+        /** @var User $primaryFounderUser */
+        $primaryFounderUser = $founderUsers[0];
+
         try {
-            $this->notifications->notifyUser(
-                $user,
-                NotificationEventType::OrganizationSubmitted,
-                'تم إرسال طلب تسجيل المؤسسة',
-                "تم إرسال طلب تسجيل {$organization->name} وهو الآن بانتظار مراجعة الإدارة.",
-                'account',
-                'normal',
-                $organization->name,
-                '/organization/profile',
-                (string) $organization->id,
-            );
+            foreach ($founderUsers as $founderUser) {
+                $this->notifications->notifyUser(
+                    $founderUser,
+                    NotificationEventType::OrganizationSubmitted,
+                    'تم إرسال طلب تسجيل المؤسسة',
+                    "تم إرسال طلب تسجيل {$organization->name} وهو الآن بانتظار مراجعة الإدارة.",
+                    'account',
+                    'normal',
+                    $organization->name,
+                    '/organization/profile',
+                    (string) $organization->id,
+                );
+            }
 
             $this->notifications->notifyAdmins(
                 NotificationEventType::OrganizationSubmitted,
@@ -136,13 +151,13 @@ class CompanyRegistrationService
                 'high',
                 $organization->name,
                 '/admin/organizations/'.$organization->id,
-                (string) $user->id,
+                (string) $primaryFounderUser->id,
             );
         } catch (Throwable $exception) {
             report($exception);
         }
 
-        return $user->refresh()->loadMissing('organization.logoMedia');
+        return $primaryFounderUser->refresh()->loadMissing('organization.logoMedia');
     }
 
     /** @return list<string> */

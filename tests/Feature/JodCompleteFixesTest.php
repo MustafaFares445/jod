@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\Group;
 use App\Models\Organization;
+use App\Models\OrganizationRole;
+use App\Models\OrganizationStaff;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\SavedPost;
@@ -110,6 +112,98 @@ test('company registration creates the organization and logo in the same request
     expect($organizationId)->not->toBe('');
     $this->assertDatabaseHas('organizations', ['id' => $organizationId, 'email' => $payload['companyEmail']]);
     $this->assertDatabaseHas('media', ['model_type' => 'organization', 'model_id' => $organizationId, 'prop' => 'logo']);
+});
+
+test('company registration creates multiple founders under one shared founder role', function () {
+    Storage::fake('public');
+    $payload = valid_company_registration_payload('multi-org@example.com', 'ORG-MULTI', 'REG-MULTI');
+    unset($payload['ownerName'], $payload['password'], $payload['password_confirmation']);
+    $payload['founders'] = [
+        [
+            'name' => 'Primary Founder',
+            'email' => 'primary-founder@example.com',
+            'phone' => '+963912345679',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ],
+        [
+            'name' => 'Second Founder',
+            'email' => 'second-founder@example.com',
+            'phone' => '+963923456789',
+            'password' => 'Password456!',
+            'password_confirmation' => 'Password456!',
+        ],
+    ];
+    $payload['logo'] = UploadedFile::fake()->image('multi-organization.png', 500, 500);
+
+    $response = $this->post('/api/v1/company/auth/register', $payload, ['Accept' => 'application/json']);
+
+    $response->assertCreated()
+        ->assertJsonPath('data.user.email', 'primary-founder@example.com');
+
+    $organizationId = (string) $response->json('data.user.organizationId');
+    $role = OrganizationRole::query()
+        ->where('organization_id', $organizationId)
+        ->where('is_system', true)
+        ->firstOrFail();
+
+    expect($role->name)->toBe('المؤسس');
+    expect($role->members_count)->toBe(2);
+
+    foreach ($payload['founders'] as $founder) {
+        $founderUser = User::query()->where('email', $founder['email'])->firstOrFail();
+        $this->assertDatabaseHas('users', [
+            'id' => $founderUser->id,
+            'organization_id' => $organizationId,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('organization_staff', [
+            'organization_id' => $organizationId,
+            'user_id' => $founderUser->id,
+            'organization_role_id' => $role->id,
+            'status' => 'active',
+        ]);
+    }
+
+    $organization = Organization::query()->findOrFail($organizationId);
+    expect($organization->owner_full_name)->toBe('Primary Founder');
+    expect($organization->owner_email)->toBe('primary-founder@example.com');
+    expect($organization->owner_phone)->toBe('+963912345679');
+});
+
+test('company registration rejects duplicate founder identities without creating records', function () {
+    Storage::fake('public');
+    $beforeOrganizations = Organization::query()->count();
+    $beforeUsers = User::query()->count();
+    $beforeStaff = OrganizationStaff::query()->count();
+
+    $payload = valid_company_registration_payload('duplicate-founders-org@example.com', 'ORG-DUP-FOUNDERS', 'REG-DUP-FOUNDERS');
+    unset($payload['ownerName'], $payload['password'], $payload['password_confirmation']);
+    $payload['founders'] = [
+        [
+            'name' => 'Founder One',
+            'email' => 'same-founder@example.com',
+            'phone' => '+963934567890',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+        ],
+        [
+            'name' => 'Founder Two',
+            'email' => 'same-founder@example.com',
+            'phone' => '+963934567890',
+            'password' => 'Password456!',
+            'password_confirmation' => 'Password456!',
+        ],
+    ];
+    $payload['logo'] = UploadedFile::fake()->image('duplicate-founders.png');
+
+    $this->post('/api/v1/company/auth/register', $payload, ['Accept' => 'application/json'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['founders.1.email', 'founders.1.phone']);
+
+    expect(Organization::query()->count())->toBe($beforeOrganizations);
+    expect(User::query()->count())->toBe($beforeUsers);
+    expect(OrganizationStaff::query()->count())->toBe($beforeStaff);
 });
 
 test('company registration rolls back when logo storage fails', function () {
