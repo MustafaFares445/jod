@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\API\Admin\AnalyticsController;
 use App\Http\Controllers\API\Admin\ArticleController;
 use App\Http\Controllers\API\Admin\AuditLogController;
 use App\Http\Controllers\API\Admin\BadgeController;
@@ -117,8 +116,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::get('help-matches/{helpMatch}', [HelpMatchController::class, 'show']);
 
         Route::get('overview', OverviewController::class);
-        Route::get('analytics/kpis', AnalyticsController::class.'@kpis');
-        Route::get('analytics/weekly', AnalyticsController::class.'@weekly');
         Route::get('analytics/recommendations', RecommendationAnalyticsController::class);
         Route::get('recommendations/inspector', RecommendationInspectorController::class);
         Route::get('recommendations/settings', [RecommendationSettingsController::class, 'index']);

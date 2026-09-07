@@ -6,7 +6,6 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Models\Post;
 use App\Models\User;
-use App\Services\Auth\TokenService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -138,13 +137,4 @@ test('admin can create ordinary post without media then upload images and videos
         ->assertJsonPath('data.updatedBy.id', $this->admin->id);
 
     expect(Post::query()->findOrFail($postId)->images()->count())->toBe(2);
-});
-
-test('weekly analytics accepts a real issued admin access token for 30d range', function () {
-    $pair = app(TokenService::class)->issueTokenPair($this->admin);
-
-    $this->withToken((string) $pair['token'])
-        ->getJson('/api/v1/admin/analytics/weekly?range=30d')
-        ->assertOk()
-        ->assertJsonStructure(['data' => ['rows']]);
 });
