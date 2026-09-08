@@ -13,7 +13,7 @@ class GenerateMissingVideoPreviews extends Command
 {
     protected $signature = 'videos:generate-previews {--force : Regenerate previews that are already ready}';
 
-    protected $description = 'Queue preview generation for organization videos.';
+    protected $description = 'Queue preview generation for public organization and post videos.';
 
     public function handle(): int
     {
@@ -27,7 +27,7 @@ class GenerateMissingVideoPreviews extends Command
         $queued = 0;
 
         Media::query()
-            ->where('model_type', MediaModel::ORGANIZATION->value)
+            ->whereIn('model_type', [MediaModel::ORGANIZATION->value, MediaModel::POST->value])
             ->where('prop', 'videos')
             ->when(! $force, fn ($query) => $query->where(function ($inner): void {
                 $inner->whereNull('preview_status')

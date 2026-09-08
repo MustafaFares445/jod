@@ -70,6 +70,11 @@ class Media extends Model
         return $this->belongsTo(Organization::class, 'model_id');
     }
 
+    public function post(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'post_id');
+    }
+
     public function likes(): HasMany
     {
         return $this->hasMany(MediaLike::class);
