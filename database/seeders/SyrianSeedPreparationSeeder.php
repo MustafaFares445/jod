@@ -41,7 +41,7 @@ final class SyrianSeedPreparationSeeder extends Seeder
             DB::table('publisher_follows')->where('target_type', 'organization')->delete();
         }
         if (Schema::hasTable('hidden_publishers')) {
-            DB::table('hidden_publishers')->where('target_type', 'organization')->delete();
+            DB::table('hidden_publishers')->where('publisher_type', 'organization')->delete();
         }
         if (Schema::hasTable('organizations')) {
             DB::table('organizations')->delete();
