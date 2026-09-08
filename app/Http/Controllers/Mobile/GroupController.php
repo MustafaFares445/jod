@@ -242,7 +242,7 @@ class GroupController extends Controller
             'title' => ['required', 'string', 'min:4', 'max:255'], 'summary' => ['nullable', 'string', 'max:2000'], 'content' => ['nullable', 'string'],
             'categoryId' => ['nullable', 'string', 'exists:categories,id'], 'location' => ['nullable', 'string', 'max:255'],
             'goalAmount' => ['required', 'numeric', 'min:0'], 'startDate' => ['nullable', 'date'], 'endDate' => ['nullable', 'date', 'after_or_equal:startDate'],
-            'audience' => ['nullable', 'string', Rule::in(['general', 'students'])],
+            'audience' => ['nullable', 'string', Rule::in(['general', 'student'])],
         ]);
         return MobileApiResponse::success($this->service->createCampaign($group, $request->user(), $data), 'Group campaign created successfully.');
     }
