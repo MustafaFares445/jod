@@ -11,12 +11,15 @@ use App\Http\Requests\Mobile\ProfileRequest;
 use App\Http\Requests\Mobile\RequestPasswordChangeCodeRequest;
 use App\Http\Resources\Mobile\UserResource;
 use App\Models\User;
+use App\Notifications\PasswordChangeVerificationCodeNotification;
 use App\Services\Permissions\PermissionCatalogService;
 use App\Services\UserService;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Throwable;
 
 class MeController extends Controller
 {
@@ -75,16 +78,37 @@ class MeController extends Controller
         }
 
         $code = (string) random_int(100000, 999999);
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->updateOrInsert(
+        $expiresInMinutes = 15;
+        $existingRecord = DB::table('password_reset_tokens')->where('email', $user->email)->first();
+
+        DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $user->email],
             ['token' => $code, 'created_at' => now()],
         );
 
+        try {
+            $user->notify(new PasswordChangeVerificationCodeNotification($code, $expiresInMinutes));
+        } catch (Throwable $exception) {
+            if ($existingRecord === null) {
+                DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            } else {
+                DB::table('password_reset_tokens')->updateOrInsert(
+                    ['email' => $user->email],
+                    [
+                        'token' => $existingRecord->token,
+                        'created_at' => $existingRecord->created_at,
+                    ],
+                );
+            }
+
+            throw $exception;
+        }
+
         return MobileApiResponse::success([
             'verificationRequired' => true,
             'verificationCodeSent' => true,
-            'expiresIn' => 900,
-        ], 'Password change verification code generated successfully.');
+            'expiresIn' => $expiresInMinutes * 60,
+        ], 'Password change verification code sent successfully.');
     }
 
     /**
@@ -106,7 +130,7 @@ class MeController extends Controller
             return MobileApiResponse::error('invalid_credentials', 'The current password is incorrect.', null, 422);
         }
 
-        $record = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $user->email)->first();
+        $record = DB::table('password_reset_tokens')->where('email', $user->email)->first();
         $validCode = $record
             && isset($record->created_at)
             && now()->diffInMinutes($record->created_at) <= 15
@@ -117,7 +141,7 @@ class MeController extends Controller
         }
 
         $this->userService->updatePassword($user, $request->validated('password'));
-        \Illuminate\Support\Facades\DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
         return MobileApiResponse::success([
             'passwordChanged' => true,
