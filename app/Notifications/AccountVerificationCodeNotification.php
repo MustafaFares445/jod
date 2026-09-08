@@ -26,11 +26,15 @@ class AccountVerificationCodeNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->theme('jod')
             ->subject('Verify your JOD account')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('Use the following verification code to activate your JOD account:')
-            ->line($this->code)
-            ->line("This code expires in {$this->expiresInMinutes} minutes.")
-            ->line('If you did not create this account, you can ignore this message.');
+            ->markdown('mail.verification-code', [
+                'heading' => 'Verify your JOD account',
+                'recipientName' => (string) $notifiable->name,
+                'intro' => 'Use the following verification code to activate your JOD account:',
+                'code' => $this->code,
+                'expiresInMinutes' => $this->expiresInMinutes,
+                'securityMessage' => 'If you did not create this account, you can safely ignore this message.',
+            ]);
     }
 }

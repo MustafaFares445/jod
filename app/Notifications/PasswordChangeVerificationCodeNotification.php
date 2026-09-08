@@ -26,11 +26,15 @@ class PasswordChangeVerificationCodeNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
+            ->theme('jod')
             ->subject('JOD password change verification code')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('Use the following verification code to change your JOD account password:')
-            ->line($this->code)
-            ->line("This code expires in {$this->expiresInMinutes} minutes.")
-            ->line('If you did not request a password change, you can ignore this message.');
+            ->markdown('mail.verification-code', [
+                'heading' => 'Confirm your password change',
+                'recipientName' => (string) $notifiable->name,
+                'intro' => 'Use the following verification code to change your JOD account password:',
+                'code' => $this->code,
+                'expiresInMinutes' => $this->expiresInMinutes,
+                'securityMessage' => 'If you did not request a password change, you can safely ignore this message.',
+            ]);
     }
 }
