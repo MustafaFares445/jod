@@ -16,6 +16,8 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    'test_endpoint_enabled' => (bool) env('MAIL_TEST_ENDPOINT_ENABLED', false),
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
