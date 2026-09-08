@@ -29,8 +29,8 @@ class PersonalizedFeedService
     {
         $page = max(1, $page);
         $perPage = max(1, min($perPage, 100));
-        $location = $viewer->preference?->preferred_city ?? $viewer->city;
-        if ($type === FeedType::Nearby && blank($location)) return $this->paginator(collect(), $page, $perPage);
+        $preferredCities = $this->preferredCities($viewer);
+        if ($type === FeedType::Nearby && $preferredCities === []) return $this->paginator(collect(), $page, $perPage);
 
         $posts = Post::query()->with([
             'organization.logoMedia', 'campaign', 'category', 'requiredCapabilities', 'author.avatarMedia', 'images', 'videos',
@@ -49,7 +49,7 @@ class PersonalizedFeedService
                     HelpRequestStatus::Expired->value,
                 ]);
             });
-        if ($type === FeedType::Nearby) $posts->where('location', $location);
+        if ($type === FeedType::Nearby) $posts->whereIn('location', $preferredCities);
         if ($type === FeedType::Urgent) $posts->whereIn('urgency', [PostUrgency::Important->value, PostUrgency::Urgent->value, PostUrgency::Critical->value]);
 
         $candidateLimit = (int) config('recommendations.candidate_limit', 200);
@@ -70,7 +70,7 @@ class PersonalizedFeedService
                 ->where(function ($query): void {
                     $query->whereNull('end_date')->orWhereDate('end_date', '>=', now()->toDateString());
                 });
-            if ($type === FeedType::Nearby) $campaignQuery->where('location', $location);
+            if ($type === FeedType::Nearby) $campaignQuery->whereIn('location', $preferredCities);
             $campaignCandidates = $campaignQuery->orderByDesc('created_at')->limit($candidateLimit)->get();
         }
 
@@ -80,7 +80,7 @@ class PersonalizedFeedService
     private function rank(User $viewer, Collection $posts, Collection $campaigns): Collection
     {
         $preference = $viewer->preference()->first();
-        $preferredCity = $preference?->preferred_city ?? $viewer->city;
+        $preferredCities = $this->preferredCities($viewer);
         $interests = UserCategoryInterest::query()->where('user_id', $viewer->id)->get()->keyBy('category_id');
         $follows = PublisherFollow::query()->where('follower_user_id', $viewer->id)->get();
         $followedUsers = $follows->where('target_type', PublisherFollow::TARGET_USER)->pluck('target_id')->flip();
@@ -91,12 +91,12 @@ class PersonalizedFeedService
 
         $rankedPosts = $posts
             ->reject(fn (Post $post): bool => $excludedPostIds->has((string) $post->id) || $hiddenPublishers->has($this->postPublisherKey($post)))
-            ->map(function (Post $post) use ($viewer, $preference, $preferredCity, $interests, $followedUsers, $followedOrganizations, $viewCounts): array {
+            ->map(function (Post $post) use ($viewer, $preference, $preferredCities, $interests, $followedUsers, $followedOrganizations, $viewCounts): array {
                 $scored = $this->scorePost(
                     $viewer,
                     $post,
                     $preference?->intent,
-                    $preferredCity,
+                    $preferredCities,
                     $interests->get($post->category_id),
                     $followedUsers->has((string) $post->author_id),
                     $post->organization_id !== null && $followedOrganizations->has((string) $post->organization_id),
@@ -107,11 +107,11 @@ class PersonalizedFeedService
 
         $rankedCampaigns = $campaigns
             ->reject(fn (Campaign $campaign): bool => $hiddenPublishers->has('organization:'.$campaign->organization_id))
-            ->map(function (Campaign $campaign) use ($preference, $preferredCity, $interests, $followedOrganizations): array {
+            ->map(function (Campaign $campaign) use ($preference, $preferredCities, $interests, $followedOrganizations): array {
                 $scored = $this->scoreCampaign(
                     $campaign,
                     $preference?->intent,
-                    $preferredCity,
+                    $preferredCities,
                     $interests->get($campaign->category_id),
                     $followedOrganizations->has((string) $campaign->organization_id),
                 );
@@ -124,13 +124,13 @@ class PersonalizedFeedService
         })->values();
     }
 
-    private function scorePost(User $viewer, Post $post, ?UserIntent $intent, ?string $preferredCity, ?UserCategoryInterest $interest, bool $followsAuthor, bool $followsOrganization, int $viewCount): array
+    private function scorePost(User $viewer, Post $post, ?UserIntent $intent, array $preferredCities, ?UserCategoryInterest $interest, bool $followsAuthor, bool $followsOrganization, int $viewCount): array
     {
         $weights = config('recommendations.weights');
         $components = [];
         if ($followsAuthor || $followsOrganization) $components['followed_publisher'] = (float) $weights['followed_publisher'];
         $this->applyInterestComponents($components, $interest, $weights);
-        if ($this->sameLocation($preferredCity, $post->location)) $components['same_city'] = (float) $weights['same_city'];
+        if ($this->sameLocation($preferredCities, $post->location)) $components['same_city'] = (float) $weights['same_city'];
         if ($this->postIntentMatches($intent, $post)) $components['intent_match'] = (float) $weights['intent_match'];
 
         $requiredIds = $post->requiredCapabilities->pluck('id');
@@ -145,13 +145,13 @@ class PersonalizedFeedService
         return $this->scoreResult($components);
     }
 
-    private function scoreCampaign(Campaign $campaign, ?UserIntent $intent, ?string $preferredCity, ?UserCategoryInterest $interest, bool $followsOrganization): array
+    private function scoreCampaign(Campaign $campaign, ?UserIntent $intent, array $preferredCities, ?UserCategoryInterest $interest, bool $followsOrganization): array
     {
         $weights = config('recommendations.weights');
         $components = [];
         if ($followsOrganization) $components['followed_publisher'] = (float) $weights['followed_publisher'];
         $this->applyInterestComponents($components, $interest, $weights);
-        if ($this->sameLocation($preferredCity, $campaign->location)) $components['same_city'] = (float) $weights['same_city'];
+        if ($this->sameLocation($preferredCities, $campaign->location)) $components['same_city'] = (float) $weights['same_city'];
         if ($intent === null || $intent === UserIntent::Both || $intent === UserIntent::Giver) $components['intent_match'] = (float) $weights['intent_match'];
         $freshness = $this->freshnessScore($campaign->created_at); if ($freshness > 0) $components['fresh'] = $freshness;
         $popularity = min((float) config('recommendations.popularity_cap', 10), floor(((int) $campaign->donors_count + (int) $campaign->applicants_count) / 2));
@@ -194,9 +194,21 @@ class PersonalizedFeedService
         return match ($urgency) { PostUrgency::Important->value => 4, PostUrgency::Urgent->value => 8, PostUrgency::Critical->value => 10, default => 0 };
     }
 
-    private function sameLocation(?string $left, ?string $right): bool
+    /** @return list<string> */
+    private function preferredCities(User $viewer): array
     {
-        return ! blank($left) && ! blank($right) && Str::lower(trim($left)) === Str::lower(trim($right));
+        $preference = $viewer->preference;
+        $cities = collect($preference?->preferred_cities ?? [])->filter(fn (mixed $city): bool => is_string($city) && filled(trim($city)))->map(fn (string $city): string => trim($city))->unique()->values()->all();
+        if ($cities === [] && filled($viewer->city)) $cities = [trim((string) $viewer->city)];
+        return $cities;
+    }
+
+    /** @param list<string> $preferredCities */
+    private function sameLocation(array $preferredCities, ?string $right): bool
+    {
+        if (blank($right)) return false;
+        $normalizedRight = Str::lower(trim((string) $right));
+        return collect($preferredCities)->contains(fn (string $city): bool => Str::lower(trim($city)) === $normalizedRight);
     }
 
     private function postPublisherKey(Post $post): string

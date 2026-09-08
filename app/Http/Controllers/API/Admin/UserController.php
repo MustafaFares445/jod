@@ -121,7 +121,7 @@ class UserController extends Controller
             'onboardingCompleted' => $user->preference?->onboarding_completed_at !== null,
             'onboardingCompletedAt' => $user->preference?->onboarding_completed_at?->toIso8601String(),
             'intent' => $user->preference?->intent?->value ?? $user->preference?->intent,
-            'preferredCity' => $user->preference?->preferred_city,
+            'preferredCity' => ($user->preference?->preferred_cities ?? [])[0] ?? null,
             'preferredGovernorate' => $user->preference?->preferred_governorate,
             'preferredRadiusKm' => $user->preference?->preferred_radius_km,
             'remoteHelpEnabled' => (bool) ($user->preference?->remote_help_enabled ?? false),

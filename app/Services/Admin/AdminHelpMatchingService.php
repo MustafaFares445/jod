@@ -48,7 +48,7 @@ class AdminHelpMatchingService
                 $q->whereIn('intent', [UserIntent::Giver->value, UserIntent::Both->value]);
                 if (filled($post->location)) {
                     $q->where(fn (Builder $location) => $location
-                        ->where('preferred_city', $post->location)
+                        ->whereJsonContains('preferred_cities', $post->location)
                         ->orWhere('remote_help_enabled', true));
                 }
             })

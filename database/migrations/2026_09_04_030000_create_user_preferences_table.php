@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('id')->primary();
             $table->string('user_id')->unique();
             $table->string('intent', 20)->nullable()->index();
-            $table->string('preferred_city')->nullable()->index();
+            $table->json('preferred_cities')->nullable();
             $table->string('preferred_governorate')->nullable()->index();
             $table->unsignedSmallInteger('preferred_radius_km')->nullable();
             $table->boolean('remote_help_enabled')->default(false);

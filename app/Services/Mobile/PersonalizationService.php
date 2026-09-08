@@ -52,13 +52,14 @@ class PersonalizationService
         DB::transaction(function () use ($user, $data): void {
             $preference = UserPreference::query()->firstOrCreate(['user_id' => $user->id]);
 
-            if (blank($preference->preferred_city) && filled($user->city)) {
-                $preference->preferred_city = $user->city;
+            if (empty($preference->preferred_cities) && filled($user->city)) {
+                $preference->preferred_cities = [$user->city];
             }
+
+            $this->applyPreferredCities($preference, $data);
 
             foreach ([
                 'intent' => 'intent',
-                'preferredCity' => 'preferred_city',
                 'remoteHelpEnabled' => 'remote_help_enabled',
             ] as $requestKey => $attribute) {
                 if (array_key_exists($requestKey, $data) && $data[$requestKey] !== null) {
@@ -86,9 +87,10 @@ class PersonalizationService
     {
         $preference = UserPreference::query()->firstOrCreate(['user_id' => $user->id]);
 
+        $this->applyPreferredCities($preference, $data);
+
         foreach ([
             'intent' => 'intent',
-            'preferredCity' => 'preferred_city',
             'remoteHelpEnabled' => 'remote_help_enabled',
         ] as $requestKey => $attribute) {
             if (array_key_exists($requestKey, $data)) {
@@ -126,11 +128,14 @@ class PersonalizationService
             ->filter(fn (UserCategoryInterest $interest): bool => $interest->explicit_weight > 0 && $interest->category !== null)
             ->values();
 
+        $preferredCities = $this->preferredCities($preference, $user);
+
         return [
             'onboardingCompleted' => $preference?->onboarding_completed_at !== null,
             'missingFields' => $this->missingOnboardingFields($user, $preference, $explicitInterests),
             'intent' => $preference?->intent?->value,
-            'preferredCity' => $preference?->preferred_city ?? $user->city,
+            'preferredCity' => $preferredCities[0] ?? null,
+            'preferredCities' => $preferredCities,
             'remoteHelpEnabled' => (bool) ($preference?->remote_help_enabled ?? false),
             'interests' => $explicitInterests
                 ->map(fn (UserCategoryInterest $interest): array => [
@@ -161,7 +166,7 @@ class PersonalizationService
             $missing[] = 'interests';
         }
 
-        if (blank($preference?->preferred_city) && blank($user->city)) {
+        if ($this->preferredCities($preference, $user) === []) {
             $missing[] = 'preferredCity';
         }
 
@@ -173,6 +178,29 @@ class PersonalizationService
         }
 
         return $missing;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function applyPreferredCities(UserPreference $preference, array $data): void
+    {
+        if (array_key_exists('preferredCities', $data) && is_array($data['preferredCities'])) {
+            $cities = collect($data['preferredCities'])->filter(fn (mixed $city): bool => is_string($city) && filled(trim($city)))->map(fn (string $city): string => trim($city))->unique()->values()->all();
+            $preference->preferred_cities = $cities;
+            return;
+        }
+        if (array_key_exists('preferredCity', $data)) {
+            $city = is_string($data['preferredCity'] ?? null) ? trim((string) $data['preferredCity']) : null;
+            $city = filled($city) ? $city : null;
+            $preference->preferred_cities = $city === null ? [] : [$city];
+        }
+    }
+
+    /** @return list<string> */
+    private function preferredCities(?UserPreference $preference, User $user): array
+    {
+        $cities = collect($preference?->preferred_cities ?? [])->filter(fn (mixed $city): bool => is_string($city) && filled(trim($city)))->map(fn (string $city): string => trim($city))->unique()->values()->all();
+        if ($cities === [] && filled($user->city)) $cities = [trim((string) $user->city)];
+        return $cities;
     }
 
     /** @param array<int, string> $categoryIds */

@@ -72,7 +72,7 @@ final class PersonalizationDemoSeeder extends Seeder
                 [
                     'id' => $this->id('preference:'.$user->id),
                     'intent' => $intents[$index % count($intents)],
-                    'preferred_city' => $cities[$index % count($cities)],
+                    'preferred_cities' => json_encode([$cities[$index % count($cities)]], JSON_UNESCAPED_UNICODE),
                     'preferred_governorate' => $cities[$index % count($cities)],
                     'preferred_radius_km' => [10, 25, 50, null][$index % 4],
                     'remote_help_enabled' => $index % 3 !== 1,

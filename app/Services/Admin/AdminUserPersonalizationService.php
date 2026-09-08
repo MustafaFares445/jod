@@ -19,7 +19,7 @@ class AdminUserPersonalizationService
             'onboardingCompleted' => $preference?->onboarding_completed_at !== null,
             'onboardingCompletedAt' => $preference?->onboarding_completed_at?->toIso8601String(),
             'intent' => $preference?->intent?->value,
-            'preferredCity' => $preference?->preferred_city,
+            'preferredCity' => ($preference?->preferred_cities ?? [])[0] ?? null,
             'preferredGovernorate' => $preference?->preferred_governorate,
             'preferredRadiusKm' => $preference?->preferred_radius_km,
             'remoteHelpEnabled' => (bool) ($preference?->remote_help_enabled ?? false),

@@ -22,7 +22,7 @@ test('for you feed ranks followed and explicitly interesting content first', fun
     UserPreference::query()->create([
         'user_id' => $viewer->id,
         'intent' => 'giver',
-        'preferred_city' => 'دمشق',
+        'preferred_cities' => ['دمشق'],
         'onboarding_completed_at' => now(),
     ]);
     UserCategoryInterest::query()->create([
@@ -62,37 +62,26 @@ test('for you feed ranks followed and explicitly interesting content first', fun
         ->assertJsonFragment(['reasons' => ['followed_publisher', 'explicit_interest', 'same_city']]);
 });
 
-test('nearby feed only returns active unexpired content in preferred city', function () {
+test('nearby feed returns active unexpired content in any selected city', function () {
     $viewer = User::factory()->create(['city' => 'دمشق']);
     $author = User::factory()->create();
     UserPreference::query()->create([
         'user_id' => $viewer->id,
         'intent' => 'both',
-        'preferred_city' => 'دمشق',
+        'preferred_cities' => ['دمشق', 'حلب'],
         'onboarding_completed_at' => now(),
     ]);
 
-    $nearby = Post::factory()->published()->create([
-        'author_id' => $author->id,
-        'location' => 'دمشق',
-        'expires_at' => now()->addDay(),
-    ]);
-    Post::factory()->published()->create([
-        'author_id' => $author->id,
-        'location' => 'حلب',
-    ]);
-    Post::factory()->published()->create([
-        'author_id' => $author->id,
-        'location' => 'دمشق',
-        'expires_at' => now()->subMinute(),
-    ]);
+    $damascus = Post::factory()->published()->create(['author_id' => $author->id, 'location' => 'دمشق', 'expires_at' => now()->addDay()]);
+    $aleppo = Post::factory()->published()->create(['author_id' => $author->id, 'location' => 'حلب']);
+    Post::factory()->published()->create(['author_id' => $author->id, 'location' => 'حمص']);
+    Post::factory()->published()->create(['author_id' => $author->id, 'location' => 'دمشق', 'expires_at' => now()->subMinute()]);
 
     Sanctum::actingAs($viewer);
 
-    $this->getJson('/api/mobile/feed?type=nearby')
-        ->assertOk()
-        ->assertJsonPath('meta.total', 1)
-        ->assertJsonPath('data.0.content.id', $nearby->id);
+    $response = $this->getJson('/api/mobile/feed?type=nearby')->assertOk()->assertJsonPath('meta.total', 2);
+    $ids = collect($response->json('data'))->pluck('content.id')->all();
+    expect($ids)->toContain($damascus->id, $aleppo->id);
 });
 
 test('urgent feed only returns important urgent or critical posts', function () {

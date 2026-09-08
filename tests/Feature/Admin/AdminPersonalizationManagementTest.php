@@ -90,7 +90,7 @@ test('admin views user personalization summary', function () {
     UserPreference::query()->create([
         'user_id' => $user->id,
         'intent' => 'both',
-        'preferred_city' => 'دمشق',
+        'preferred_cities' => ['دمشق'],
         'remote_help_enabled' => true,
         'availability_status' => 'weekends',
         'onboarding_completed_at' => now(),
@@ -196,7 +196,7 @@ test('recommendation inspector exposes scoring components from production rankin
     UserPreference::query()->create([
         'user_id' => $user->id,
         'intent' => 'both',
-        'preferred_city' => 'دمشق',
+        'preferred_cities' => ['دمشق'],
         'onboarding_completed_at' => now(),
     ]);
     UserCategoryInterest::query()->create([

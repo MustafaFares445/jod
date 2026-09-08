@@ -47,7 +47,7 @@ final class MobilePersonalizationTest extends TestCase
             'intent' => 'giver',
             'categoryIds' => [$category->id],
             'capabilityIds' => [$capability->id],
-            'preferredCity' => 'دمشق',
+            'preferredCities' => ['دمشق', 'حلب'],
             'remoteHelpEnabled' => true,
         ]);
 
@@ -56,6 +56,7 @@ final class MobilePersonalizationTest extends TestCase
             ->assertJsonPath('data.missingFields', [])
             ->assertJsonPath('data.intent', 'giver')
             ->assertJsonPath('data.preferredCity', 'دمشق')
+            ->assertJsonPath('data.preferredCities', ['دمشق', 'حلب'])
             ->assertJsonPath('data.remoteHelpEnabled', true);
 
         $data = $response->json('data');
@@ -117,12 +118,13 @@ final class MobilePersonalizationTest extends TestCase
         $second = Category::factory()->create(['status' => 'active']);
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/mobile/me/onboarding', ['intent' => 'receiver', 'categoryIds' => [$first->id], 'preferredCity' => 'دمشق'])->assertOk();
+        $this->postJson('/api/mobile/me/onboarding', ['intent' => 'receiver', 'categoryIds' => [$first->id], 'preferredCities' => ['دمشق']])->assertOk();
         $this->patchJson('/api/mobile/me/interests', ['categoryIds' => [$second->id]])
             ->assertOk()->assertJsonPath('data.interests.0.category.id', $second->id);
-        $this->patchJson('/api/mobile/me/preferences', ['preferredCity' => 'حلب', 'remoteHelpEnabled' => true])
+        $this->patchJson('/api/mobile/me/preferences', ['preferredCities' => ['حلب', 'حمص'], 'remoteHelpEnabled' => true])
             ->assertOk()
             ->assertJsonPath('data.preferredCity', 'حلب')
+            ->assertJsonPath('data.preferredCities', ['حلب', 'حمص'])
             ->assertJsonPath('data.remoteHelpEnabled', true)
             ->assertJsonPath('data.missingFields', []);
     }

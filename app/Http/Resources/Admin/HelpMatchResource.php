@@ -46,7 +46,7 @@ class HelpMatchResource extends JsonResource
                 'name' => (string) $helper->name,
                 'email' => $helper->email,
                 'phone' => $helper->phone,
-                'preferredCity' => $preference?->preferred_city,
+                'preferredCity' => ($preference?->preferred_cities ?? [])[0] ?? null,
                 'availabilityStatus' => $preference?->availability_status?->value ?? $preference?->availability_status,
                 'capabilities' => $helper->relationLoaded('capabilities')
                     ? $helper->capabilities->map(fn ($capability) => [
@@ -63,7 +63,7 @@ class HelpMatchResource extends JsonResource
                 'phone' => $owner->phone,
             ] : null,
             'signals' => [
-                'preferredCity' => $preference?->preferred_city,
+                'preferredCity' => ($preference?->preferred_cities ?? [])[0] ?? null,
                 'requestLocation' => $post?->location,
                 'explicitCategoryWeight' => $interest ? (float) $interest->explicit_weight : 0,
                 'behavioralCategoryWeight' => $interest ? (float) $interest->behavioral_weight : 0,

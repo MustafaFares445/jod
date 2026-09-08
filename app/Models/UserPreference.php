@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'id', 'user_id', 'intent', 'preferred_city', 'preferred_governorate', 'preferred_radius_km',
+    'id', 'user_id', 'intent', 'preferred_cities', 'preferred_governorate', 'preferred_radius_km',
     'remote_help_enabled', 'availability_status', 'onboarding_completed_at',
 ])]
 class UserPreference extends Model
@@ -27,6 +27,7 @@ class UserPreference extends Model
     {
         return [
             'intent' => UserIntent::class,
+            'preferred_cities' => 'array',
             'remote_help_enabled' => 'boolean',
             'availability_status' => AvailabilityStatus::class,
             'onboarding_completed_at' => 'datetime',
