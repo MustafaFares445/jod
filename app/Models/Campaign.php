@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'location',
     'images',
     'organization_id',
+    'group_id',
     'creator_id',
     'goal_amount',
     'raised_amount',
@@ -61,6 +62,11 @@ class Campaign extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class);
     }
 
     public function category(): BelongsTo

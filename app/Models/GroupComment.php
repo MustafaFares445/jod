@@ -26,7 +26,7 @@ class GroupComment extends Model
         return ['likes_count' => 'integer'];
     }
 
-    public function post(): BelongsTo { return $this->belongsTo(GroupPost::class, 'post_id'); }
+    public function post(): BelongsTo { return $this->belongsTo(Post::class, 'post_id'); }
     public function author(): BelongsTo { return $this->belongsTo(User::class, 'author_id'); }
     public function parent(): BelongsTo { return $this->belongsTo(self::class, 'parent_id'); }
     public function replies(): HasMany { return $this->hasMany(self::class, 'parent_id')->where('status', 'published')->orderBy('created_at'); }

@@ -100,6 +100,7 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::patch('capabilities', [PersonalizationController::class, 'updateCapabilities'])->name('capabilities.update');
         Route::get('posts', [UserPostController::class, 'index'])->name('posts.index');
         Route::get('groups', [GroupController::class, 'mine'])->name('groups.index');
+        Route::get('group-invitations', [GroupController::class, 'myInvitations'])->name('group-invitations.index');
         Route::get('posts/{post}', [UserPostController::class, 'show'])->name('posts.show');
         Route::get('saved-posts', [SavedPostController::class, 'index'])->name('saved-posts.index');
         Route::get('following', [FollowController::class, 'following'])->name('following.index');
@@ -130,14 +131,37 @@ Route::middleware(['auth:sanctum', 'mobile-access-token'])->group(function (): v
         Route::get('permissions', [MeController::class, 'permissions'])->name('permissions');
     });
 
+    Route::get('groups/user-candidates', [GroupController::class, 'userCandidates'])->name('groups.user-candidates');
     Route::get('groups/admin-candidates', [GroupController::class, 'adminCandidates'])->name('groups.admin-candidates');
     Route::post('groups', [GroupController::class, 'store'])->name('groups.store');
+    Route::patch('groups/{group}', [GroupController::class, 'update'])->whereUuid('group')->name('groups.update');
+    Route::delete('groups/{group}', [GroupController::class, 'destroy'])->whereUuid('group')->name('groups.destroy');
     Route::post('groups/{group}/join', [GroupController::class, 'join'])->whereUuid('group')->name('groups.join');
     Route::delete('groups/{group}/join', [GroupController::class, 'leave'])->whereUuid('group')->name('groups.leave');
+    Route::post('groups/{group}/invitations', [GroupController::class, 'invite'])->whereUuid('group')->name('groups.invitations.store');
+    Route::post('group-invitations/{invitation}/accept', [GroupController::class, 'acceptInvitation'])->whereUuid('invitation')->name('group-invitations.accept');
+    Route::post('group-invitations/{invitation}/decline', [GroupController::class, 'declineInvitation'])->whereUuid('invitation')->name('group-invitations.decline');
+    Route::delete('groups/{group}/members/{user}', [GroupController::class, 'removeMember'])->whereUuid('group')->name('groups.members.destroy');
+    Route::post('groups/{group}/campaigns', [GroupController::class, 'createCampaign'])->whereUuid('group')->name('groups.campaigns.store');
+    Route::get('groups/{group}/applications', [GroupController::class, 'applications'])->whereUuid('group')->name('groups.applications.index');
+    Route::patch('groups/{group}/applications/{application}/accept', [GroupController::class, 'acceptApplication'])->whereUuid('group')->name('groups.applications.accept');
+    Route::patch('groups/{group}/applications/{application}/contact', [GroupController::class, 'contactApplication'])->whereUuid('group')->name('groups.applications.contact');
+    Route::patch('groups/{group}/applications/{application}/complete', [GroupController::class, 'completeApplication'])->whereUuid('group')->name('groups.applications.complete');
+    Route::patch('groups/{group}/applications/{application}/reject', [GroupController::class, 'rejectApplication'])->whereUuid('group')->name('groups.applications.reject');
+    Route::get('groups/{group}/donations', [GroupController::class, 'donations'])->whereUuid('group')->name('groups.donations.index');
+    Route::patch('groups/{group}/donations/{donation}/accept', [GroupController::class, 'acceptDonation'])->whereUuid('group')->name('groups.donations.accept');
+    Route::patch('groups/{group}/donations/{donation}/contact', [GroupController::class, 'contactDonation'])->whereUuid('group')->name('groups.donations.contact');
+    Route::patch('groups/{group}/donations/{donation}/agree', [GroupController::class, 'agreeDonation'])->whereUuid('group')->name('groups.donations.agree');
+    Route::patch('groups/{group}/donations/{donation}/complete', [GroupController::class, 'completeDonation'])->whereUuid('group')->name('groups.donations.complete');
+    Route::patch('groups/{group}/donations/{donation}/cancel', [GroupController::class, 'cancelDonation'])->whereUuid('group')->name('groups.donations.cancel');
     Route::post('groups/{group}/posts', [GroupController::class, 'createPost'])->whereUuid('group')->name('groups.posts.store');
+    Route::post('groups/{group}/posts/{post}/approve', [GroupController::class, 'approvePost'])->whereUuid('group')->whereUuid('post')->name('groups.posts.approve');
+    Route::post('groups/{group}/posts/{post}/reject', [GroupController::class, 'rejectPost'])->whereUuid('group')->whereUuid('post')->name('groups.posts.reject');
+    Route::delete('groups/{group}/posts/{post}', [GroupController::class, 'deletePost'])->whereUuid('group')->whereUuid('post')->name('groups.posts.destroy');
     Route::post('groups/posts/{post}/comments', [GroupController::class, 'createComment'])->whereUuid('post')->name('groups.posts.comments.store');
     Route::post('groups/posts/{post}/like', [GroupController::class, 'likePost'])->whereUuid('post')->name('groups.posts.like');
     Route::delete('groups/posts/{post}/like', [GroupController::class, 'unlikePost'])->whereUuid('post')->name('groups.posts.unlike');
+    Route::post('groups/posts/{post}/poll/vote', [GroupController::class, 'vote'])->whereUuid('post')->name('groups.posts.poll.vote');
     Route::post('groups/comments/{comment}/like', [GroupController::class, 'likeComment'])->whereUuid('comment')->name('groups.comments.like');
     Route::delete('groups/comments/{comment}/like', [GroupController::class, 'unlikeComment'])->whereUuid('comment')->name('groups.comments.unlike');
 

@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'id', 'owner_id', 'organization_id', 'name', 'description', 'category', 'location',
-    'status', 'purpose', 'rules', 'proposed_admin_ids', 'rejection_reason', 'suspension_reason',
+    'status', 'purpose', 'rules', 'requires_post_approval', 'proposed_admin_ids', 'rejection_reason', 'suspension_reason',
     'submitted_at', 'reviewed_at', 'reviewed_by',
 ])]
 class Group extends Model
@@ -30,6 +30,7 @@ class Group extends Model
         return [
             'rules' => 'array',
             'proposed_admin_ids' => 'array',
+            'requires_post_approval' => 'boolean',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
@@ -40,7 +41,11 @@ class Group extends Model
     public function reviewedBy(): BelongsTo { return $this->belongsTo(User::class, 'reviewed_by'); }
     public function memberships(): HasMany { return $this->hasMany(GroupMember::class); }
     public function activeMembers(): HasMany { return $this->memberships()->where('status', 'active'); }
-    public function posts(): HasMany { return $this->hasMany(GroupPost::class); }
+    public function categories(): HasMany { return $this->hasMany(GroupCategory::class); }
+    public function invitations(): HasMany { return $this->hasMany(GroupInvitation::class); }
+    public function posts(): HasMany { return $this->hasMany(Post::class); }
+    public function legacyPosts(): HasMany { return $this->hasMany(GroupPost::class); }
+    public function campaigns(): HasMany { return $this->hasMany(Campaign::class); }
 
     public function avatarMedia(): HasOne
     {

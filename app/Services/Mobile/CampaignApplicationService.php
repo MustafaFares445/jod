@@ -65,8 +65,7 @@ class CampaignApplicationService
                 ->whereKey($campaignId)
                 ->where('status', 'active')
                 ->whereHas('posts', function (Builder $post): void {
-                    $post->where('status', 'published')
-                        ->where('type', 'volunteer_opportunity');
+                    $post->where('status', 'published')->where('type', 'volunteer_opportunity');
                 })
                 ->lockForUpdate()
                 ->first();
@@ -90,6 +89,7 @@ class CampaignApplicationService
 
             $values = [
                 'organization_id' => $campaign->organization_id,
+                'group_id' => $campaign->group_id,
                 'campaign_id' => $campaign->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -126,17 +126,14 @@ class CampaignApplicationService
                 (string) $campaign->organization_id,
             );
 
-            $this->notifications->notifyOrganization(
-                (string) $campaign->organization_id,
-                NotificationEventType::ApplicationSubmitted,
-                'طلب تطوع جديد',
-                "تم استلام طلب تطوع جديد من {$user->name} لحملة {$campaign->title}.",
-                'applicant',
-                'high',
-                $user->name,
-                '/org/applicants/'.$application->id,
-                (string) $user->id,
-            );
+            if (filled($campaign->group_id)) {
+                $group = \App\Models\Group::query()->find($campaign->group_id);
+                if ($group !== null) {
+                    $this->notifications->notifyUser($group->owner_id, NotificationEventType::ApplicationSubmitted, 'طلب تطوع جديد', "قدم {$user->name} طلب تطوع في حملة {$campaign->title} التابعة لفريق {$group->name}.", 'applicant', 'high', $user->name, "/groups/{$group->id}?tab=applications", null, (string) $user->id);
+                }
+            } elseif (filled($campaign->organization_id)) {
+                $this->notifications->notifyOrganization((string) $campaign->organization_id, NotificationEventType::ApplicationSubmitted, 'طلب تطوع جديد', "تم استلام طلب تطوع جديد من {$user->name} لحملة {$campaign->title}.", 'applicant', 'high', $user->name, '/org/applicants/'.$application->id, (string) $user->id);
+            }
 
             return $application->refresh()->load(['campaign.organization', 'organization']);
         });
@@ -163,9 +160,9 @@ class CampaignApplicationService
             return $this->apply($user, (string) $post->campaign_id, $attributes);
         }
 
-        if (! filled($post->organization_id)) {
+        if (! filled($post->organization_id) && ! filled($post->group_id)) {
             throw ValidationException::withMessages([
-                'post' => ['Only organization volunteer opportunities can receive applications.'],
+                'post' => ['Only organization or volunteer-group opportunities can receive applications.'],
             ]);
         }
 
@@ -178,7 +175,7 @@ class CampaignApplicationService
                 ->lockForUpdate()
                 ->first();
 
-            if ($lockedPost === null || ! filled($lockedPost->organization_id)) {
+            if ($lockedPost === null || (! filled($lockedPost->organization_id) && ! filled($lockedPost->group_id))) {
                 throw ValidationException::withMessages([
                     'post' => ['The selected volunteer opportunity is not available for applications.'],
                 ]);
@@ -200,6 +197,7 @@ class CampaignApplicationService
             $title = filled($lockedPost->title) ? (string) $lockedPost->title : 'فرصة تطوع';
             $values = [
                 'organization_id' => $lockedPost->organization_id,
+                'group_id' => $lockedPost->group_id,
                 'campaign_id' => null,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -236,17 +234,12 @@ class CampaignApplicationService
                 (string) $lockedPost->organization_id,
             );
 
-            $this->notifications->notifyOrganization(
-                (string) $lockedPost->organization_id,
-                NotificationEventType::ApplicationSubmitted,
-                'طلب تطوع جديد',
-                "تم استلام طلب تطوع جديد من {$user->name} لفرصة {$title}.",
-                'applicant',
-                'high',
-                $user->name,
-                '/org/applicants/'.$application->id,
-                (string) $user->id,
-            );
+            if (filled($lockedPost->group_id)) {
+                $group = \App\Models\Group::query()->find($lockedPost->group_id);
+                if ($group !== null) $this->notifications->notifyUser($group->owner_id, NotificationEventType::ApplicationSubmitted, 'طلب تطوع جديد', "قدم {$user->name} على فرصة {$title} في {$group->name}.", 'applicant', 'high', $user->name, "/groups/{$group->id}?tab=applications", null, (string) $user->id);
+            } elseif (filled($lockedPost->organization_id)) {
+                $this->notifications->notifyOrganization((string) $lockedPost->organization_id, NotificationEventType::ApplicationSubmitted, 'طلب تطوع جديد', "تم استلام طلب تطوع جديد من {$user->name} لفرصة {$title}.", 'applicant', 'high', $user->name, '/org/applicants/'.$application->id, (string) $user->id);
+            }
 
             return $application->refresh()->load(['campaign.organization', 'organization']);
         });

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'organization_id', 'campaign_id', 'name', 'email', 'phone', 'campaign_title',
+    'organization_id', 'group_id', 'campaign_id', 'name', 'email', 'phone', 'campaign_title',
     'amount_or_type', 'confirmed_amount', 'donated_at', 'city', 'source', 'payment_method', 'status',
     'contact_method', 'notes', 'cancel_reason', 'accepted_at', 'contacted_at', 'agreed_at',
     'completed_at', 'cancelled_at', 'campaign_ref', 'assigned_to', 'internal_notes',
@@ -40,6 +40,11 @@ class Donation extends Model
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(Group::class);
     }
 
     public function campaign(): BelongsTo

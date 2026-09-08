@@ -17,8 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'help_status', 'urgency', 'urgency_reason', 'location',
-    'organization_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
+    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'group_review_status', 'group_rejection_reason', 'help_status', 'urgency', 'urgency_reason', 'location',
+    'organization_id', 'group_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
     'block_reason', 'views_count', 'reactions_count', 'applications_count',
     'published_at', 'expires_at', 'fulfilled_at', 'submitted_at', 'reviewed_at', 'reviewed_by',
     'urgency_reviewed_at', 'urgency_reviewed_by', 'blocked_at', 'blocked_by',
@@ -63,6 +63,7 @@ class Post extends Model
     }
 
     public function organization(): BelongsTo { return $this->belongsTo(Organization::class); }
+    public function group(): BelongsTo { return $this->belongsTo(Group::class); }
     public function campaign(): BelongsTo { return $this->belongsTo(Campaign::class); }
     public function category(): BelongsTo { return $this->belongsTo(Category::class); }
     public function author(): BelongsTo { return $this->belongsTo(User::class, 'author_id'); }
@@ -77,6 +78,8 @@ class Post extends Model
     public function likes(): HasMany { return $this->hasMany(PostLike::class); }
     public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
     public function helpOffers(): HasMany { return $this->hasMany(HelpOffer::class); }
+    public function poll(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(PostPoll::class); }
+    public function groupComments(): HasMany { return $this->hasMany(GroupComment::class, 'post_id'); }
 
     public function requiredCapabilities(): BelongsToMany
     {

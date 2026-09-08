@@ -56,6 +56,12 @@ enum NotificationEventType: string
     case GroupRejected = 'group.rejected';
     case GroupRoleChanged = 'group.role_changed';
     case GroupMemberRemoved = 'group.member_removed';
+    case GroupInvitationCreated = 'group.invitation_created';
+    case GroupInvitationAccepted = 'group.invitation_accepted';
+    case GroupInvitationDeclined = 'group.invitation_declined';
+    case GroupPostReviewRequested = 'group_post.review_requested';
+    case GroupPostApproved = 'group_post.approved';
+    case GroupPostRejected = 'group_post.rejected';
 
     case StaffInvited = 'staff.invited';
     case StaffRoleChanged = 'staff.role_changed';
@@ -80,7 +86,9 @@ enum NotificationEventType: string
             self::ReportSubmitted, self::ReportInProgress, self::ReportClosed => 'report',
             self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',
             self::GroupSubmitted, self::GroupApproved, self::GroupRejected,
-            self::GroupRoleChanged, self::GroupMemberRemoved => 'group',
+            self::GroupRoleChanged, self::GroupMemberRemoved,
+            self::GroupInvitationCreated, self::GroupInvitationAccepted, self::GroupInvitationDeclined,
+            self::GroupPostReviewRequested, self::GroupPostApproved, self::GroupPostRejected => 'group',
             self::StaffInvited, self::StaffRoleChanged, self::StaffRemoved => 'staff',
             self::SystemAnnouncement, self::SystemMaintenance, self::MediaPublished => 'system',
         };

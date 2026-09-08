@@ -50,7 +50,7 @@ class HelpOfferPolicy
 
     public function markFulfilled(User $user, Post $post): bool
     {
-        return (string) $post->author_id === (string) $user->id || $this->belongsToOrganization($user, $post);
+        return (string) $post->author_id === (string) $user->id || $this->belongsToOrganization($user, $post) || $this->managesGroup($user, $post);
     }
 
     private function isParticipant(User $user, HelpOffer $offer): bool
@@ -67,7 +67,18 @@ class HelpOfferPolicy
     {
         if ((string) $offer->post_owner_id === (string) $user->id) return true;
         $post = $offer->relationLoaded('post') ? $offer->post : $offer->post()->first();
-        return $post instanceof Post && $this->belongsToOrganization($user, $post);
+        return $post instanceof Post && ($this->belongsToOrganization($user, $post) || $this->managesGroup($user, $post));
+    }
+
+    private function managesGroup(User $user, Post $post): bool
+    {
+        if (! filled($post->group_id)) return false;
+        return \App\Models\GroupMember::query()
+            ->where('group_id', $post->group_id)
+            ->where('user_id', $user->id)
+            ->where('status', 'active')
+            ->whereIn('role', ['owner', 'admin'])
+            ->exists();
     }
 
     private function belongsToOrganization(User $user, Post $post): bool

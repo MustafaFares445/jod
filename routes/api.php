@@ -74,6 +74,7 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::get('groups/{group}', [AdminGroupController::class, 'show']);
         Route::post('groups/{group}/approve', [AdminGroupController::class, 'approve']);
         Route::post('groups/{group}/reject', [AdminGroupController::class, 'reject']);
+        Route::post('groups/{group}/suspend', [AdminGroupController::class, 'suspend']);
         Route::delete('groups/{group}', [AdminGroupController::class, 'destroy']);
 
         Route::apiResource('organizations', OrganizationController::class);

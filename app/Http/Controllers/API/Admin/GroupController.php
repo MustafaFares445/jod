@@ -7,7 +7,6 @@ namespace App\Http\Controllers\API\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminGroupResource;
 use App\Models\Group;
-use App\Models\User;
 use App\Services\Mobile\GroupService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -23,7 +22,7 @@ class GroupController extends Controller
         $this->authorize('viewAny', Group::class);
         $perPage = max(1, min((int) $request->integer('perPage', 20), 100));
         $query = Group::query()
-            ->with(['owner', 'organization', 'avatarMedia', 'reviewedBy'])
+            ->with(['owner', 'organization', 'avatarMedia', 'coverMedia', 'categories', 'reviewedBy'])
             ->withCount([
                 'activeMembers as active_members_count',
                 'posts as posts_count' => fn (Builder $builder) => $builder->where('status', 'published'),
@@ -31,7 +30,10 @@ class GroupController extends Controller
             ]);
 
         if ($request->filled('status')) $query->where('status', $request->string('status')->toString());
-        if ($request->filled('category')) $query->where('category', $request->string('category')->toString());
+        if ($request->filled('category')) {
+            $category = $request->string('category')->toString();
+            $query->whereHas('categories', fn (Builder $builder) => $builder->where('category', $category));
+        }
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
             $query->where(fn (Builder $builder) => $builder->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%"));
@@ -39,13 +41,10 @@ class GroupController extends Controller
 
         $sort = $request->string('sort', '-submittedAt')->toString();
         match ($sort) {
-            'name' => $query->orderBy('name'),
-            '-name' => $query->orderByDesc('name'),
-            'submittedAt' => $query->orderBy('submitted_at'),
-            '-membersCount' => $query->orderByDesc('active_members_count'),
+            'name' => $query->orderBy('name'), '-name' => $query->orderByDesc('name'),
+            'submittedAt' => $query->orderBy('submitted_at'), '-membersCount' => $query->orderByDesc('active_members_count'),
             default => $query->orderByDesc('submitted_at'),
         };
-
         return AdminGroupResource::collection($query->paginate($perPage));
     }
 
@@ -68,6 +67,13 @@ class GroupController extends Controller
         return AdminGroupResource::make($this->loadAdmin($this->service->reject($group, $request->user(), $data['rejectionReason'])));
     }
 
+    public function suspend(Request $request, Group $group): AdminGroupResource
+    {
+        $this->authorize('reject', $group);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:1000']]);
+        return AdminGroupResource::make($this->loadAdmin($this->service->suspend($group, $request->user(), $data['reason'])));
+    }
+
     public function destroy(Group $group): Response
     {
         $this->authorize('delete', $group);
@@ -77,10 +83,7 @@ class GroupController extends Controller
 
     private function loadAdmin(Group $group): Group
     {
-        $ids = collect($group->proposed_admin_ids ?? [])->filter()->values();
-        $group->setRelation('proposedAdmins', User::query()->whereIn('id', $ids)->get());
-
-        return $group->load(['owner', 'organization', 'avatarMedia', 'reviewedBy'])->loadCount([
+        return $group->load(['owner', 'organization', 'avatarMedia', 'coverMedia', 'categories', 'reviewedBy', 'memberships.user', 'invitations.invitedUser'])->loadCount([
             'activeMembers as active_members_count',
             'posts as posts_count' => fn (Builder $builder) => $builder->where('status', 'published'),
             'posts as posts_this_week_count' => fn (Builder $builder) => $builder->where('status', 'published')->where('created_at', '>=', now()->subDays(7)),

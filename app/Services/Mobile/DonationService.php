@@ -96,6 +96,7 @@ class DonationService
 
             return Donation::query()->create([
                 'organization_id' => $campaign->organization_id,
+                'group_id' => $campaign->group_id,
                 'campaign_id' => $campaign->id,
                 'name' => $user->name,
                 'email' => $user->email,
@@ -132,17 +133,14 @@ class DonationService
             (string) $campaign->organization_id,
         );
 
-        $this->notifications->notifyOrganization(
-            (string) $campaign->organization_id,
-            NotificationEventType::DonationIntentCreated,
-            'طلب تبرع جديد',
-            "يوجد طلب تبرع جديد بقيمة {$formattedAmount} لحملة {$campaign->title}.",
-            'donation',
-            'high',
-            $campaign->title,
-            '/org/donations/'.$donation->id,
-            (string) $user->id,
-        );
+        if (filled($campaign->group_id)) {
+            $group = \App\Models\Group::query()->find($campaign->group_id);
+            if ($group !== null) {
+                $this->notifications->notifyUser($group->owner_id, NotificationEventType::DonationIntentCreated, 'طلب تبرع جديد', "أرسل {$user->name} طلب تبرع بقيمة {$formattedAmount} لحملة {$campaign->title} التابعة لفريق {$group->name}.", 'donation', 'high', $campaign->title, "/groups/{$group->id}?tab=donations", null, (string) $user->id);
+            }
+        } elseif (filled($campaign->organization_id)) {
+            $this->notifications->notifyOrganization((string) $campaign->organization_id, NotificationEventType::DonationIntentCreated, 'طلب تبرع جديد', "يوجد طلب تبرع جديد بقيمة {$formattedAmount} لحملة {$campaign->title}.", 'donation', 'high', $campaign->title, '/org/donations/'.$donation->id, (string) $user->id);
+        }
 
         return $donation->load('campaign.organization');
     }
@@ -300,9 +298,17 @@ class DonationService
 
     private function authorizeOrganizationUpdate(User $actor, Donation $donation): void
     {
-        if (! Gate::forUser($actor)->allows('update', $donation)) {
-            abort(403, 'You are not authorized to manage this donation.');
+        if (filled($donation->group_id)) {
+            $canManageGroup = \App\Models\GroupMember::query()
+                ->where('group_id', $donation->group_id)
+                ->where('user_id', $actor->id)
+                ->where('status', 'active')
+                ->whereIn('role', ['owner', 'admin'])
+                ->exists();
+            if (! $canManageGroup) abort(403, 'You are not authorized to manage this group donation.');
+            return;
         }
+        if (! Gate::forUser($actor)->allows('update', $donation)) abort(403, 'You are not authorized to manage this donation.');
     }
 
     private function requireStatus(Donation $donation, DonationStatus $expected): void

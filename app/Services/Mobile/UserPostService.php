@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Enums\NotificationEventType;
+use App\Models\Group;
+use App\Models\GroupMember;
+use App\Models\PostPoll;
+use App\Models\PostPollOption;
 use App\Models\Post;
 use App\Models\User;
 use App\Services\NotificationEventService;
@@ -40,21 +44,47 @@ class UserPostService
     {
         return DB::transaction(function () use ($user, $data, $images): Post {
             $isDraft = (bool) ($data['saveAsDraft'] ?? false);
+            $group = filled($data['groupId'] ?? null) ? Group::query()->whereKey($data['groupId'])->firstOrFail() : null;
+            $isGroupOwner = $group !== null && (string) $group->owner_id === (string) $user->id;
+            if ($group !== null) {
+                if ($group->status !== 'active' || ! GroupMember::query()->where('group_id', $group->id)->where('user_id', $user->id)->where('status', 'active')->exists()) {
+                    throw ValidationException::withMessages(['groupId' => ['You must be an active member of this group to publish.']]);
+                }
+                if ($data['type'] === 'donation_campaign' && ! $isGroupOwner) {
+                    throw ValidationException::withMessages(['type' => ['Only the group owner can publish campaign donation posts.']]);
+                }
+                if (filled($data['campaignId'] ?? null) && ! $group->campaigns()->whereKey($data['campaignId'])->exists()) {
+                    throw ValidationException::withMessages(['campaignId' => ['The selected campaign does not belong to this group.']]);
+                }
+            }
+
+            $requiresGroupReview = ! $isDraft && $group !== null && (bool) $group->requires_post_approval && ! $isGroupOwner;
+            $status = $isDraft ? 'draft' : ($group !== null ? ($requiresGroupReview ? 'pending' : 'published') : 'pending');
             $post = Post::query()->create([
                 'title' => $data['title'] ?? null,
                 'summary' => $this->summaryFromDetails($data['details'] ?? null),
                 'content' => $data['details'] ?? null,
                 'type' => $data['type'],
-                'status' => $isDraft ? 'draft' : 'pending',
+                'status' => $status,
+                'group_review_status' => $group === null || $isDraft ? null : ($requiresGroupReview ? 'pending' : 'approved'),
                 'location' => $this->locationFromData($data),
                 'category_id' => $data['categoryId'] ?? null,
                 'audience' => $data['audience'] ?? 'general',
+                'group_id' => $group?->id,
+                'campaign_id' => $data['campaignId'] ?? null,
                 'author_id' => $user->id,
                 'updated_by' => $user->id,
                 'submitted_at' => $isDraft ? null : now(),
+                'published_at' => $status === 'published' ? now() : null,
             ]);
 
-            if (! $isDraft) $this->notifyAdminsForReview($post, $user);
+            if (! $isDraft && $group === null) {
+                $this->notifyAdminsForReview($post, $user);
+            } elseif ($requiresGroupReview && $group !== null) {
+                $this->notifications->notifyUser($group->owner_id, NotificationEventType::GroupPostReviewRequested, 'منشور جديد بانتظار مراجعتك', "أرسل {$user->name} منشوراً إلى {$group->name} بانتظار قرارك.", 'group', 'high', $group->name, "/groups/{$group->id}?tab=pending", null, (string) $user->id);
+            }
+
+            if ($data['type'] === 'poll') $this->syncPoll($post, $data);
             if ($images !== []) $post = $this->imageService->add($post, $images);
 
             return $this->loadViewerState($post, (string) $user->id);
@@ -74,9 +104,13 @@ class UserPostService
         if (array_key_exists('categoryId', $data)) $attributes['category_id'] = $data['categoryId'];
         if (array_key_exists('audience', $data)) $attributes['audience'] = $data['audience'];
 
+        if (array_key_exists('campaignId', $data)) $attributes['campaign_id'] = $data['campaignId'];
         if ($attributes !== []) {
             $attributes['updated_by'] = $post->author_id;
             $post->update($attributes);
+        }
+        if (($data['type'] ?? $post->type) === 'poll' && (array_key_exists('pollQuestion', $data) || array_key_exists('pollOptions', $data))) {
+            $this->syncPoll($post, $data);
         }
         return $this->loadViewerState($post->refresh(), (string) $post->author_id);
     }
@@ -90,10 +124,17 @@ class UserPostService
             }
 
             $this->validateForSubmission($lockedPost);
+            $author = User::query()->find($lockedPost->author_id);
+            $group = filled($lockedPost->group_id) ? Group::query()->find($lockedPost->group_id) : null;
+            $isOwner = $group !== null && (string) $group->owner_id === (string) $lockedPost->author_id;
+            $requiresGroupReview = $group !== null && (bool) $group->requires_post_approval && ! $isOwner;
+            $nextStatus = $group === null || $requiresGroupReview ? 'pending' : 'published';
             $lockedPost->update([
-                'status' => 'pending',
+                'status' => $nextStatus,
+                'group_review_status' => $group === null ? null : ($requiresGroupReview ? 'pending' : 'approved'),
+                'group_rejection_reason' => null,
                 'submitted_at' => now(),
-                'published_at' => null,
+                'published_at' => $nextStatus === 'published' ? now() : null,
                 'updated_by' => $lockedPost->author_id,
                 'block_reason' => null,
                 'blocked_at' => null,
@@ -102,8 +143,10 @@ class UserPostService
                 'reviewed_by' => null,
             ]);
 
-            $author = User::query()->find($lockedPost->author_id);
-            if ($author !== null) $this->notifyAdminsForReview($lockedPost, $author);
+            if ($author !== null && $group === null) $this->notifyAdminsForReview($lockedPost, $author);
+            if ($author !== null && $requiresGroupReview && $group !== null) {
+                $this->notifications->notifyUser($group->owner_id, NotificationEventType::GroupPostReviewRequested, 'منشور جديد بانتظار مراجعتك', "أرسل {$author->name} منشوراً إلى {$group->name} بانتظار قرارك.", 'group', 'high', $group->name, "/groups/{$group->id}?tab=pending", null, (string) $author->id);
+            }
             return $this->loadViewerState($lockedPost->refresh(), (string) $lockedPost->author_id);
         });
     }
@@ -155,12 +198,31 @@ class UserPostService
             'images',
             'likes' => static fn ($query) => $query->where('user_id', $viewerId),
             'saves' => static fn ($query) => $query->where('user_id', $viewerId),
+            'poll.options',
+            'poll.votes' => static fn ($query) => $query->where('user_id', $viewerId),
         ];
     }
 
     private function loadViewerState(Post $post, string $viewerId): Post
     {
         return $post->load($this->viewerRelations($viewerId));
+    }
+
+    /** @param array<string,mixed> $data */
+    private function syncPoll(Post $post, array $data): void
+    {
+        $question = trim((string) ($data['pollQuestion'] ?? $post->poll?->question ?? ''));
+        $options = array_values(array_unique(array_filter(array_map(fn ($value) => trim((string) $value), (array) ($data['pollOptions'] ?? [])))));
+        if ($question === '' || count($options) < 2) return;
+        $poll = PostPoll::query()->updateOrCreate(['post_id' => $post->id], [
+            'question' => $question,
+            'allows_multiple_choices' => (bool) ($data['allowsMultipleChoices'] ?? false),
+            'ends_at' => $data['pollEndsAt'] ?? null,
+        ]);
+        if (array_key_exists('pollOptions', $data)) {
+            $poll->options()->delete();
+            foreach ($options as $position => $label) PostPollOption::query()->create(['poll_id' => $poll->id, 'label' => $label, 'position' => $position, 'votes_count' => 0]);
+        }
     }
 
     private function normalizeSort(string $sort): array
