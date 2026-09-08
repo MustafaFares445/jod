@@ -1,0 +1,56 @@
+{
+  "fallbacks": {
+    "organization": {
+      "file_name": "Syria Relief aid worker delivering aid August 2020.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Syria_Relief_aid_worker_delivering_aid_August_2020.jpg"
+    },
+    "health": {
+      "file_name": "Getting a check-up with the International Rescue Committee (9616711348).jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Getting_a_check-up_with_the_International_Rescue_Committee_(9616711348).jpg"
+    },
+    "education": {
+      "file_name": "The Right to Education - Refugees.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:The_Right_to_Education_-_Refugees.jpg"
+    },
+    "food": {
+      "file_name": "Shopping for supplies with food vouchers (9661073235).jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Shopping_for_supplies_with_food_vouchers_(9661073235).jpg"
+    },
+    "emergency": {
+      "file_name": "Syria humanitarian aid 130521-F-KL201-002.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Syria_humanitarian_aid_130521-F-KL201-002.jpg"
+    },
+    "shelter": {
+      "file_name": "Syrian refugee center with arched tents.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Syrian_refugee_center_with_arched_tents.jpg"
+    },
+    "employment": {
+      "file_name": "A young Syrian refugee girl in Lebanon shows a basket that she’s just learnt how to make and decorate at a UNICEF vocational training session supported by UK aid. (14496181410).jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:A_young_Syrian_refugee_girl_in_Lebanon_shows_a_basket_that_she%E2%80%99s_just_learnt_how_to_make_and_decorate_at_a_UNICEF_vocational_training_session_supported_by_UK_aid._(14496181410).jpg"
+    },
+    "volunteering": {
+      "file_name": "Syria Relief aid worker delivering aid August 2020.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Syria_Relief_aid_worker_delivering_aid_August_2020.jpg"
+    },
+    "protection": {
+      "file_name": "Idlib Bekaa refugees.jpeg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Idlib_Bekaa_refugees.jpeg"
+    },
+    "wash": {
+      "file_name": "Children filling water in Al-Zaatari Camp.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Children_filling_water_in_Al-Zaatari_Camp.jpg"
+    },
+    "children": {
+      "file_name": "Getting Syria's children back to school in Lebanon (15556570453).jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Getting_Syria%27s_children_back_to_school_in_Lebanon_(15556570453).jpg"
+    },
+    "disability": {
+      "file_name": "Idlib Bekaa refugees.jpeg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Idlib_Bekaa_refugees.jpeg"
+    },
+    "reconstruction": {
+      "file_name": "Overview over the Reconstruction Site in the Citadel Aleppo Syria.jpg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Overview_over_the_Reconstruction_Site_in_the_Citadel_Aleppo_Syria.jpg"
+    }
+  }
+}
