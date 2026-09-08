@@ -31,7 +31,7 @@ class HelpOfferService
             if ($post === null || $post->type !== 'help_request' || $post->status !== 'published') {
                 throw ValidationException::withMessages(['post' => ['Help offers can only be created for public help requests.']]);
             }
-            if ($post->help_status?->isTerminal() || ($post->expires_at !== null && $post->expires_at->isPast())) {
+            if ($post->help_status?->isTerminal() || filled($post->selected_help_offer_id) || ($post->expires_at !== null && $post->expires_at->isPast())) {
                 throw ValidationException::withMessages(['post' => ['This help request is no longer accepting offers.']]);
             }
             if ($post->author_id === null) throw ValidationException::withMessages(['post' => ['This help request does not have an owner who can receive offers.']]);
@@ -84,7 +84,7 @@ class HelpOfferService
 
     public function reject(User $actor, string $offerId, ?string $reason = null): HelpOffer
     {
-        $offer = $this->transition($actor, $offerId, 'reject', [HelpOfferStatus::Pending], HelpOfferStatus::Rejected, ['rejected_at' => now(), 'rejection_reason' => $reason]);
+        $offer = $this->transition($actor, $offerId, 'reject', [HelpOfferStatus::Pending, HelpOfferStatus::Accepted, HelpOfferStatus::Contacting], HelpOfferStatus::Rejected, ['rejected_at' => now(), 'rejection_reason' => $reason]);
         $this->helpStatus->sync($offer->post);
         $this->notifyHelper($offer, NotificationEventType::HelpOfferRejected, 'تم رفض عرض المساعدة', 'لم يتم قبول عرض المساعدة على هذا الطلب.');
         return $offer;
@@ -101,30 +101,53 @@ class HelpOfferService
     public function markAgreed(User $actor, string $offerId): HelpOffer
     {
         $completedAgreement = false;
-        $offer = DB::transaction(function () use ($actor, $offerId, &$completedAgreement): HelpOffer {
+        $autoRejected = collect();
+        $offer = DB::transaction(function () use ($actor, $offerId, &$completedAgreement, &$autoRejected): HelpOffer {
             $offer = HelpOffer::query()->whereKey($offerId)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('coordinate', $offer);
             if (! in_array($offer->status, [HelpOfferStatus::Contacting, HelpOfferStatus::Agreed], true)) {
                 $this->throwInvalidTransition($offer, HelpOfferStatus::Agreed);
             }
 
-            $column = (string) $actor->id === (string) $offer->helper_user_id
-                ? 'helper_agreed_at'
-                : 'receiver_agreed_at';
+            $post = Post::query()->whereKey($offer->post_id)->lockForUpdate()->firstOrFail();
+            if (filled($post->selected_help_offer_id) && (string) $post->selected_help_offer_id !== (string) $offer->id) {
+                throw ValidationException::withMessages(['offer' => ['Another help offer has already been selected for final agreement on this request.']]);
+            }
+
+            $column = (string) $actor->id === (string) $offer->helper_user_id ? 'helper_agreed_at' : 'receiver_agreed_at';
             if ($offer->{$column} === null) $offer->forceFill([$column => now()])->save();
             $offer->refresh();
 
             if ($offer->helper_agreed_at !== null && $offer->receiver_agreed_at !== null && $offer->status !== HelpOfferStatus::Agreed) {
+                $post->forceFill(['selected_help_offer_id' => $offer->id])->save();
                 $offer->forceFill(['status' => HelpOfferStatus::Agreed, 'agreed_at' => now()])->save();
                 $completedAgreement = true;
+
+                $autoRejected = HelpOffer::query()
+                    ->where('post_id', $post->id)
+                    ->whereKeyNot($offer->id)
+                    ->whereIn('status', [HelpOfferStatus::Pending->value, HelpOfferStatus::Accepted->value, HelpOfferStatus::Contacting->value, HelpOfferStatus::Agreed->value])
+                    ->lockForUpdate()
+                    ->get();
+                foreach ($autoRejected as $rejected) {
+                    $rejected->forceFill([
+                        'status' => HelpOfferStatus::Rejected,
+                        'rejected_at' => now(),
+                        'rejection_reason' => 'تم الاتفاق مع مقدم مساعدة آخر على هذا الطلب.',
+                    ])->save();
+                }
             }
 
             return $offer->load(['post', 'helper', 'postOwner']);
         });
 
         $this->helpStatus->sync($offer->post);
+        foreach ($autoRejected as $rejected) {
+            $rejected->loadMissing(['post', 'helper', 'postOwner']);
+            $this->notifyHelper($rejected, NotificationEventType::HelpOfferRejected, 'تم رفض عرض المساعدة', 'تم رفض عرضك لأن صاحب الطلب توصل إلى اتفاق نهائي مع مقدم مساعدة آخر.');
+        }
         if ($completedAgreement) {
-            $this->notifyBoth($offer, NotificationEventType::HelpOfferAgreed, 'تم الاتفاق على المساعدة', 'أكد الطرفان الوصول إلى اتفاق. يمكن الآن تأكيد تقديم واستلام المساعدة.');
+            $this->notifyBoth($offer, NotificationEventType::HelpOfferAgreed, 'تم الاتفاق على المساعدة', 'أكد الطرفان الوصول إلى اتفاق نهائي. تم إغلاق استقبال العروض الأخرى ويمكن الآن تأكيد تقديم واستلام المساعدة.');
         } else {
             $this->notifyOtherParticipant($actor, $offer, NotificationEventType::HelpOfferAgreed, 'بانتظار تأكيد الاتفاق', 'أكد الطرف الآخر الوصول إلى اتفاق. أكد الاتفاق من طرفك للانتقال إلى التنفيذ.');
         }
@@ -137,7 +160,9 @@ class HelpOfferService
             $offer = HelpOffer::query()->whereKey($offerId)->lockForUpdate()->firstOrFail();
             Gate::forUser($actor)->authorize('coordinate', $offer);
             if (! in_array($offer->status, [HelpOfferStatus::Pending, HelpOfferStatus::Accepted, HelpOfferStatus::Contacting, HelpOfferStatus::Agreed], true)) $this->throwInvalidTransition($offer, HelpOfferStatus::Cancelled);
+            $post = Post::query()->whereKey($offer->post_id)->lockForUpdate()->firstOrFail();
             $offer->forceFill(['status' => HelpOfferStatus::Cancelled, 'cancelled_at' => now(), 'cancel_reason' => $reason])->save();
+            if ((string) $post->selected_help_offer_id === (string) $offer->id) $post->forceFill(['selected_help_offer_id' => null])->save();
             return $offer->load(['post', 'helper', 'postOwner']);
         });
         $this->helpStatus->sync($offer->post);
@@ -184,6 +209,10 @@ class HelpOfferService
             Gate::forUser($actor)->authorize($ability, $offer);
             if ($offer->status === HelpOfferStatus::Completed) return $offer;
             if ($offer->status !== HelpOfferStatus::Agreed) $this->throwInvalidTransition($offer, HelpOfferStatus::Completed);
+            $post = Post::query()->whereKey($offer->post_id)->lockForUpdate()->firstOrFail();
+            if ((string) $post->selected_help_offer_id !== (string) $offer->id) {
+                throw ValidationException::withMessages(['offer' => ['Only the final selected help offer can be completed.']]);
+            }
             if ($offer->{$column} === null) $offer->forceFill([$column => now()])->save();
             $offer->refresh();
             if ($offer->helper_confirmed_at !== null && $offer->receiver_confirmed_at !== null) {

@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'group_review_status', 'group_rejection_reason', 'help_status', 'urgency', 'urgency_reason', 'location',
+    'id', 'title', 'summary', 'content', 'type', 'audience', 'status', 'group_review_status', 'group_rejection_reason', 'help_status', 'selected_help_offer_id', 'urgency', 'urgency_reason', 'location',
     'organization_id', 'group_id', 'campaign_id', 'category_id', 'author_id', 'updated_by',
     'block_reason', 'views_count', 'reactions_count', 'applications_count',
     'published_at', 'expires_at', 'fulfilled_at', 'submitted_at', 'reviewed_at', 'reviewed_by',
@@ -39,6 +39,7 @@ class Post extends Model
 
             if ($post->type !== 'help_request') {
                 $post->help_status = null;
+                $post->selected_help_offer_id = null;
                 $post->urgency = PostUrgency::Normal;
                 $post->urgency_reason = null;
                 $post->expires_at = null;
@@ -78,6 +79,7 @@ class Post extends Model
     public function likes(): HasMany { return $this->hasMany(PostLike::class); }
     public function saves(): HasMany { return $this->hasMany(SavedPost::class); }
     public function helpOffers(): HasMany { return $this->hasMany(HelpOffer::class); }
+    public function selectedHelpOffer(): BelongsTo { return $this->belongsTo(HelpOffer::class, 'selected_help_offer_id'); }
     public function poll(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(PostPoll::class); }
     public function groupComments(): HasMany { return $this->hasMany(GroupComment::class, 'post_id'); }
 

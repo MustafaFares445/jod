@@ -15,6 +15,9 @@ class HelpOfferResource extends JsonResource
         $ownsRequest = $organizationId !== '' && (string) $this->post?->organization_id === $organizationId;
         $status = $this->status?->value ?? (string) $this->status;
         $canSeeContact = $ownsRequest && $this->accepted_at !== null;
+        $selectedId = $this->post?->selected_help_offer_id;
+        $isSelected = filled($selectedId) && (string) $selectedId === (string) $this->id;
+        $hasOtherSelection = filled($selectedId) && ! $isSelected;
 
         return [
             'id' => (string) $this->id,
@@ -38,12 +41,13 @@ class HelpOfferResource extends JsonResource
             'helperConfirmedAt' => $this->helper_confirmed_at?->toIso8601String(),
             'receiverConfirmedAt' => $this->receiver_confirmed_at?->toIso8601String(),
             'completedAt' => $this->completed_at?->toIso8601String(),
+            'isSelectedFinalOffer' => $isSelected,
             'can' => [
-                'accept' => $ownsRequest && $status === 'pending',
-                'reject' => $ownsRequest && $status === 'pending',
-                'contact' => $ownsRequest && $status === 'accepted',
-                'agree' => $ownsRequest && in_array($status, ['contacting', 'agreed'], true) && $this->receiver_agreed_at === null,
-                'confirmReceived' => $ownsRequest && $status === 'agreed' && $this->receiver_confirmed_at === null,
+                'accept' => $ownsRequest && ! $hasOtherSelection && $status === 'pending',
+                'reject' => $ownsRequest && ! $isSelected && in_array($status, ['pending', 'accepted', 'contacting'], true),
+                'contact' => $ownsRequest && ! $hasOtherSelection && $status === 'accepted',
+                'agree' => $ownsRequest && ! $hasOtherSelection && in_array($status, ['contacting', 'agreed'], true) && $this->receiver_agreed_at === null,
+                'confirmReceived' => $ownsRequest && $isSelected && $status === 'agreed' && $this->receiver_confirmed_at === null,
             ],
         ];
     }

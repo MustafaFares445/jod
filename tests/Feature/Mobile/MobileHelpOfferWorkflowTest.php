@@ -110,6 +110,32 @@ test('help offers reject self help duplicates and fulfilled requests', function 
     ])->assertUnprocessable();
 });
 
+test('only one offer can become final agreement and competing offers are rejected automatically', function () {
+    $owner = User::factory()->create();
+    $helperA = User::factory()->create();
+    $helperB = User::factory()->create();
+    $post = Post::factory()->published()->create(['author_id'=>$owner->id,'type'=>'help_request']);
+
+    $offerIds = [];
+    foreach ([$helperA,$helperB] as $helper) {
+        Sanctum::actingAs($helper);
+        $response = $this->postJson("/api/mobile/posts/{$post->id}/help-offers", ['type'=>'service','description'=>null,'contactMethod'=>'email','contactValue'=>$helper->email])->assertOk();
+        $offerIds[] = (string)$response->json('data.id');
+    }
+
+    Sanctum::actingAs($owner);
+    foreach ($offerIds as $offerId) $this->patchJson("/api/mobile/help-offers/{$offerId}/accept")->assertOk();
+    foreach ($offerIds as $offerId) $this->patchJson("/api/mobile/help-offers/{$offerId}/contact")->assertOk();
+
+    Sanctum::actingAs($helperA);
+    $this->patchJson("/api/mobile/help-offers/{$offerIds[0]}/agree")->assertOk();
+    Sanctum::actingAs($owner);
+    $this->patchJson("/api/mobile/help-offers/{$offerIds[0]}/agree")->assertOk()->assertJsonPath('data.status','agreed');
+
+    expect((string)$post->refresh()->selected_help_offer_id)->toBe($offerIds[0]);
+    $this->assertDatabaseHas('help_offers', ['id'=>$offerIds[1],'status'=>'rejected','rejection_reason'=>'تم الاتفاق مع مقدم مساعدة آخر على هذا الطلب.']);
+});
+
 test('cancelled accepted offer reopens request when no other progressing offer remains', function () {
     $owner = User::factory()->create();
     $helper = User::factory()->create();

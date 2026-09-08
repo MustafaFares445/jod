@@ -36,7 +36,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'closed_at',
     'closed_reason',
     'rejection_reason',
+    'suspension_reason',
     'reviewed_by',
+    'reviewed_at',
 ])]
 class Campaign extends Model
 {
@@ -54,6 +56,7 @@ class Campaign extends Model
             'end_date' => 'date',
             'submitted_at' => 'datetime',
             'closed_at' => 'datetime',
+            'reviewed_at' => 'datetime',
             'goal_amount' => 'decimal:2',
             'raised_amount' => 'decimal:2',
         ];
@@ -82,6 +85,11 @@ class Campaign extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(CampaignLike::class);
+    }
+
+    public function donations(): HasMany
+    {
+        return $this->hasMany(Donation::class);
     }
 
     public function media(): HasMany

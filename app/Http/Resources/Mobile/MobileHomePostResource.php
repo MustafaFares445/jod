@@ -37,6 +37,8 @@ class MobileHomePostResource extends JsonResource
         $isSaved = $this->relationLoaded('saves') && $this->saves->isNotEmpty();
         $images = $this->relationLoaded('images') ? $this->images : $this->resource->images()->get();
         $videos = $this->relationLoaded('videos') ? $this->videos : $this->resource->videos()->get();
+        $campaignImages = $campaign?->relationLoaded('imageMedia') === true ? $campaign->imageMedia : collect();
+        $displayImages = $images->isNotEmpty() ? $images : $campaignImages;
 
         $data = [
             'id' => (string) $this->id,
@@ -45,7 +47,7 @@ class MobileHomePostResource extends JsonResource
             'audience' => $this->audience ?? 'general',
             'content' => (string) ($this->content ?? $this->summary ?? ''),
             'createdAt' => ($this->published_at ?? $this->created_at)?->toIso8601String(),
-            'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
+            'images' => $displayImages->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
             'videos' => $videos->map(static fn (Media $video): string => $video->publicUrl())->values()->all(),
             'cta' => $cta,
             'stats' => ['likes' => (int) $this->reactions_count, 'comments' => 0, 'shares' => 0],
@@ -85,12 +87,15 @@ class MobileHomePostResource extends JsonResource
         }
         $helpStatusEnum = HelpRequestStatus::tryFrom((string) $helpStatus);
 
+        $hasFinalAgreement = filled($this->selected_help_offer_id);
         return [
             'helpStatus' => $helpStatus,
+            'hasFinalAgreement' => $hasFinalAgreement,
             'canOfferHelp' => $viewerId !== null
                 && (string) $viewerId !== (string) $this->author_id
                 && $helpStatusEnum !== null
                 && ! $helpStatusEnum->isTerminal()
+                && ! $hasFinalAgreement
                 && $myOffer === null,
             'activeOffersCount' => $activeOffersCount,
             'myOffer' => $myOffer,

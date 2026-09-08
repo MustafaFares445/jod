@@ -63,8 +63,11 @@ class PostRequest extends FormRequest
         return [function (Validator $validator): void {
             $type = (string) $this->input('type');
             $groupId = $this->input('groupId');
-            if (! filled($groupId) && in_array($type, ['awareness', 'poll', 'donation_campaign'], true)) {
+            if (! filled($groupId) && in_array($type, ['awareness', 'poll'], true)) {
                 $validator->errors()->add('type', 'This post type is only available inside a volunteer group.');
+            }
+            if ($type === 'donation_campaign' && ! filled($groupId) && ! filled($this->input('campaignId'))) {
+                $validator->errors()->add('campaignId', 'A donation campaign post must be linked to a campaign.');
             }
             if ($type === 'poll') {
                 if (! filled($this->input('pollQuestion'))) $validator->errors()->add('pollQuestion', 'Poll question is required.');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Enums\NotificationEventType;
+use App\Models\Campaign;
 use App\Models\Group;
 use App\Models\GroupMember;
 use App\Models\PostPoll;
@@ -46,6 +47,13 @@ class UserPostService
             $isDraft = (bool) ($data['saveAsDraft'] ?? false);
             $group = filled($data['groupId'] ?? null) ? Group::query()->whereKey($data['groupId'])->firstOrFail() : null;
             $isGroupOwner = $group !== null && (string) $group->owner_id === (string) $user->id;
+            $personalCampaign = null;
+            if ($group === null && $data['type'] === 'donation_campaign') {
+                $personalCampaign = Campaign::query()->whereKey($data['campaignId'] ?? '')
+                    ->whereNull('organization_id')->whereNull('group_id')->where('creator_id', $user->id)->where('status', 'active')->first();
+                if ($personalCampaign === null) throw ValidationException::withMessages(['campaignId' => ['Choose an active personal campaign that belongs to you.']]);
+                if (Post::query()->where('campaign_id',$personalCampaign->id)->where('type','donation_campaign')->exists()) throw ValidationException::withMessages(['campaignId'=>['This personal campaign already has a donation post.']]);
+            }
             if ($group !== null) {
                 if ($group->status !== 'active' || ! GroupMember::query()->where('group_id', $group->id)->where('user_id', $user->id)->where('status', 'active')->exists()) {
                     throw ValidationException::withMessages(['groupId' => ['You must be an active member of this group to publish.']]);
@@ -59,7 +67,8 @@ class UserPostService
             }
 
             $requiresGroupReview = ! $isDraft && $group !== null && (bool) $group->requires_post_approval && ! $isGroupOwner;
-            $status = $isDraft ? 'draft' : ($group !== null ? ($requiresGroupReview ? 'pending' : 'published') : 'pending');
+            $isApprovedPersonalCampaignPost = ! $isDraft && $personalCampaign !== null;
+            $status = $isDraft ? 'draft' : ($group !== null ? ($requiresGroupReview ? 'pending' : 'published') : ($isApprovedPersonalCampaignPost ? 'published' : 'pending'));
             $post = Post::query()->create([
                 'title' => $data['title'] ?? null,
                 'summary' => $this->summaryFromDetails($data['details'] ?? null),
@@ -78,7 +87,7 @@ class UserPostService
                 'published_at' => $status === 'published' ? now() : null,
             ]);
 
-            if (! $isDraft && $group === null) {
+            if (! $isDraft && $group === null && ! $isApprovedPersonalCampaignPost) {
                 $this->notifyAdminsForReview($post, $user);
             } elseif ($requiresGroupReview && $group !== null) {
                 $this->notifications->notifyUser($group->owner_id, NotificationEventType::GroupPostReviewRequested, 'منشور جديد بانتظار مراجعتك', "أرسل {$user->name} منشوراً إلى {$group->name} بانتظار قرارك.", 'group', 'high', $group->name, "/groups/{$group->id}?tab=pending", null, (string) $user->id);

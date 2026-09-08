@@ -38,14 +38,14 @@ class DonationService
     {
         $perPage = max(1, min((int) ($params['perPage'] ?? 20), 100));
         $flow = (string) ($params['flow'] ?? 'contributed');
-        $query = Donation::query()->with('campaign.organization');
+        $query = Donation::query()->with(['campaign.organization','campaign.group','campaign.creator','creator']);
 
         if ($flow === 'received') {
-            if (! Gate::forUser($user)->allows('viewAny', Donation::class)) {
-                $query->whereRaw('1 = 0');
-            } else {
-                $query->where('organization_id', $user->organization_id);
-            }
+            $query->where(function (Builder $received) use ($user): void {
+                if (filled($user->organization_id) && Gate::forUser($user)->allows('viewAny', Donation::class)) $received->where('organization_id', $user->organization_id);
+                else $received->whereRaw('1 = 0');
+                $received->orWhereHas('campaign', fn (Builder $campaign) => $campaign->whereNull('organization_id')->whereNull('group_id')->where('creator_id', $user->id));
+            });
         } else {
             $query->where('created_by', $user->id);
         }
@@ -60,7 +60,7 @@ class DonationService
 
     public function findForUser(User $user, string $donationId): ?Donation
     {
-        $donation = Donation::query()->with('campaign.organization')->whereKey($donationId)->first();
+        $donation = Donation::query()->with(['campaign.organization','campaign.group','campaign.creator','creator'])->whereKey($donationId)->first();
         if ($donation === null) {
             return null;
         }
@@ -69,6 +69,8 @@ class DonationService
             return $donation;
         }
 
+        $campaign = $donation->campaign;
+        if ($campaign !== null && blank($campaign->organization_id) && blank($campaign->group_id) && (string) $campaign->creator_id === (string) $user->id) return $donation;
         return Gate::forUser($user)->allows('view', $donation) ? $donation : null;
     }
 
@@ -90,6 +92,10 @@ class DonationService
                 throw ValidationException::withMessages([
                     'campaign' => ['The selected campaign is not available for donations.'],
                 ]);
+            }
+
+            if (blank($campaign->organization_id) && blank($campaign->group_id) && (string) $campaign->creator_id === (string) $user->id) {
+                throw ValidationException::withMessages(['campaign' => ['You cannot donate to your own personal campaign.']]);
             }
 
             $amount = number_format((float) $attributes['amount'], 2, '.', '');
@@ -118,19 +124,21 @@ class DonationService
             ]);
         });
 
-        $campaign = $donation->campaign()->firstOrFail();
+        $campaign = $donation->campaign()->with(['organization','group','creator'])->firstOrFail();
+        $donation->setRelation('campaign', $campaign);
         $formattedAmount = number_format((float) $donation->amount_or_type, 2);
+        $managerLabel = $this->managerLabel($campaign);
 
         $this->notifications->notifyUser(
             $user,
             NotificationEventType::DonationIntentCreated,
             'تم تسجيل طلب التبرع',
-            "تم تسجيل رغبتك بالتبرع بقيمة {$formattedAmount} لحملة {$campaign->title}. بانتظار موافقة المنظمة، ثم يبدأ التواصل والتنسيق.",
+            "تم تسجيل رغبتك بالتبرع بقيمة {$formattedAmount} لحملة {$campaign->title}. بانتظار موافقة {$managerLabel}، ثم يبدأ التواصل والتنسيق.",
             'donation',
             'normal',
             $campaign->title,
             '/campaigns/'.$campaign->id,
-            (string) $campaign->organization_id,
+            filled($campaign->organization_id) ? (string) $campaign->organization_id : null,
         );
 
         if (filled($campaign->group_id)) {
@@ -140,9 +148,11 @@ class DonationService
             }
         } elseif (filled($campaign->organization_id)) {
             $this->notifications->notifyOrganization((string) $campaign->organization_id, NotificationEventType::DonationIntentCreated, 'طلب تبرع جديد', "يوجد طلب تبرع جديد بقيمة {$formattedAmount} لحملة {$campaign->title}.", 'donation', 'high', $campaign->title, '/org/donations/'.$donation->id, (string) $user->id);
+        } elseif (filled($campaign->creator_id)) {
+            $this->notifications->notifyUser($campaign->creator_id, NotificationEventType::DonationIntentCreated, 'طلب تبرع جديد لحملتك', "أرسل {$user->name} طلب تبرع بقيمة {$formattedAmount} لحملة {$campaign->title}.", 'donation', 'high', $campaign->title, "/my-campaigns/{$campaign->id}", null, (string) $user->id);
         }
 
-        return $donation->load('campaign.organization');
+        return $donation->load(['campaign.organization','campaign.group','campaign.creator','creator']);
     }
 
     /** @deprecated Use createIntent(). */
@@ -161,7 +171,7 @@ class DonationService
             'accepted_at' => now(),
         ]);
 
-        $this->notifyDonor($donation, NotificationEventType::DonationAccepted, 'تم قبول طلب التبرع', 'وافقت المنظمة على طلب تبرعك. الخطوة التالية هي بدء التواصل لتنسيق التبرع.');
+        $this->notifyDonor($donation, NotificationEventType::DonationAccepted, 'تم قبول طلب التبرع', 'وافق '.$this->managerLabel($donation->campaign).' على طلب تبرعك. الخطوة التالية هي بدء التواصل لتنسيق التبرع.');
 
         return $donation;
     }
@@ -172,7 +182,7 @@ class DonationService
             'contacted_at' => now(),
         ]);
 
-        $this->notifyDonor($donation, NotificationEventType::DonationContactStarted, 'بدأ التواصل بخصوص تبرعك', 'بدأت المنظمة التواصل معك لإتمام التبرع.');
+        $this->notifyDonor($donation, NotificationEventType::DonationContactStarted, 'بدأ التواصل بخصوص تبرعك', 'بدأ '.$this->managerLabel($donation->campaign).' التواصل معك لإتمام التبرع.');
 
         return $donation;
     }
@@ -237,20 +247,19 @@ class DonationService
             return $donation;
         });
 
-        $donation->load('campaign.organization', 'creator');
-        $this->notifyDonor($donation, NotificationEventType::DonationCompleted, 'تم تأكيد استلام تبرعك', 'أكدت المنظمة استلام تبرعك. شكراً لمساهمتك.');
+        $donation->load(['campaign.organization','campaign.group','campaign.creator','creator']);
+        $this->notifyDonor($donation, NotificationEventType::DonationCompleted, 'تم تأكيد استلام تبرعك', 'أكد '.$this->managerLabel($donation->campaign).' استلام تبرعك. شكراً لمساهمتك.');
 
         if ($goalReached && $donation->campaign !== null) {
-            $this->notifications->notifyOrganization(
-                (string) $donation->organization_id,
-                NotificationEventType::CampaignGoalReached,
-                'الحملة وصلت إلى هدفها',
-                "وصلت حملة {$donation->campaign->title} إلى هدف التبرعات المحدد.",
-                'campaign',
-                'high',
-                $donation->campaign->title,
-                '/org/campaigns/'.$donation->campaign->id,
-            );
+            $campaign = $donation->campaign;
+            if (filled($campaign->organization_id)) {
+                $this->notifications->notifyOrganization((string) $campaign->organization_id, NotificationEventType::CampaignGoalReached, 'الحملة وصلت إلى هدفها', "وصلت حملة {$campaign->title} إلى هدف التبرعات المحدد.", 'campaign', 'high', $campaign->title, '/org/campaigns/'.$campaign->id);
+            } elseif (filled($campaign->group_id)) {
+                $group = $campaign->group;
+                if ($group !== null) $this->notifications->notifyUser($group->owner_id, NotificationEventType::CampaignGoalReached, 'الحملة وصلت إلى هدفها', "وصلت حملة {$campaign->title} إلى هدف التبرعات المحدد.", 'campaign', 'high', $campaign->title, "/groups/{$group->id}");
+            } elseif (filled($campaign->creator_id)) {
+                $this->notifications->notifyUser($campaign->creator_id, NotificationEventType::CampaignGoalReached, 'حملتك وصلت إلى هدفها', "وصلت حملة {$campaign->title} إلى هدف التبرعات المحدد. يمكنك إغلاقها عندما تنتهي من معالجة الطلبات القائمة.", 'campaign', 'high', $campaign->title, "/my-campaigns/{$campaign->id}");
+            }
         }
 
         return $donation;
@@ -275,7 +284,7 @@ class DonationService
             return $donation;
         });
 
-        $donation->load('campaign.organization', 'creator');
+        $donation->load(['campaign.organization','campaign.group','campaign.creator','creator']);
         $this->notifyDonor($donation, NotificationEventType::DonationCancelled, 'تم إلغاء طلب التبرع', 'تم إلغاء عملية التبرع ولم يتم احتساب المبلغ ضمن الحملة.');
 
         return $donation;
@@ -293,11 +302,14 @@ class DonationService
             return $donation;
         });
 
-        return $donation->load('campaign.organization', 'creator');
+        return $donation->load(['campaign.organization','campaign.group','campaign.creator','creator']);
     }
 
     private function authorizeOrganizationUpdate(User $actor, Donation $donation): void
     {
+        $donation->loadMissing('campaign');
+        $campaign = $donation->campaign;
+        if ($campaign !== null && blank($campaign->organization_id) && blank($campaign->group_id) && (string) $campaign->creator_id === (string) $actor->id) return;
         if (filled($donation->group_id)) {
             $canManageGroup = \App\Models\GroupMember::query()
                 ->where('group_id', $donation->group_id)
@@ -325,6 +337,14 @@ class DonationService
         ]);
     }
 
+    private function managerLabel(?Campaign $campaign): string
+    {
+        if ($campaign === null) return 'إدارة الحملة';
+        if (filled($campaign->organization_id)) return 'المنظمة';
+        if (filled($campaign->group_id)) return 'مدير الفريق';
+        return 'صاحب الحملة';
+    }
+
     private function notifyDonor(Donation $donation, NotificationEventType $event, string $title, string $message): void
     {
         $creator = $donation->creator;
@@ -341,7 +361,7 @@ class DonationService
             'normal',
             $donation->campaign_title,
             '/me/donations/'.$donation->id,
-            (string) $donation->organization_id,
+            filled($donation->organization_id) ? (string) $donation->organization_id : null,
         );
     }
 }

@@ -152,7 +152,7 @@ class NotificationEventService
             $priority,
             $referenceLabel,
             $referencePath,
-            (string) $campaign->organization_id,
+            filled($campaign->organization_id) ? (string) $campaign->organization_id : null,
             $creatorId,
         );
     }

@@ -16,6 +16,10 @@ class HelpOfferResource extends JsonResource
         $isOwner = $userId !== '' && $userId === (string) $this->post_owner_id;
         $ownerCanSeeContact = $isOwner && $this->accepted_at !== null;
         $canSeeContact = $isHelper || $ownerCanSeeContact;
+        $post = $this->relationLoaded('post') ? $this->post : $this->post()->first();
+        $selectedId = $post?->selected_help_offer_id;
+        $isSelected = filled($selectedId) && (string) $selectedId === (string) $this->id;
+        $hasOtherSelection = filled($selectedId) && ! $isSelected;
 
         return [
             'id' => (string) $this->id,
@@ -49,15 +53,16 @@ class HelpOfferResource extends JsonResource
             'completedAt' => $this->completed_at?->toIso8601String(),
             'cancelledAt' => $this->cancelled_at?->toIso8601String(),
             'rejectedAt' => $this->rejected_at?->toIso8601String(),
+            'isSelectedFinalOffer' => $isSelected,
             'can' => [
-                'accept' => $isOwner && ($this->status?->value ?? $this->status) === 'pending',
-                'reject' => $isOwner && ($this->status?->value ?? $this->status) === 'pending',
-                'contact' => ($isHelper || $isOwner) && ($this->status?->value ?? $this->status) === 'accepted',
-                'agree' => ($isHelper || $isOwner)
+                'accept' => $isOwner && ! $hasOtherSelection && ($this->status?->value ?? $this->status) === 'pending',
+                'reject' => $isOwner && ! $isSelected && in_array(($this->status?->value ?? $this->status), ['pending', 'accepted', 'contacting'], true),
+                'contact' => ($isHelper || $isOwner) && ! $hasOtherSelection && ($this->status?->value ?? $this->status) === 'accepted',
+                'agree' => ($isHelper || $isOwner) && ! $hasOtherSelection
                     && in_array(($this->status?->value ?? $this->status), ['contacting', 'agreed'], true)
                     && (($isHelper && $this->helper_agreed_at === null) || ($isOwner && $this->receiver_agreed_at === null)),
-                'confirmProvided' => $isHelper && ($this->status?->value ?? $this->status) === 'agreed' && $this->helper_confirmed_at === null,
-                'confirmReceived' => $isOwner && ($this->status?->value ?? $this->status) === 'agreed' && $this->receiver_confirmed_at === null,
+                'confirmProvided' => $isHelper && $isSelected && ($this->status?->value ?? $this->status) === 'agreed' && $this->helper_confirmed_at === null,
+                'confirmReceived' => $isOwner && $isSelected && ($this->status?->value ?? $this->status) === 'agreed' && $this->receiver_confirmed_at === null,
             ],
         ];
     }

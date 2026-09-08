@@ -89,6 +89,33 @@ class DonationController extends Controller
         );
     }
 
+    public function accept(Request $request, string $donation): JsonResponse
+    {
+        return MobileApiResponse::success(DonationResource::make($this->service->accept($this->user($request), $donation))->resolve($request), 'Donation accepted.');
+    }
+
+    public function contact(Request $request, string $donation): JsonResponse
+    {
+        return MobileApiResponse::success(DonationResource::make($this->service->markContacting($this->user($request), $donation))->resolve($request), 'Donation marked as contacting.');
+    }
+
+    public function agree(Request $request, string $donation): JsonResponse
+    {
+        return MobileApiResponse::success(DonationResource::make($this->service->markAgreed($this->user($request), $donation))->resolve($request), 'Donation marked as agreed.');
+    }
+
+    public function complete(Request $request, string $donation): JsonResponse
+    {
+        $data = $request->validate(['confirmedAmount' => ['required','numeric','gt:0','max:999999999.99']]);
+        return MobileApiResponse::success(DonationResource::make($this->service->complete($this->user($request), $donation, (float) $data['confirmedAmount']))->resolve($request), 'Donation completed.');
+    }
+
+    public function cancel(Request $request, string $donation): JsonResponse
+    {
+        $data = $request->validate(['reason' => ['required','string','min:3','max:1000']]);
+        return MobileApiResponse::success(DonationResource::make($this->service->cancel($this->user($request), $donation, $data['reason']))->resolve($request), 'Donation cancelled.');
+    }
+
     private function user(Request $request): User
     {
         /** @var User $user */

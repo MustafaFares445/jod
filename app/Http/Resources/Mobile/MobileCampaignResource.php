@@ -52,6 +52,7 @@ class MobileCampaignResource extends JsonResource
             'closedReason' => $this->closed_reason,
             'organizationName' => $this->organization?->name,
             'managerName' => $this->creator?->name,
+            'ownerType' => filled($this->group_id) ? 'group' : (filled($this->organization_id) ? 'organization' : 'personal'),
         ];
 
         if (isset($publisher['phoneNumber'])) $data['phoneNumber'] = $publisher['phoneNumber'];
@@ -84,7 +85,7 @@ class MobileCampaignResource extends JsonResource
             'id' => (string) $publisherId,
             'name' => (string) $name,
             'username' => $this->username($email, (string) $name),
-            'avatarUrl' => $organization?->logoMedia?->publicUrl(),
+            'avatarUrl' => $organization?->logoMedia?->publicUrl() ?? ($manager?->relationLoaded('avatarMedia') ? $manager->avatarMedia?->publicUrl() : null),
             'verified' => $organization !== null ? $organization->verification_status === 'verified' : $manager?->email_verified_at !== null,
         ];
         if (filled($bio)) $publisher['bio'] = $bio;

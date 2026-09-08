@@ -15,7 +15,10 @@ class PostResource extends JsonResource
     {
         $images = $this->relationLoaded('images') ? $this->images : $this->resource->images()->get();
         $videos = $this->relationLoaded('videos') ? $this->videos : $this->resource->videos()->get();
-        $media = $images->concat($videos)->values();
+        $campaign = $this->relationLoaded('campaign') ? $this->campaign : null;
+        $campaignImages = $campaign?->relationLoaded('imageMedia') === true ? $campaign->imageMedia : collect();
+        $displayImages = $images->isNotEmpty() ? $images : $campaignImages;
+        $media = $displayImages->concat($videos)->values();
         $helpStatus = $this->help_status?->value ?? $this->help_status;
 
         return [
@@ -51,7 +54,9 @@ class PostResource extends JsonResource
             'updatedByName' => $this->whenLoaded('updatedBy', fn () => $this->updatedBy?->name),
             'location' => $this->location,
             'campaignTitle' => $this->whenLoaded('campaign', fn () => $this->campaign?->title, $this->campaign?->title),
-            'images' => $images->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
+            'campaignStatus' => $campaign?->status,
+            'campaignOwnerType' => $campaign === null ? null : (filled($campaign->group_id) ? 'group' : (filled($campaign->organization_id) ? 'organization' : 'personal')),
+            'images' => $displayImages->map(static fn (Media $image): string => $image->publicUrl())->values()->all(),
             'videos' => $videos->map(static fn (Media $video): string => $video->publicUrl())->values()->all(),
             'media' => $media->map(fn (Media $item): array => MediaResource::make($item)->resolve($request))->values()->all(),
             'submittedAt' => $this->submitted_at?->toIso8601String() ?? $this->created_at?->toIso8601String(),

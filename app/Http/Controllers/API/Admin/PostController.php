@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminPostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use App\Services\Mobile\PersonalCampaignService;
 use App\Services\NotificationEventService;
 use App\Support\SearchFilter;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,11 +22,14 @@ use Illuminate\Validation\ValidationException;
 class PostController extends Controller
 {
     private const RELATIONS = [
-        'organization', 'campaign', 'category', 'images', 'videos', 'author',
+        'organization', 'campaign.imageMedia', 'category', 'images', 'videos', 'author',
         'updatedBy', 'reviewedBy', 'blockedBy',
     ];
 
-    public function __construct(private readonly NotificationEventService $notifications) {}
+    public function __construct(
+        private readonly NotificationEventService $notifications,
+        private readonly PersonalCampaignService $personalCampaigns,
+    ) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -110,8 +114,13 @@ class PostController extends Controller
         $data = $request->validated();
         $status = array_key_exists('status', $data) ? (string) $data['status'] : null;
 
-        if ($post->status === 'pending' && in_array($status, ['published', 'blocked'], true)) {
-            return $this->reviewUserPost($request, $post, $data, $status);
+        $personalCampaignPost = $this->personalCampaigns->isPersonalCampaignPost($post);
+        $isInitialReview = $post->status === 'pending' && in_array($status, ['published', 'blocked'], true);
+        $isPersonalCampaignLifecycle = $personalCampaignPost
+            && (($post->status === 'published' && $status === 'blocked')
+                || ($post->status === 'blocked' && $status === 'published'));
+        if ($isInitialReview || $isPersonalCampaignLifecycle) {
+            return $this->reviewUserPost($request, $post, $data, (string) $status, $personalCampaignPost);
         }
 
         $this->authorize('updateAdmin', $post);
@@ -148,11 +157,14 @@ class PostController extends Controller
         return response()->noContent();
     }
 
-    private function reviewUserPost(Request $request, Post $post, array $data, string $status): PostResource
+    private function reviewUserPost(Request $request, Post $post, array $data, string $status, bool $personalCampaignPost = false): PostResource
     {
         $this->authorize($status === 'published' ? 'publishUserPost' : 'blockUserPost', $post);
-        if ($post->status !== 'pending') {
+        if (! $personalCampaignPost && $post->status !== 'pending') {
             throw ValidationException::withMessages(['status' => ['Only pending user posts can be reviewed.']]);
+        }
+        if ($personalCampaignPost && ! in_array("{$post->status}:{$status}", ['pending:published', 'pending:blocked', 'published:blocked', 'blocked:published'], true)) {
+            throw ValidationException::withMessages(['status' => ['This personal campaign post cannot transition to the requested moderation state.']]);
         }
         if (array_key_exists('title', $data) || array_key_exists('description', $data)) {
             throw ValidationException::withMessages(['post' => ['Admin review cannot edit user post content.']]);
@@ -184,8 +196,14 @@ class PostController extends Controller
         }
 
         $post->update($updates);
-        $post->refresh();
-        $this->notifyStatusChange($post, $actorId);
+        $post->refresh()->loadMissing('campaign');
+        $campaignHandled = $this->personalCampaigns->applyPostModeration(
+            $post,
+            $request->user(),
+            $status,
+            $status === 'blocked' ? (string) $post->block_reason : null,
+        );
+        if (! $campaignHandled) $this->notifyStatusChange($post, $actorId);
         return PostResource::make($post->load(self::RELATIONS));
     }
 

@@ -12,6 +12,10 @@ class DonationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $organizationName = $this->campaign?->organization?->name;
+        $campaignOwnerName = $organizationName ?? $this->campaign?->group?->name ?? $this->campaign?->creator?->name;
+        $viewerId = (string) $request->user()?->id;
+        $isPersonalOwner = $viewerId !== '' && $viewerId === (string) $this->campaign?->creator_id
+            && blank($this->campaign?->organization_id) && blank($this->campaign?->group_id);
         $requestedAmount = (float) $this->amount_or_type;
         $confirmedAmount = $this->confirmed_amount !== null ? (float) $this->confirmed_amount : null;
         $amount = $confirmedAmount ?? $requestedAmount;
@@ -21,6 +25,9 @@ class DonationResource extends JsonResource
             'campaignId' => (string) $this->campaign_id,
             'campaignTitle' => $this->campaign_title,
             'organizationName' => $organizationName,
+            'campaignOwnerName' => $campaignOwnerName,
+            'donorName' => $isPersonalOwner ? $this->name : null,
+            'donorEmail' => $isPersonalOwner ? $this->email : null,
             'amount' => $amount,
             'requestedAmount' => $requestedAmount,
             'confirmedAmount' => $confirmedAmount,
@@ -46,6 +53,13 @@ class DonationResource extends JsonResource
             'targetAmount' => (float) ($this->campaign?->goal_amount ?? 0),
             'date' => ($this->completed_at ?? $this->created_at)?->toIso8601String(),
             'flow' => $this->flow($request),
+            'can' => [
+                'accept' => $isPersonalOwner && ($this->status?->value ?? $this->status) === 'pending',
+                'contact' => $isPersonalOwner && ($this->status?->value ?? $this->status) === 'accepted',
+                'agree' => $isPersonalOwner && ($this->status?->value ?? $this->status) === 'contacting',
+                'complete' => $isPersonalOwner && ($this->status?->value ?? $this->status) === 'agreed',
+                'cancel' => $isPersonalOwner && in_array(($this->status?->value ?? $this->status), ['pending','accepted','contacting','agreed'], true),
+            ],
         ];
     }
 

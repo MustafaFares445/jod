@@ -26,10 +26,13 @@ enum NotificationEventType: string
     case HelpRequestFulfilled = 'help_request.fulfilled';
     case HelpRequestReopened = 'help_request.reopened';
 
+    case CampaignSubmitted = 'campaign.submitted';
     case CampaignGoalReached = 'campaign.goal_reached';
     case CampaignClosingSoon = 'campaign.closing_soon';
     case CampaignClosed = 'campaign.closed';
     case CampaignPublished = 'campaign.published';
+    case CampaignRejected = 'campaign.rejected';
+    case CampaignSuspended = 'campaign.suspended';
 
     case ApplicationSubmitted = 'application.submitted';
     case ApplicationAccepted = 'application.accepted';
@@ -79,7 +82,8 @@ enum NotificationEventType: string
             self::HelpOfferContactStarted, self::HelpOfferAgreed, self::HelpOfferHelperConfirmed,
             self::HelpOfferReceiverConfirmed, self::HelpOfferCompleted, self::HelpOfferCancelled,
             self::HelpRequestFulfilled, self::HelpRequestReopened => 'help',
-            self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed, self::CampaignPublished => 'campaign',
+            self::CampaignSubmitted, self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed,
+            self::CampaignPublished, self::CampaignRejected, self::CampaignSuspended => 'campaign',
             self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationContactStarted,
             self::ApplicationCompleted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
             self::PostSubmitted, self::PostPublished, self::PostBlocked => 'post',

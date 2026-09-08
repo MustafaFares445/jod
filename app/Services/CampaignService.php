@@ -155,7 +155,7 @@ class CampaignService
     {
         $relations = [
             'organization.logoMedia',
-            'creator',
+            'creator.avatarMedia',
             'category',
             'imageMedia',
             'posts' => static function ($relation): void {

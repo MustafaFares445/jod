@@ -30,7 +30,8 @@ class HelpOfferPolicy
 
     public function reject(User $user, HelpOffer $offer): bool
     {
-        return $this->isOwner($user, $offer) && $offer->status === HelpOfferStatus::Pending;
+        return $this->isOwner($user, $offer)
+            && in_array($offer->status, [HelpOfferStatus::Pending, HelpOfferStatus::Accepted, HelpOfferStatus::Contacting], true);
     }
 
     public function coordinate(User $user, HelpOffer $offer): bool
