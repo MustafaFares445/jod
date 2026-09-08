@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
 
         if (! app()->environment('testing')) {
             $this->call(SyrianRealVideosSeeder::class);
+            $this->call(RealSeedMediaRefinementSeeder::class);
         }
 
         $this->call(OrganizationRolePermissionSyncSeeder::class);
