@@ -4,17 +4,28 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\MediaModel;
 use App\Http\Resources\Mobile\MediaOrganizationResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class MediaResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        return [
+        $modelType = $this->model_type instanceof MediaModel
+            ? $this->model_type->value
+            : (string) $this->model_type;
+        $post = $modelType === MediaModel::POST->value && $this->relationLoaded('post')
+            ? $this->post
+            : null;
+        $postOrganization = $post?->relationLoaded('organization') === true ? $post->organization : null;
+        $postAuthor = $post?->relationLoaded('author') === true ? $post->author : null;
+
+        $data = [
             'id' => $this->id,
-            'model' => $this->model_type->value,
+            'model' => $modelType,
             'modelId' => $this->model_id,
             'prop' => $this->prop,
             'url' => $this->publicUrl(),
@@ -62,5 +73,34 @@ class MediaResource extends JsonResource
                 return MediaOrganizationResource::make($this->organization)->resolve($request);
             }),
         ];
+
+        if ($post !== null) {
+            $publisherName = $postOrganization?->name ?? $postAuthor?->name ?? 'JOD';
+            $publisherEmail = $postOrganization?->email ?? $postAuthor?->email;
+
+            $data['post'] = [
+                'id' => (string) $post->id,
+                'title' => $post->title,
+                'summary' => $post->summary,
+                'content' => $post->content,
+                'location' => $post->location,
+                'audience' => $post->audience ?? 'general',
+                'publishedAt' => ($post->published_at ?? $post->created_at)?->toIso8601String(),
+            ];
+            $data['publisher'] = [
+                'id' => (string) ($postOrganization?->id ?? $postAuthor?->id ?? $post->author_id ?? 'jod'),
+                'publisherType' => $postOrganization !== null ? 'organization' : 'user',
+                'name' => (string) $publisherName,
+                'username' => filled($publisherEmail)
+                    ? Str::before((string) $publisherEmail, '@')
+                    : (Str::slug((string) $publisherName, '.') ?: 'jod'),
+                'verified' => $postOrganization !== null
+                    ? $postOrganization->verification_status === 'verified'
+                    : $postAuthor?->email_verified_at !== null,
+                'avatarUrl' => $postOrganization?->logoMedia?->publicUrl() ?? $postAuthor?->avatarMedia?->publicUrl(),
+            ];
+        }
+
+        return $data;
     }
 }
