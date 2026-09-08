@@ -26,5 +26,6 @@ class DatabaseSeeder extends Seeder
         $this->call(SyrianGeneralNotificationsSeeder::class);
         $this->call(SeedOperationalIdentifiersSeeder::class);
         $this->call(SeedDataPresentationSeeder::class);
+        $this->call(RestoreAdminAccessSeeder::class);
     }
 }

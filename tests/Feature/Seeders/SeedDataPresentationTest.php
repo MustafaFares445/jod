@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\RestoreAdminAccessSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -81,10 +82,25 @@ it('does not persist demo or seed terminology in user-facing seeded data', funct
         }
 
         foreach (DB::table($table)->whereNotNull($column)->pluck($column) as $value) {
-            expect((string) $value)
-                ->not->toMatch('/\bdemo\b|jod-demo|@demo\.|demo\/syria\//i');
+            $value = (string) $value;
+            if ($table === 'users' && $column === 'email' && $value === RestoreAdminAccessSeeder::EMAIL) {
+                continue;
+            }
+
+            expect($value)->not->toMatch('/\bdemo\b|jod-demo|@demo\.|demo\/syria\//i');
         }
     }
+});
+
+it('restores the requested administrator seed account', function (): void {
+    $this->seed(DatabaseSeeder::class);
+
+    $admin = DB::table('users')->where('email', RestoreAdminAccessSeeder::EMAIL)->first();
+
+    expect($admin)->not->toBeNull()
+        ->and((string) $admin->user_type)->toBe('admin')
+        ->and((string) $admin->status)->toBe('active')
+        ->and($admin->organization_id)->toBeNull();
 });
 
 it('preserves valid Arabic UTF-8 while sanitizing content', function (): void {
