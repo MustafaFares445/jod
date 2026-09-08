@@ -23,5 +23,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(OrganizationRolePermissionSyncSeeder::class);
+        $this->call(SyrianGeneralNotificationsSeeder::class);
+        $this->call(SeedDataPresentationSeeder::class);
     }
 }
