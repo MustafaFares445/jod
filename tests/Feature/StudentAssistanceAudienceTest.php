@@ -98,3 +98,10 @@ test('discovery rejects unsupported audiences', function () {
     $this->getJson('/api/mobile/discovery/posts?audience=vip')->assertUnprocessable()->assertJsonValidationErrors('audience');
     $this->getJson('/api/mobile/discovery/campaigns?audience=vip')->assertUnprocessable()->assertJsonValidationErrors('audience');
 });
+
+test('group campaign validation uses singular student audience consistently', function () {
+    $controller = (string) file_get_contents(app_path('Http/Controllers/Mobile/GroupController.php'));
+
+    expect($controller)->toContain("Rule::in(['general', 'student'])")
+        ->and($controller)->not->toContain("Rule::in(['general', 'students'])");
+});
