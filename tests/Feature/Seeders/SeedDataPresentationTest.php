@@ -87,6 +87,43 @@ it('does not persist demo or seed terminology in user-facing seeded data', funct
     }
 });
 
+it('preserves valid Arabic UTF-8 while sanitizing content', function (): void {
+    $this->seed(DatabaseSeeder::class);
+
+    $categoryNames = DB::table('categories')->orderBy('name')->pluck('name')->map(fn ($value) => (string) $value);
+
+    expect($categoryNames)->toContain('الغذاء')
+        ->toContain('التعليم')
+        ->toContain('الصحة');
+
+    foreach ([
+        ['categories', 'name'],
+        ['categories', 'description'],
+        ['organizations', 'name'],
+        ['organizations', 'description'],
+        ['campaigns', 'title'],
+        ['campaigns', 'summary'],
+        ['campaigns', 'content'],
+        ['posts', 'title'],
+        ['posts', 'summary'],
+        ['posts', 'content'],
+        ['groups', 'name'],
+        ['groups', 'description'],
+        ['articles', 'title'],
+        ['articles', 'content'],
+        ['notifications', 'title'],
+        ['notifications', 'body'],
+    ] as [$table, $column]) {
+        if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+            continue;
+        }
+
+        foreach (DB::table($table)->whereNotNull($column)->pluck($column) as $value) {
+            expect(preg_match('//u', (string) $value))->toBe(1, "Invalid UTF-8 found in {$table}.{$column}");
+        }
+    }
+});
+
 it('replaces legacy articles and reports with natural Arabic content', function (): void {
     $this->seed(DatabaseSeeder::class);
 

@@ -456,8 +456,13 @@ final class SeedDataPresentationSeeder extends Seeder
         $clean = preg_replace('/\s+([،,.؛:])/u', '$1', $clean) ?? $clean;
         $clean = preg_replace('/\s{2,}/u', ' ', $clean) ?? $clean;
         $clean = preg_replace('/(?:\.\s*){2,}/u', '. ', $clean) ?? $clean;
+        $clean = preg_replace('/^[\p{Z}\s.\-،؛:]+|[\p{Z}\s.\-،؛:]+$/u', '', $clean) ?? $clean;
 
-        return trim($clean, " \t\n\r\0\x0B.-؛،:");
+        if (preg_match('//u', $clean) !== 1) {
+            throw new \RuntimeException('Seed content sanitizer produced invalid UTF-8 text.');
+        }
+
+        return $clean;
     }
 
     private function fallbackText(string $table, string $column): string
