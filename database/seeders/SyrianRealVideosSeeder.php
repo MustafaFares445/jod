@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Jobs\GenerateVideoPreview;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -54,7 +55,6 @@ final class SyrianRealVideosSeeder extends Seeder
 
         $postId = $this->id('post:'.$video['key']);
         $publishedAt = now()->subDays((int) ($video['seed_days_ago'] ?? ($index + 1)));
-        $attribution = $this->attribution($video);
 
         DB::table('posts')->updateOrInsert(
             ['id' => $postId],
@@ -62,7 +62,7 @@ final class SyrianRealVideosSeeder extends Seeder
                 'id' => $postId,
                 'title' => $video['title'],
                 'summary' => $video['summary'],
-                'content' => trim($video['content'])."\n\n".$attribution,
+                'content' => trim((string) $video['content']),
                 'type' => $video['type'] ?? 'general',
                 'audience' => $video['audience'] ?? 'general',
                 'status' => 'published',
@@ -89,7 +89,7 @@ final class SyrianRealVideosSeeder extends Seeder
     private function seedVideoMedia(array $video, string $postId, int $index): void
     {
         $disk = Storage::disk('public');
-        $path = 'demo/syria/videos/'.$video['key'].'.webm';
+        $path = 'content/syria/videos/'.$video['key'].'.webm';
         $stored = $disk->exists($path) && $disk->size($path) > 1024;
 
         if (! $stored) {
@@ -109,6 +109,9 @@ final class SyrianRealVideosSeeder extends Seeder
         }
 
         $mediaId = $this->id('media:'.$video['key']);
+        $previewStatus = config('video.preview.enabled', true) ? 'pending' : 'disabled';
+        $existing = DB::table('media')->where('id', $mediaId)->first();
+
         DB::table('media')->updateOrInsert(
             ['id' => $mediaId],
             $this->columns('media', [
@@ -120,20 +123,24 @@ final class SyrianRealVideosSeeder extends Seeder
                 'disk' => 'public',
                 'path' => $path,
                 'original_name' => basename((string) $video['file_name']),
-                'description' => $this->attribution($video),
+                'description' => trim((string) $video['summary']),
                 'mime_type' => 'video/webm',
                 'size' => $size,
                 'position' => $index,
-                'preview_status' => null,
-                'preview_disk' => null,
-                'preview_path' => null,
-                'preview_mime_type' => null,
-                'preview_size' => null,
+                'preview_status' => $existing?->preview_status === 'ready' ? 'ready' : $previewStatus,
+                'preview_disk' => $existing?->preview_status === 'ready' ? $existing->preview_disk : null,
+                'preview_path' => $existing?->preview_status === 'ready' ? $existing->preview_path : null,
+                'preview_mime_type' => $existing?->preview_status === 'ready' ? $existing->preview_mime_type : null,
+                'preview_size' => $existing?->preview_status === 'ready' ? $existing->preview_size : null,
                 'preview_error' => null,
-                'created_at' => now(),
+                'created_at' => $existing?->created_at ?? now(),
                 'updated_at' => now(),
             ]),
         );
+
+        if ($previewStatus === 'pending' && $existing?->preview_status !== 'ready') {
+            GenerateVideoPreview::dispatch($mediaId, $path);
+        }
     }
 
     private function downloadVideo(array $video, string $path): bool
@@ -147,7 +154,7 @@ final class SyrianRealVideosSeeder extends Seeder
 
         try {
             $response = Http::withHeaders([
-                'User-Agent' => 'JOD-Syria-Demo-Seeder/1.0 (+https://github.com/MustafaFares445/jod)',
+                'User-Agent' => 'JOD-Syria-Content-Seeder/1.0 (+https://github.com/MustafaFares445/jod)',
                 'Accept' => 'video/webm,application/octet-stream;q=0.9,*/*;q=0.1',
             ])->timeout(90)->retry(2, 750)->get($url);
 
@@ -177,18 +184,6 @@ final class SyrianRealVideosSeeder extends Seeder
             $this->command?->warn('Could not download real video '.$video['key'].': '.$exception->getMessage());
             return false;
         }
-    }
-
-    private function attribution(array $video): string
-    {
-        $date = trim((string) ($video['source_date'] ?? ''));
-        $datePart = $date !== '' ? ' تاريخ المادة: '.$date.'.' : '';
-
-        return 'اعتماد الفيديو: '.trim((string) $video['creator'])
-            .' — '.trim((string) $video['license'])
-            .'. رابط الترخيص: '.trim((string) $video['license_url'])
-            .'. المصدر: '.trim((string) $video['source_page']).'.'
-            .$datePart;
     }
 
     /** @return array<string, string> */
