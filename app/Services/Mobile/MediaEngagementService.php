@@ -175,7 +175,6 @@ class MediaEngagementService
             'high',
             $report->title,
             '/admin/reports/'.$report->id,
-            $organizationId,
             (string) $user->id,
         );
 
