@@ -44,7 +44,7 @@ class StaffRequest extends FormRequest
             'phone' => [
                 Rule::requiredIf($profileFieldsRequired),
                 'string',
-                'regex:/^09\d{8}$/',
+                'regex:/^\+9639\d{8}$/',
             ],
             'organization_role_id' => [
                 Rule::requiredIf($profileFieldsRequired),
@@ -59,7 +59,7 @@ class StaffRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'رقم الهاتف يجب أن يكون رقم موبايل سوري من 10 أرقام ويبدأ بـ 09.',
+            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ +963 ثم 9 أرقام، ويجب أن يبدأ الرقم بعد +963 بالرقم 9.',
         ];
     }
 }

@@ -12,7 +12,7 @@ class ApplicantRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'regex:/^09\d{8}$/'],
+            'phone' => ['required', 'string', 'regex:/^\+9639\d{8}$/'],
             'campaignTitle' => ['required', 'string', 'max:255'],
             'applicantStatus' => ['required', 'string', 'max:100'],
             'appliedAt' => ['required', 'date'],
@@ -22,7 +22,7 @@ class ApplicantRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'phone.regex' => 'رقم الهاتف يجب أن يكون رقم موبايل سوري من 10 أرقام ويبدأ بـ 09.',
+            'phone.regex' => 'رقم الهاتف يجب أن يبدأ بـ +963 ثم 9 أرقام، ويجب أن يبدأ الرقم بعد +963 بالرقم 9.',
         ];
     }
 }
