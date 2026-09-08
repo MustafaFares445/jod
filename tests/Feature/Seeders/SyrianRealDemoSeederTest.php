@@ -58,6 +58,72 @@ test('Syrian demo seed provides broad realistic content across backend types', f
         ->and(DB::table('posts')->where('type', 'help_request')->where('urgency', 'critical')->exists())->toBeTrue();
 });
 
+test('visible Syrian seed content does not expose seed metadata or provenance language', function () {
+    $this->seed(DatabaseSeeder::class);
+
+    $forbidden = [
+        'بيانات JOD',
+        'المصدر المرجعي',
+        'نوع التوثيق',
+        'هذا سجل تجريبي',
+        'ضمن بيانات JOD',
+        'المصدر الرسمي',
+        'صورة افتراضية ثابتة',
+    ];
+
+    foreach ($forbidden as $phrase) {
+        expect(DB::table('posts')->where('title', 'like', '%'.$phrase.'%')->exists())->toBeFalse()
+            ->and(DB::table('posts')->where('summary', 'like', '%'.$phrase.'%')->exists())->toBeFalse()
+            ->and(DB::table('posts')->where('content', 'like', '%'.$phrase.'%')->exists())->toBeFalse()
+            ->and(DB::table('campaigns')->where('summary', 'like', '%'.$phrase.'%')->exists())->toBeFalse()
+            ->and(DB::table('campaigns')->where('content', 'like', '%'.$phrase.'%')->exists())->toBeFalse()
+            ->and(DB::table('organizations')->where('description', 'like', '%'.$phrase.'%')->exists())->toBeFalse();
+    }
+
+    expect(DB::table('posts')->where('content', 'like', '%نبحث عن جهة أو شخص قادر على تقديم المساعدة%')->exists())->toBeTrue()
+        ->and(DB::table('posts')->where('type', 'campaign_update')->where('content', 'like', '%تواصل الفرق تنفيذ الأنشطة%')->exists())->toBeTrue();
+});
+
+test('student assistance feed only contains student-relevant seeded content', function () {
+    $this->seed(DatabaseSeeder::class);
+
+    $studentPosts = DB::table('posts')->where('audience', 'student')->get();
+    expect($studentPosts->count())->toBeGreaterThanOrEqual(12);
+
+    expect(DB::table('posts')
+        ->where('title', 'انضم إلى فريق التواصل في سند الشباب')
+        ->where('audience', 'general')
+        ->exists())->toBeTrue();
+
+    expect(DB::table('posts')
+        ->where('title', 'طالب جامعي يحتاج حاسوباً محمولاً للدراسة')
+        ->where('audience', 'student')
+        ->where('type', 'help_request')
+        ->exists())->toBeTrue()
+        ->and(DB::table('posts')
+            ->where('title', 'إرشاد للتقديم على المنح الجامعية')
+            ->where('audience', 'student')
+            ->where('type', 'service_offer')
+            ->exists())->toBeTrue()
+        ->and(DB::table('posts')
+            ->where('title', 'ساهم في سند طالب يتيم')
+            ->where('audience', 'student')
+            ->where('type', 'donation_campaign')
+            ->exists())->toBeTrue();
+
+    foreach (['نوع التوثيق', 'documented', 'بيانات JOD', 'هذا سجل تجريبي'] as $forbidden) {
+        expect(DB::table('posts')->where('audience', 'student')->where('content', 'like', '%'.$forbidden.'%')->exists())->toBeFalse();
+    }
+
+    $studentPostIds = DB::table('posts')->where('audience', 'student')->pluck('id');
+    expect(DB::table('media')
+        ->whereIn('model_id', $studentPostIds)
+        ->where(function ($query): void {
+            $query->where('mime_type', 'image/svg+xml')->orWhere('path', 'like', '%.svg');
+        })
+        ->exists())->toBeFalse();
+});
+
 test('Syrian demo media uses official campaign images or deterministic local fallbacks only', function () {
     $this->seed(DatabaseSeeder::class);
 
@@ -69,7 +135,9 @@ test('Syrian demo media uses official campaign images or deterministic local fal
             ->and(strtolower((string) $item->path))->not->toContain('unsplash')
             ->and(strtolower((string) $item->path))->not->toContain('pexels')
             ->and(strtolower((string) $item->path))->not->toContain('mountain')
-            ->and(strtolower((string) $item->path))->not->toContain('forest');
+            ->and(strtolower((string) $item->path))->not->toContain('forest')
+            ->and((string) $item->description)->not->toContain('المصدر الرسمي')
+            ->and((string) $item->description)->not->toContain('افتراضية');
     }
 
     expect($media->contains(fn ($item) => (string) $item->mime_type === 'image/svg+xml'))->toBeTrue();
