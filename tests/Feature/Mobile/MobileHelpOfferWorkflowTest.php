@@ -41,9 +41,18 @@ test('help offer requires bilateral agreement and auto fulfills after both compl
     expect($post->refresh()->help_status->value)->toBe('in_progress');
 
     Sanctum::actingAs($helper);
+    $this->getJson("/api/mobile/me/help-offers/{$offerId}")
+        ->assertOk()
+        ->assertJsonPath('data.can.contact', false);
+    $this->patchJson("/api/mobile/help-offers/{$offerId}/contact")
+        ->assertForbidden();
+
+    Sanctum::actingAs($owner);
     $this->patchJson("/api/mobile/help-offers/{$offerId}/contact")
         ->assertOk()
         ->assertJsonPath('data.status', 'contacting');
+
+    Sanctum::actingAs($helper);
     $this->patchJson("/api/mobile/help-offers/{$offerId}/agree")
         ->assertOk()
         ->assertJsonPath('data.status', 'contacting')

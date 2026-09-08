@@ -92,7 +92,7 @@ class HelpOfferService
 
     public function markContacting(User $actor, string $offerId): HelpOffer
     {
-        $offer = $this->transition($actor, $offerId, 'coordinate', [HelpOfferStatus::Accepted], HelpOfferStatus::Contacting, ['contacted_at' => now()]);
+        $offer = $this->transition($actor, $offerId, 'startContact', [HelpOfferStatus::Accepted], HelpOfferStatus::Contacting, ['contacted_at' => now()]);
         $this->helpStatus->sync($offer->post);
         $this->notifyOtherParticipant($actor, $offer, NotificationEventType::HelpOfferContactStarted, 'بدأ التواصل', 'تم تسجيل بدء التواصل لتنسيق المساعدة.');
         return $offer;

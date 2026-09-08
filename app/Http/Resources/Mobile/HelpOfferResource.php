@@ -57,7 +57,7 @@ class HelpOfferResource extends JsonResource
             'can' => [
                 'accept' => $isOwner && ! $hasOtherSelection && ($this->status?->value ?? $this->status) === 'pending',
                 'reject' => $isOwner && ! $isSelected && in_array(($this->status?->value ?? $this->status), ['pending', 'accepted', 'contacting'], true),
-                'contact' => ($isHelper || $isOwner) && ! $hasOtherSelection && ($this->status?->value ?? $this->status) === 'accepted',
+                'contact' => $isOwner && ! $hasOtherSelection && ($this->status?->value ?? $this->status) === 'accepted',
                 'agree' => ($isHelper || $isOwner) && ! $hasOtherSelection
                     && in_array(($this->status?->value ?? $this->status), ['contacting', 'agreed'], true)
                     && (($isHelper && $this->helper_agreed_at === null) || ($isOwner && $this->receiver_agreed_at === null)),

@@ -34,6 +34,12 @@ class HelpOfferPolicy
             && in_array($offer->status, [HelpOfferStatus::Pending, HelpOfferStatus::Accepted, HelpOfferStatus::Contacting], true);
     }
 
+    public function startContact(User $user, HelpOffer $offer): bool
+    {
+        return $this->isOwner($user, $offer)
+            && $offer->status === HelpOfferStatus::Accepted;
+    }
+
     public function coordinate(User $user, HelpOffer $offer): bool
     {
         return $this->isParticipant($user, $offer);
