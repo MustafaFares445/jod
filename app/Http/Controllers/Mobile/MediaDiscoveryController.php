@@ -9,8 +9,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MediaResource;
 use App\Models\Media;
 use App\Models\Organization;
+use App\Models\Post;
 use App\Models\User;
 use App\Support\Mobile\MobileApiResponse;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,15 +25,17 @@ class MediaDiscoveryController extends Controller
         $search = trim((string) $request->query('search', ''));
         $viewer = $this->viewer($request);
 
-        $paginator = Media::query()
+        $paginator = $this->publicVideosQuery()
             ->with($this->relations($viewer))
-            ->where('model_type', MediaModel::ORGANIZATION->value)
-            ->where('prop', 'videos')
-            ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
-            ->when($search !== '', function ($query) use ($search): void {
-                $query->where(function ($inner) use ($search): void {
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $inner) use ($search): void {
                     $inner->where('description', 'like', "%{$search}%")
-                        ->orWhere('original_name', 'like', "%{$search}%");
+                        ->orWhere('original_name', 'like', "%{$search}%")
+                        ->orWhereHas('post', function (Builder $post) use ($search): void {
+                            $post->where('title', 'like', "%{$search}%")
+                                ->orWhere('summary', 'like', "%{$search}%")
+                                ->orWhere('content', 'like', "%{$search}%");
+                        });
                 });
             })
             ->orderByDesc('created_at')
@@ -46,12 +50,9 @@ class MediaDiscoveryController extends Controller
     public function show(Request $request, string $video): JsonResponse
     {
         $viewer = $this->viewer($request);
-        $media = Media::query()
+        $media = $this->publicVideosQuery()
             ->with($this->relations($viewer))
             ->whereKey($video)
-            ->where('model_type', MediaModel::ORGANIZATION->value)
-            ->where('prop', 'videos')
-            ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
             ->first();
 
         if ($media === null) {
@@ -64,6 +65,29 @@ class MediaDiscoveryController extends Controller
         );
     }
 
+    /** @return Builder<Media> */
+    private function publicVideosQuery(): Builder
+    {
+        return Media::query()
+            ->where('prop', 'videos')
+            ->where(function (Builder $query): void {
+                $query->where(function (Builder $organizationVideo): void {
+                    $organizationVideo
+                        ->where('model_type', MediaModel::ORGANIZATION->value)
+                        ->whereIn('model_id', Organization::query()
+                            ->where('status', 'active')
+                            ->select('id'));
+                })->orWhere(function (Builder $postVideo): void {
+                    $postVideo
+                        ->where('model_type', MediaModel::POST->value)
+                        ->whereIn('post_id', Post::query()
+                            ->where('status', 'published')
+                            ->whereNull('deleted_at')
+                            ->select('id'));
+                });
+            });
+    }
+
     private function viewer(Request $request): ?User
     {
         $user = $request->user('sanctum');
@@ -74,7 +98,11 @@ class MediaDiscoveryController extends Controller
     /** @return array<int|string, mixed> */
     private function relations(?User $viewer): array
     {
-        $relations = ['organization.logoMedia'];
+        $relations = [
+            'organization.logoMedia',
+            'post.organization.logoMedia',
+            'post.author.avatarMedia',
+        ];
 
         if ($viewer === null) {
             return $relations;

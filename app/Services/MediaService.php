@@ -200,7 +200,7 @@ class MediaService
 
     private function initialPreviewStatus(MediaModel $model, string $prop): ?string
     {
-        if ($model !== MediaModel::ORGANIZATION || $prop !== 'videos') {
+        if (! in_array($model, [MediaModel::ORGANIZATION, MediaModel::POST], true) || $prop !== 'videos') {
             return null;
         }
 
@@ -214,11 +214,11 @@ class MediaService
         string $mediaId,
         string $sourcePath,
     ): ?string {
-        if ($model !== MediaModel::ORGANIZATION || $prop !== 'videos') {
+        if (! in_array($model, [MediaModel::ORGANIZATION, MediaModel::POST], true) || $prop !== 'videos') {
             return null;
         }
 
-        return VideoPreviewGenerator::previewPathFor($modelId, $mediaId, $sourcePath);
+        return VideoPreviewGenerator::previewPathForModel($model->value, $modelId, $mediaId, $sourcePath);
     }
 
     private function queueVideoPreview(Media $media): void
@@ -228,7 +228,7 @@ class MediaService
             : MediaModel::tryFrom((string) $media->model_type);
 
         if (
-            $modelType !== MediaModel::ORGANIZATION
+            ! in_array($modelType, [MediaModel::ORGANIZATION, MediaModel::POST], true)
             || $media->prop !== 'videos'
             || $media->preview_status !== 'pending'
         ) {

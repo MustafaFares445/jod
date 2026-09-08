@@ -20,11 +20,13 @@ class DatabaseSeeder extends Seeder
 
         if (! app()->environment('testing')) {
             $this->call(SyrianRealVideosSeeder::class);
+            $this->call(RealSeedMediaRefinementSeeder::class);
         }
 
         $this->call(OrganizationRolePermissionSyncSeeder::class);
         $this->call(SyrianGeneralNotificationsSeeder::class);
         $this->call(SeedOperationalIdentifiersSeeder::class);
         $this->call(SeedDataPresentationSeeder::class);
+        $this->call(RestoreAdminAccessSeeder::class);
     }
 }

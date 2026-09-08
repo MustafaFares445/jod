@@ -6,6 +6,7 @@ use App\Enums\MediaModel;
 use App\Jobs\GenerateVideoPreview;
 use App\Models\Media;
 use App\Models\Organization;
+use App\Models\Post;
 use App\Services\MediaService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -32,6 +33,26 @@ test('video media queues preview generation when created', function (): void {
     );
 
     expect($video->preview_status)->toBe('pending');
+
+    Queue::assertPushed(
+        GenerateVideoPreview::class,
+        fn (GenerateVideoPreview $job): bool => $job->mediaId === $video->id
+            && $job->sourcePath === $video->path,
+    );
+});
+
+test('post video media queues preview generation when created', function (): void {
+    $post = Post::factory()->create(['status' => 'published']);
+
+    $video = app(MediaService::class)->upload(
+        MediaModel::POST,
+        (string) $post->id,
+        'videos',
+        UploadedFile::fake()->create('post-video.webm', 100, 'video/webm'),
+    );
+
+    expect($video->preview_status)->toBe('pending')
+        ->and((string) $video->post_id)->toBe((string) $post->id);
 
     Queue::assertPushed(
         GenerateVideoPreview::class,
@@ -138,10 +159,11 @@ test('preview generation can be disabled without blocking video upload', functio
     Queue::assertNothingPushed();
 });
 
-test('existing videos without previews can be queued for backfill', function (): void {
+test('existing organization and post videos without previews can be queued for backfill', function (): void {
     $organization = video_preview_test_organization();
+    $post = Post::factory()->create(['status' => 'published']);
 
-    $missing = Media::query()->create([
+    $missingOrganization = Media::query()->create([
         'model_type' => MediaModel::ORGANIZATION->value,
         'model_id' => $organization->id,
         'prop' => 'videos',
@@ -149,6 +171,20 @@ test('existing videos without previews can be queued for backfill', function ():
         'path' => 'videos/missing.mp4',
         'original_name' => 'missing.mp4',
         'mime_type' => 'video/mp4',
+        'size' => 100,
+        'position' => 0,
+        'preview_status' => null,
+    ]);
+
+    $missingPost = Media::query()->create([
+        'model_type' => MediaModel::POST->value,
+        'model_id' => $post->id,
+        'post_id' => $post->id,
+        'prop' => 'videos',
+        'disk' => 'public',
+        'path' => 'videos/post-missing.webm',
+        'original_name' => 'post-missing.webm',
+        'mime_type' => 'video/webm',
         'size' => 100,
         'position' => 0,
         'preview_status' => null,
@@ -173,13 +209,19 @@ test('existing videos without previews can be queued for backfill', function ():
 
     Artisan::call('videos:generate-previews');
 
-    expect($missing->refresh()->preview_status)->toBe('pending');
+    expect($missingOrganization->refresh()->preview_status)->toBe('pending')
+        ->and($missingPost->refresh()->preview_status)->toBe('pending');
 
-    Queue::assertPushed(GenerateVideoPreview::class, 1);
+    Queue::assertPushed(GenerateVideoPreview::class, 2);
     Queue::assertPushed(
         GenerateVideoPreview::class,
-        fn (GenerateVideoPreview $job): bool => $job->mediaId === $missing->id
-            && $job->sourcePath === $missing->path,
+        fn (GenerateVideoPreview $job): bool => $job->mediaId === $missingOrganization->id
+            && $job->sourcePath === $missingOrganization->path,
+    );
+    Queue::assertPushed(
+        GenerateVideoPreview::class,
+        fn (GenerateVideoPreview $job): bool => $job->mediaId === $missingPost->id
+            && $job->sourcePath === $missingPost->path,
     );
 });
 
