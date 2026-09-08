@@ -91,15 +91,17 @@ final class SyrianRealGroupsSeeder extends Seeder
         );
 
         if (Schema::hasTable('group_categories')) {
-            DB::table('group_categories')->where('group_id', $groupId)->delete();
-            foreach (array_values(array_unique($group['categories'])) as $categoryIndex => $category) {
-                DB::table('group_categories')->insert($this->columns('group_categories', [
-                    'id' => $this->id('group-category:'.$group['key'].':'.$category),
-                    'group_id' => $groupId,
-                    'category' => $this->categoryLabel($category),
-                    'created_at' => now()->subMonths(7)->addDays($groupIndex),
-                    'updated_at' => now(),
-                ]));
+            foreach (array_values(array_unique($group['categories'])) as $category) {
+                DB::table('group_categories')->updateOrInsert(
+                    ['id' => $this->id('group-category:'.$group['key'].':'.$category)],
+                    $this->columns('group_categories', [
+                        'id' => $this->id('group-category:'.$group['key'].':'.$category),
+                        'group_id' => $groupId,
+                        'category' => $this->categoryLabel($category),
+                        'created_at' => now()->subMonths(7)->addDays($groupIndex),
+                        'updated_at' => now(),
+                    ]),
+                );
             }
         }
 
@@ -112,8 +114,6 @@ final class SyrianRealGroupsSeeder extends Seeder
         if (! Schema::hasTable('group_members') || $this->memberPool === []) {
             return;
         }
-
-        DB::table('group_members')->where('group_id', $groupId)->delete();
 
         $desired = $documentedMembers !== null
             ? min(18, max(6, (int) round(((int) $documentedMembers) / 8)))
@@ -133,17 +133,21 @@ final class SyrianRealGroupsSeeder extends Seeder
 
         foreach ($members as $memberIndex => $userId) {
             $role = $memberIndex === 0 ? 'owner' : ($memberIndex === 1 ? 'admin' : ($memberIndex === 2 ? 'moderator' : 'member'));
-            DB::table('group_members')->insert($this->columns('group_members', [
-                'id' => $this->id('group-member:'.$groupId.':'.$userId),
-                'group_id' => $groupId,
-                'user_id' => $userId,
-                'role' => $role,
-                'status' => 'active',
-                'joined_at' => now()->subMonths(6)->addDays($memberIndex + $groupIndex),
-                'left_at' => null,
-                'created_at' => now()->subMonths(6)->addDays($memberIndex + $groupIndex),
-                'updated_at' => now(),
-            ]));
+            $memberId = $this->id('group-member:'.$groupId.':'.$userId);
+            DB::table('group_members')->updateOrInsert(
+                ['id' => $memberId],
+                $this->columns('group_members', [
+                    'id' => $memberId,
+                    'group_id' => $groupId,
+                    'user_id' => $userId,
+                    'role' => $role,
+                    'status' => 'active',
+                    'joined_at' => now()->subMonths(6)->addDays($memberIndex + $groupIndex),
+                    'left_at' => null,
+                    'created_at' => now()->subMonths(6)->addDays($memberIndex + $groupIndex),
+                    'updated_at' => now(),
+                ]),
+            );
         }
     }
 
@@ -153,10 +157,8 @@ final class SyrianRealGroupsSeeder extends Seeder
             return;
         }
 
-        $existingIds = [];
         foreach ($group['activities'] as $activityIndex => $activity) {
             $postId = $this->id('group-post:'.$group['key'].':'.$activityIndex.':'.$activity['title']);
-            $existingIds[] = $postId;
             $categoryId = $this->categoryIds[$activity['category']] ?? null;
             $publishedAt = $activity['published_at'] ?? now()->subDays(20 + $activityIndex + $groupIndex)->toDateString();
 
@@ -191,10 +193,6 @@ final class SyrianRealGroupsSeeder extends Seeder
                 ]),
             );
         }
-
-        if ($existingIds !== []) {
-            DB::table('posts')->where('group_id', $groupId)->whereNotIn('id', $existingIds)->delete();
-        }
     }
 
     private function seedGroupMedia(array $group, int $groupIndex): void
@@ -205,43 +203,61 @@ final class SyrianRealGroupsSeeder extends Seeder
 
         $groupId = $this->id('group:'.$group['key']);
         $fallback = database_path('assets/syrian-fallback/community-group.png');
-        $avatarPath = 'demo/syria/groups/'.$group['key'].'-avatar.png';
-        $coverPath = 'demo/syria/groups/'.$group['key'].'-cover.jpg';
-
-        $officialImage = $this->discoverImageUrl($group['source'] ?? null);
-        $coverMime = 'image/png';
-        $coverBytes = null;
-
-        if ($officialImage !== null) {
-            try {
-                $response = Http::timeout(15)->retry(1, 200)->get($officialImage);
-                $contentType = strtolower((string) $response->header('Content-Type'));
-                if ($response->successful() && str_starts_with($contentType, 'image/')) {
-                    $coverBytes = $response->body();
-                    $coverMime = explode(';', $contentType)[0];
-                    $extension = str_contains($coverMime, 'png') ? 'png' : (str_contains($coverMime, 'webp') ? 'webp' : 'jpg');
-                    $coverPath = 'demo/syria/groups/'.$group['key'].'-cover.'.$extension;
-                }
-            } catch (Throwable) {
-                $coverBytes = null;
-            }
-        }
-
         $fallbackBytes = is_file($fallback) ? (string) file_get_contents($fallback) : '';
         if ($fallbackBytes === '') {
             return;
         }
 
+        $avatarPath = 'demo/syria/groups/'.$group['key'].'-avatar.png';
         Storage::disk('public')->put($avatarPath, $fallbackBytes);
+
+        $coverBytes = null;
+        $coverMime = 'image/png';
+        $coverPath = 'demo/syria/groups/'.$group['key'].'-cover.png';
+
+        if (! app()->environment('testing')) {
+            $officialImage = $this->discoverImageUrl($group['source'] ?? null);
+            if ($officialImage !== null) {
+                try {
+                    $response = Http::timeout(15)->retry(1, 200)->get($officialImage);
+                    $contentType = strtolower((string) $response->header('Content-Type'));
+                    if ($response->successful() && str_starts_with($contentType, 'image/')) {
+                        $coverBytes = $response->body();
+                        $coverMime = explode(';', $contentType)[0];
+                        $extension = str_contains($coverMime, 'png') ? 'png' : (str_contains($coverMime, 'webp') ? 'webp' : 'jpg');
+                        $coverPath = 'demo/syria/groups/'.$group['key'].'-cover.'.$extension;
+                    }
+                } catch (Throwable) {
+                    $coverBytes = null;
+                }
+            }
+        }
+
         if ($coverBytes === null) {
             $coverBytes = $fallbackBytes;
             $coverMime = 'image/png';
-            $coverPath = 'demo/syria/groups/'.$group['key'].'-cover.png';
         }
+
         Storage::disk('public')->put($coverPath, $coverBytes);
 
-        $this->upsertMedia($this->id('group-avatar:'.$group['key']), $groupId, 'avatar', $avatarPath, 'image/png', strlen($fallbackBytes), 'صورة تعريفية للفريق التطوعي.');
-        $this->upsertMedia($this->id('group-cover:'.$group['key']), $groupId, 'cover', $coverPath, $coverMime, strlen($coverBytes), 'صورة مرتبطة بنشاط الفريق ومجال عمله.');
+        $this->upsertMedia(
+            $this->id('group-avatar:'.$group['key']),
+            $groupId,
+            'avatar',
+            $avatarPath,
+            'image/png',
+            strlen($fallbackBytes),
+            'صورة تعريفية للفريق التطوعي.',
+        );
+        $this->upsertMedia(
+            $this->id('group-cover:'.$group['key']),
+            $groupId,
+            'cover',
+            $coverPath,
+            $coverMime,
+            strlen($coverBytes),
+            'صورة مرتبطة بنشاط الفريق ومجال عمله.',
+        );
     }
 
     private function upsertMedia(string $id, string $groupId, string $prop, string $path, string $mime, int $size, string $description): void
@@ -335,6 +351,7 @@ final class SyrianRealGroupsSeeder extends Seeder
                 $map[$key] = (string) $category->id;
             }
         }
+
         return $map;
     }
 
