@@ -17,7 +17,11 @@ class DatabaseSeeder extends Seeder
         $this->call(PersonalizationDemoSeeder::class);
         $this->call(StudentAssistanceSeedRefinementSeeder::class);
         $this->call(SyrianRealGroupsSeeder::class);
-        $this->call(SyrianRealVideosSeeder::class);
+
+        if (! app()->environment('testing')) {
+            $this->call(SyrianRealVideosSeeder::class);
+        }
+
         $this->call(OrganizationRolePermissionSyncSeeder::class);
     }
 }
