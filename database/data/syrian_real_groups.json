@@ -1,0 +1,479 @@
+{
+  "groups": [
+    {
+      "key": "future_makers_yabroud",
+      "name": "فريق صناع الغد التطوعي",
+      "location": "ريف دمشق",
+      "categories": ["volunteering", "protection", "emergency"],
+      "description": "فريق تطوعي شبابي في يبرود يعمل على مبادرات التكافل المجتمعي ودعم الأسر المحتاجة وتنظيم الجهود التطوعية المحلية.",
+      "purpose": "تنظيم العمل التطوعي في يبرود وتوجيهه نحو احتياجات الأسر والمجتمع المحلي، مع تشجيع المشاركة الشبابية في المبادرات الإنسانية.",
+      "documented_members": 60,
+      "source": "https://sana.sy/governorates/reef-dimashak/2190095/",
+      "activities": [
+        {
+          "title": "شاركهم الدفء في يبرود",
+          "type": "general",
+          "category": "protection",
+          "audience": "general",
+          "summary": "جمع وفرز وتجهيز نحو 3 آلاف قطعة ملابس شتوية وتوزيعها عبر ثمانية مراكز لخدمة الأسر المحتاجة في يبرود.",
+          "published_at": "2025-02-15",
+          "source": "https://sana.sy/governorates/reef-dimashak/2190095/"
+        }
+      ]
+    },
+    {
+      "key": "advisors_damascus",
+      "name": "فريق Advisors التطوعي",
+      "location": "دمشق",
+      "categories": ["education", "volunteering", "employment"],
+      "description": "مبادرة طلابية تطوعية في جامعة دمشق تعمل على ردم الفجوة بين الدراسة النظرية والتطبيق العملي عبر مخابر وتجهيزات مجانية للطلاب.",
+      "purpose": "تمكين طلاب الهندسة والاختصاصات التطبيقية من تنفيذ مشاريعهم عملياً وتطوير مهاراتهم التقنية وربط الدراسة الجامعية بالخبرة التطبيقية.",
+      "source": "https://sana.sy/education/2386629/",
+      "activities": [
+        {
+          "title": "مخبر المشاريع للطلاب في جامعة دمشق",
+          "type": "service_offer",
+          "category": "education",
+          "audience": "student",
+          "summary": "تشغيل مخبر مشاريع مجاني يساعد الطلاب على تنفيذ مشاريع التخرج والمشاريع التطبيقية وتحويل الأفكار النظرية إلى نماذج قابلة للتنفيذ.",
+          "published_at": "2026-01-29",
+          "source": "https://sana.sy/education/2386629/"
+        },
+        {
+          "title": "الطباعة ثلاثية الأبعاد للطلاب",
+          "type": "awareness",
+          "category": "education",
+          "audience": "student",
+          "summary": "توفير مخبر للطباعة ثلاثية الأبعاد ودعم البرمجة وتصميم الدارات الإلكترونية ضمن بيئة تطبيقية مجانية للطلاب.",
+          "published_at": "2026-01-29",
+          "source": "https://sana.sy/education/2386629/"
+        }
+      ]
+    },
+    {
+      "key": "nabd_homs",
+      "name": "فريق نبض التطوعي",
+      "location": "حمص",
+      "categories": ["education", "children", "volunteering"],
+      "description": "فريق شبابي تطوعي في حمص يركز على تعويض الفاقد التعليمي ودعم الأطفال واليافعين من خلال دورات مجانية وأنشطة تعليمية ومهارية.",
+      "purpose": "دعم عودة الأطفال واليافعين إلى التعليم وتحسين مستواهم المعرفي ومساندة المتسربين والعائدين إلى المدارس.",
+      "source": "https://sana.sy/governorates/homs/2282953/",
+      "activities": [
+        {
+          "title": "دورات مجانية لتعويض الفاقد التعليمي",
+          "type": "service_offer",
+          "category": "education",
+          "audience": "student",
+          "summary": "استقطب الفريق نحو 700 طالب وطالبة من العائدين والمتسربين وقدم لهم دورات مجانية لتحسين المستوى التعليمي وتنمية المهارات.",
+          "published_at": "2025-09-10",
+          "source": "https://sana.sy/governorates/homs/2282953/"
+        }
+      ]
+    },
+    {
+      "key": "yalla_syria_homs",
+      "name": "فريق يلا سوريا",
+      "location": "حمص",
+      "categories": ["volunteering", "health", "reconstruction"],
+      "description": "فريق شبابي تطوعي في حمص يشارك في مبادرات صحية وخدمية ومجتمعية ويشجع ثقافة التطوع والمسؤولية المجتمعية.",
+      "purpose": "توجيه طاقات الشباب إلى مبادرات صحية وخدمية تسهم في دعم المجتمع وتحسين الخدمات العامة وتعزيز ثقافة العمل التطوعي.",
+      "source": "https://sana.sy/locals/2370535/",
+      "activities": [
+        {
+          "title": "حملة شبابية للتبرع بالدم",
+          "type": "volunteer_opportunity",
+          "category": "health",
+          "audience": "general",
+          "summary": "نظم الفريق بالتعاون مع بنك الدم في حمص حملة تطوعية لتعزيز مخزون الدم ودعم المراكز الطبية المحتاجة.",
+          "published_at": "2026-01-09",
+          "source": "https://sana.sy/locals/2370535/"
+        },
+        {
+          "title": "نظافة الرستن مسؤوليتنا جميعاً",
+          "type": "general",
+          "category": "reconstruction",
+          "audience": "general",
+          "summary": "شارك الفريق في حملة مجتمعية لتنظيف شوارع الرستن وإزالة الأتربة والنفايات بالتعاون مع المنتدى التنموي والأهالي.",
+          "published_at": "2026-03-16",
+          "source": "https://sana.sy/locals/2427741/"
+        },
+        {
+          "title": "لأجل حمص",
+          "type": "general",
+          "category": "reconstruction",
+          "audience": "general",
+          "summary": "شارك الفريق في مبادرة لمعالجة الحفر في عدد من شوارع حمص وتعزيز السلامة المرورية وتسهيل حركة السكان.",
+          "published_at": "2026-04-02",
+          "source": "https://sana.sy/locals/2441008/"
+        }
+      ]
+    },
+    {
+      "key": "harir_tartous",
+      "name": "فريق حرير التطوعي",
+      "location": "طرطوس",
+      "categories": ["volunteering", "reconstruction", "education"],
+      "description": "فريق تطوعي غير ربحي في الدريكيش يركز على تمكين الشباب وتنفيذ مشاريع بيئية وثقافية واجتماعية بالشراكة مع المجتمع المحلي.",
+      "purpose": "تنمية المجتمع المحلي في طرطوس عبر مشاريع تطوعية مستدامة وتحسين المساحات العامة ومساندة الطلاب والأسر.",
+      "documented_members": 150,
+      "source": "https://sana.sy/governorates/tartus/2250006/",
+      "activities": [
+        {
+          "title": "تأهيل مدرج حرير في الدريكيش",
+          "type": "general",
+          "category": "reconstruction",
+          "audience": "general",
+          "summary": "تنظيف وترميم المدرج وتقليم الأشجار وزراعة أشجار وأزهار لإعادة تفعيل الموقع كمساحة مجتمعية آمنة.",
+          "published_at": "2025-07-09",
+          "source": "https://sana.sy/governorates/tartus/2250006/"
+        },
+        {
+          "title": "نقل مجاني لطلاب الجامعة خلال الامتحانات",
+          "type": "service_offer",
+          "category": "education",
+          "audience": "student",
+          "summary": "مبادرة مجانية لنقل طلاب الدريكيش وريفها إلى جامعة طرطوس خلال فترة الامتحانات، واستفاد منها نحو 1200 طالب وطالبة أسبوعياً.",
+          "published_at": "2025-03-05",
+          "source": "https://sana.sy/governorates/tartus/2195602/"
+        }
+      ]
+    },
+    {
+      "key": "maan_tartous",
+      "name": "فريق معاً التطوعي",
+      "location": "طرطوس",
+      "categories": ["volunteering", "employment", "reconstruction"],
+      "description": "فريق تطوعي من الدريكيش يشارك في مبادرات مجتمعية وخدمية ويعمل على التدريب والتمكين وتعزيز التعاون بين أبناء المحافظات.",
+      "purpose": "دعم العمل التطوعي والتمكين المهني والمشاركة في المبادرات الخدمية التي تربط المجتمع المحلي بجهود التعافي والتنمية.",
+      "source": "https://sana.sy/governorates/aleppo/2215908/",
+      "activities": [
+        {
+          "title": "المشاركة في مبادرة الوفاء لحلب",
+          "type": "general",
+          "category": "reconstruction",
+          "audience": "general",
+          "summary": "شارك متطوعو الفريق القادمين من الدريكيش في أعمال مبادرة الوفاء لحلب إلى جانب فرق ومتطوعين من محافظات سورية مختلفة.",
+          "published_at": "2025-05-07",
+          "source": "https://sana.sy/governorates/aleppo/2215908/"
+        },
+        {
+          "title": "تدريب مهني للسيدات والشابات في الدريكيش",
+          "type": "service_offer",
+          "category": "employment",
+          "audience": "general",
+          "summary": "تدريب 30 سيدة وشابة ضمن ورش زراعية وحرفية وفنية بهدف دعم المهارات وفرص توليد الدخل.",
+          "published_at": "2025-07-26",
+          "source": "https://alhurriyah.sy/%D8%AA%D8%AF%D8%B1%D9%8A%D8%A8%D8%A7%D8%AA-%D9%88%D9%86%D8%B4%D8%A7%D8%B7%D8%A7%D8%AA-%D9%85%D8%AA%D9%85%D9%8A%D8%B2%D8%A9-%D9%84%D9%81%D8%B1%D9%8A%D9%82-%D9%85%D8%B9%D8%A7-%D8%A7%D9%84%D8%AA%D8%B7/"
+        }
+      ]
+    },
+    {
+      "key": "nabd_youth_sweida",
+      "name": "فريق نبض الشباب",
+      "location": "السويداء",
+      "categories": ["volunteering", "children", "reconstruction"],
+      "description": "فريق شبابي تطوعي في السويداء يعمل على حملات النظافة وتأهيل المواقع والأنشطة المجتمعية ودعم الأطفال، مع تدريب الشباب على مهارات جديدة.",
+      "purpose": "تعزيز ثقافة التطوع وتمكين الشباب من إطلاق مبادرات ذات أثر إيجابي وخدمة المجتمع المحلي في السويداء.",
+      "documented_members": 45,
+      "source": "https://sana.sy/governorates/alsoaydaa/2224481/",
+      "activities": [
+        {
+          "title": "مبادرات شبابية لخدمة المجتمع في السويداء",
+          "type": "general",
+          "category": "volunteering",
+          "audience": "general",
+          "summary": "نفذ الفريق حملات تنظيف وتأهيل وتجميل مواقع وشارك في فعاليات موجهة للأطفال، مع استمرار استقبال متطوعين جدد.",
+          "published_at": "2025-05-27",
+          "source": "https://sana.sy/governorates/alsoaydaa/2224481/"
+        },
+        {
+          "title": "باب التطوع مفتوح للشباب",
+          "type": "volunteer_opportunity",
+          "category": "volunteering",
+          "audience": "general",
+          "summary": "يواصل الفريق استقبال متطوعين جدد والعمل على تدريبهم وتأهيلهم للمشاركة في المبادرات المجتمعية.",
+          "published_at": "2025-05-27",
+          "source": "https://sana.sy/governorates/alsoaydaa/2224481/"
+        }
+      ]
+    },
+    {
+      "key": "atil_sweida",
+      "name": "فريق عتيل التطوعي الشبابي",
+      "location": "السويداء",
+      "categories": ["volunteering", "health", "protection"],
+      "description": "فريق شبابي تطوعي في بلدة عتيل يشارك في مبادرات إنسانية ومجتمعية ويعمل على مساندة الفئات المحتاجة بالتنسيق مع الجهات المحلية.",
+      "purpose": "تعبئة المجتمع المحلي حول المبادرات الإنسانية والصحية ودعم الحالات الأكثر حاجة في محافظة السويداء.",
+      "source": "https://sana.sy/governorates/alsoaydaa/2252214/",
+      "activities": [
+        {
+          "title": "شارك بالأمل.. أنقذ حياة",
+          "type": "donation_campaign",
+          "category": "health",
+          "audience": "general",
+          "summary": "مبادرة لدعم مرضى السرطان في السويداء عبر جمع تبرعات ومساندة المرضى مادياً ومعنوياً بالتنسيق مع جمعية أصدقاء مرضى السرطان.",
+          "published_at": "2025-07-09",
+          "source": "https://sana.sy/governorates/alsoaydaa/2252214/"
+        }
+      ]
+    },
+    {
+      "key": "alwan_hama",
+      "name": "فريق ألوان التطوعي الشبابي",
+      "location": "حماة",
+      "categories": ["children", "volunteering", "protection"],
+      "description": "فريق شبابي تأسس في سلمية ويعمل على تمكين الأطفال واليافعين من خلال أنشطة اجتماعية وثقافية وترفيهية ودعم نفسي وتنمية المهارات.",
+      "purpose": "توفير مساحات آمنة وممتعة للأطفال واليافعين وتنمية قدراتهم ومهاراتهم ودعم صحتهم النفسية والاجتماعية.",
+      "source": "https://sana.sy/culture-and-arts/2435961/",
+      "activities": [
+        {
+          "title": "يوم مفتوح للدعم النفسي للأطفال في سلمية",
+          "type": "general",
+          "category": "children",
+          "audience": "general",
+          "summary": "أنشطة ترفيهية وفنية ومسابقات للأطفال من عمر خمس حتى 12 سنة بهدف تنمية المهارات وتعزيز العمل الجماعي والدعم النفسي.",
+          "published_at": "2026-03-28",
+          "source": "https://sana.sy/culture-and-arts/2435961/"
+        }
+      ]
+    },
+    {
+      "key": "impact_makers_daraa",
+      "name": "فريق صناع الأثر التطوعي",
+      "location": "درعا",
+      "categories": ["volunteering", "reconstruction"],
+      "description": "فريق تطوعي يشارك في مبادرات بيئية وخدمية في محافظة درعا ويشجع العمل التشاركي والمشاركة المجتمعية.",
+      "purpose": "تحسين البيئة المحلية وتعزيز المساحات الخضراء وتشجيع الشباب والأهالي على المشاركة في المبادرات المجتمعية.",
+      "source": "https://sana.sy/governorates/daraa/2186966/",
+      "activities": [
+        {
+          "title": "زراعة أكثر من 2500 غرسة في بصرى الشام",
+          "type": "general",
+          "category": "reconstruction",
+          "audience": "general",
+          "summary": "حملة تشجير في بصرى الشام والطريق المؤدي إلى السهوة بمشاركة الفريق والأهالي والجهات المحلية لزيادة المساحات الخضراء.",
+          "published_at": "2025-02-02",
+          "source": "https://sana.sy/governorates/daraa/2186966/"
+        }
+      ]
+    },
+    {
+      "key": "sawaed_rif_dimashq",
+      "name": "فريق سواعد التطوعي",
+      "location": "ريف دمشق",
+      "categories": ["volunteering", "food", "protection"],
+      "description": "فريق تطوعي ينفذ مبادرات تكافل اجتماعي في ريف دمشق ويعمل على مساندة الأسر والعمال والمحتاجين عبر أنشطة مجتمعية موسمية.",
+      "purpose": "تنظيم مبادرات غذائية وإنسانية تخفف الأعباء عن الأسر وتعزز التعاون والتكافل داخل المجتمع المحلي.",
+      "source": "https://sana.sy/governorates/reef-dimashak/2195458/",
+      "activities": [
+        {
+          "title": "إفطار صائم",
+          "type": "general",
+          "category": "food",
+          "audience": "general",
+          "summary": "مبادرة ينفذها الفريق للعام الثالث لتوزيع ما يصل إلى 200 وجبة إفطار يومياً في عدد من أحياء ريف دمشق.",
+          "published_at": "2025-03-05",
+          "source": "https://sana.sy/governorates/reef-dimashak/2195458/"
+        }
+      ]
+    },
+    {
+      "key": "irada_moadamiyet",
+      "name": "فريق إرادة التطوعي",
+      "location": "ريف دمشق",
+      "categories": ["volunteering", "protection", "reconstruction"],
+      "description": "فريق تطوعي في معضمية الشام ينفذ مبادرات مجتمعية تجمع بين التكافل الاجتماعي وإعادة الاستخدام والعمل البيئي والخدمي.",
+      "purpose": "تنظيم التبرعات العينية وتحويلها إلى دعم مباشر للأسر وتعزيز ثقافة إعادة الاستخدام والمشاركة المجتمعية.",
+      "source": "https://sana.sy/locals/2473726/",
+      "activities": [
+        {
+          "title": "صناديق الخير في معضمية الشام",
+          "type": "general",
+          "category": "protection",
+          "audience": "general",
+          "summary": "جمع الملابس والأحذية والحقائب والمفروشات الصالحة للاستخدام وفرزها وتجهيزها لإعادة توزيعها على الأسر المحتاجة بكرامة.",
+          "published_at": "2026-05-12",
+          "source": "https://sana.sy/locals/2473726/"
+        },
+        {
+          "title": "ماراثون طلابي مجتمعي في معضمية الشام",
+          "type": "general",
+          "category": "volunteering",
+          "audience": "student",
+          "summary": "شارك الفريق في تنظيم ماراثون طلابي مجتمعي بالتعاون مع مجلس المدينة وبمشاركة الطلاب والأهالي.",
+          "published_at": "2025-12-07",
+          "source": "https://sana.sy/sport/2346808/"
+        }
+      ]
+    },
+    {
+      "key": "omraha_damascus",
+      "name": "فريق عمرها التطوعي",
+      "location": "دمشق",
+      "categories": ["volunteering", "education", "children"],
+      "description": "فريق تطوعي في دمشق ينفذ مبادرات موجهة للطلاب والأطفال بهدف تقديم الدعم المعنوي والتعليمي وتنظيم الأنشطة المجتمعية.",
+      "purpose": "مساندة الطلاب والأطفال عبر مبادرات تشجيعية وتعليمية وترفيهية تعزز الثقة والدافعية والمشاركة الإيجابية.",
+      "source": "https://sana.sy/locals/2262843/",
+      "activities": [
+        {
+          "title": "مبادرة دعم معنوي لطلاب الثانوية",
+          "type": "general",
+          "category": "education",
+          "audience": "student",
+          "summary": "توزيع رسائل تشجيعية وعبوات مياه على طلاب الثانوية العامة بعد الامتحانات بهدف التخفيف عنهم ودعمهم معنوياً.",
+          "published_at": "2025-07-31",
+          "source": "https://sana.sy/locals/2262843/"
+        }
+      ]
+    },
+    {
+      "key": "hope_train_damascus",
+      "name": "فريق قطار الأمل",
+      "location": "دمشق",
+      "categories": ["children", "protection", "volunteering"],
+      "description": "فريق تطوعي يعمل مع الأطفال في دمشق من خلال أنشطة فنية وتوعوية وترفيهية تسهم في الدعم النفسي وتنمية الإبداع.",
+      "purpose": "استخدام الفن والأنشطة الجماعية كأدوات للتعافي والدعم النفسي وتنمية مهارات الأطفال في المدارس ودور الرعاية.",
+      "source": "https://sana.sy/locals/2372106/",
+      "activities": [
+        {
+          "title": "الفن للتعافي.. قطار الأمل",
+          "type": "general",
+          "category": "children",
+          "audience": "general",
+          "summary": "مشروع ترفيهي توعوي استهدف 200 طفل عبر ورشات فنية في دور الأيتام والمدارس ومراكز رعاية الأطفال.",
+          "published_at": "2026-01-11",
+          "source": "https://sana.sy/locals/2372106/"
+        }
+      ]
+    },
+    {
+      "key": "ataa_volunteer_damascus",
+      "name": "فريق عطاء التطوعي",
+      "location": "دمشق",
+      "categories": ["volunteering", "food", "protection"],
+      "description": "مبادرة شبابية غير ربحية تضم متطوعين من تخصصات وأعمار مختلفة وتهدف إلى نشر ثقافة التعاون والمواطنة والمسؤولية الاجتماعية.",
+      "purpose": "إعداد الشباب للمشاركة الفاعلة في المبادرات الإنسانية والمجتمعية وتنظيم أنشطة تعزز التكافل والتعاون.",
+      "source": "https://sana.sy/locals/2428048/",
+      "activities": [
+        {
+          "title": "لمة رمضان 7",
+          "type": "general",
+          "category": "food",
+          "audience": "general",
+          "summary": "تنظيم فعالية لتحضير نحو 20 ألف وجبة سحور وتوزيعها على نحو 40 مسجداً في دمشق وريفها بمشاركة متطوعين وفرق مجتمعية.",
+          "published_at": "2026-03-17",
+          "source": "https://sana.sy/locals/2428048/"
+        }
+      ]
+    },
+    {
+      "key": "athar_barzeh",
+      "name": "فريق أثر التطوعي",
+      "location": "دمشق",
+      "categories": ["volunteering", "employment", "disability"],
+      "description": "فريق شبابي تطوعي من حي برزة يعمل على مبادرات خدمية واقتصادية صغيرة تعزز التكافل والتماسك المجتمعي ودعم أصحاب المشاريع.",
+      "purpose": "مساندة المبادرات الإنتاجية والمشاريع الصغيرة وتشجيع الاعتماد على النفس وإتاحة مساحة لمنتجات المجتمع المحلي.",
+      "source": "https://sana.sy/locals/2477015/",
+      "activities": [
+        {
+          "title": "اصنع أثرك لدعم المشاريع الصغيرة",
+          "type": "general",
+          "category": "employment",
+          "audience": "general",
+          "summary": "بازار مجتمعي في برزة لعرض المنتجات اليدوية والمشاريع الصغيرة ومنتجات منزلية وأعمال لذوي الإعاقة بهدف دعم أصحاب المبادرات الإنتاجية.",
+          "published_at": "2026-05-16",
+          "source": "https://sana.sy/locals/2477015/"
+        }
+      ]
+    },
+    {
+      "key": "shaheen_latakia",
+      "name": "فريق شاهين التطوعي",
+      "location": "اللاذقية",
+      "categories": ["volunteering", "reconstruction", "health"],
+      "description": "فريق تطوعي في اللاذقية يشارك في مبادرات النظافة والخدمات المجتمعية وله أنشطة في المجالات الطبية والإسعافية وتنظيم الحركة.",
+      "purpose": "تحسين الواقع الخدمي وتعزيز الوعي المجتمعي بالنظافة والسلامة والمشاركة في الأنشطة الطبية والإسعافية عند الحاجة.",
+      "source": "https://sana.sy/governorates/latakia/2184148/",
+      "activities": [
+        {
+          "title": "تنظيف الواجهة البحرية في جبلة",
+          "type": "general",
+          "category": "reconstruction",
+          "audience": "general",
+          "summary": "مشاركة في حملة تنظيف الواجهة البحرية لمدينة جبلة مع نشر رسائل توعوية حول النظافة والمسؤولية المشتركة والعمل الجماعي.",
+          "published_at": "2025-01-21",
+          "source": "https://sana.sy/governorates/latakia/2184148/"
+        }
+      ]
+    },
+    {
+      "key": "mart_damascus",
+      "name": "فريق مارت التطوعي",
+      "location": "دمشق",
+      "categories": ["volunteering", "protection", "children"],
+      "description": "فريق تطوعي ناشط في المجالات الإغاثية والخيرية والتنموية ويشارك في مبادرات مجتمعية وأنشطة موجهة للأطفال في دمشق ومحافظات أخرى.",
+      "purpose": "المساهمة في الأعمال الإنسانية والخيرية والتنموية وتعزيز التماسك الاجتماعي عبر مبادرات ينفذها المتطوعون بالتعاون مع الجهات الأهلية والرسمية.",
+      "source": "https://sana.sy/locals/2353747/",
+      "activities": [
+        {
+          "title": "مبادرات إنسانية وخيرية منذ التحرير",
+          "type": "general",
+          "category": "protection",
+          "audience": "general",
+          "summary": "نشاطات إغاثية وخيرية وتنموية ومبادرات إبداعية للأطفال ضمن عمل الفريق بالتعاون مع مؤسسة الرز وجهات مجتمعية مختلفة.",
+          "published_at": "2025-12-14",
+          "source": "https://sana.sy/locals/2353747/"
+        }
+      ]
+    },
+    {
+      "key": "ghiras_nahda",
+      "name": "فريق غراس النهضة",
+      "location": "دمشق",
+      "categories": ["volunteering", "education", "protection"],
+      "description": "مبادرة سورية انطلقت من دمشق وتعمل على التعليم والحماية والاستجابة الإنسانية ودعم المجتمع من خلال برامج ومشاريع تنموية وتطوعية.",
+      "purpose": "تعزيز الكرامة والنهضة المجتمعية ودعم التعليم والحماية والاستجابة للاحتياجات الإنسانية مع تشجيع المشاركة التطوعية.",
+      "source": "https://ghirasalnahda.com/",
+      "activities": [
+        {
+          "title": "مساحة تعليم وترفيه للأطفال في مهرجان التحرير",
+          "type": "general",
+          "category": "children",
+          "audience": "general",
+          "summary": "خصص الفريق مساحة آمنة للأطفال تجمع بين التعليم والترفيه والتعريف بالقيم والحقوق ضمن مشاركته في فعاليات مجتمعية بدمشق.",
+          "published_at": "2025-12-06",
+          "source": "https://sana.sy/locals/2345572/"
+        },
+        {
+          "title": "إفطار مجتمعي لـ500 محرر من سجن صيدنايا",
+          "type": "general",
+          "category": "protection",
+          "audience": "general",
+          "summary": "مبادرة مجتمعية بالتعاون مع محافظة دمشق جمعت أكثر من 500 محرر لتعزيز الدعم المعنوي والتماسك المجتمعي.",
+          "published_at": "2026-03-08",
+          "source": "https://sana.sy/locals/2420706/"
+        }
+      ]
+    },
+    {
+      "key": "syria_hope_cyclists",
+      "name": "فريق دراجي سوريا الأمل",
+      "location": "سوريا",
+      "categories": ["volunteering", "food", "emergency"],
+      "description": "فريق تطوعي يوظف هواية ركوب الدراجات في خدمة المجتمع والمشاركة في نقل وتوزيع المساعدات والوجبات ضمن مبادرات إنسانية مختلفة.",
+      "purpose": "استخدام فرق الدراجين في دعم الأنشطة الإنسانية والمجتمعية والمساهمة في الوصول السريع والتوزيع ضمن المبادرات التطوعية.",
+      "source": "https://sana.sy/locals/2428048/",
+      "activities": [
+        {
+          "title": "نقل وتوزيع وجبات لمة رمضان 7",
+          "type": "volunteer_opportunity",
+          "category": "food",
+          "audience": "general",
+          "summary": "شارك الفريق في نقل وتوزيع وجبات السحور إلى عدد من مساجد دمشق وريفها ضمن فعالية لمة رمضان 7.",
+          "published_at": "2026-03-17",
+          "source": "https://sana.sy/locals/2428048/"
+        }
+      ]
+    }
+  ]
+}

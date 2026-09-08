@@ -37,16 +37,16 @@ final class SyrianSeedPreparationSeeder extends Seeder
             }
         }
 
-        if (Schema::hasTable('publisher_follows')) {
+        if (Schema::hasTable('publisher_follows') && Schema::hasColumn('publisher_follows', 'target_type')) {
             DB::table('publisher_follows')->where('target_type', 'organization')->delete();
         }
-        if (Schema::hasTable('hidden_publishers')) {
-            DB::table('hidden_publishers')->where('target_type', 'organization')->delete();
+        if (Schema::hasTable('hidden_publishers') && Schema::hasColumn('hidden_publishers', 'publisher_type')) {
+            DB::table('hidden_publishers')->where('publisher_type', 'organization')->delete();
         }
         if (Schema::hasTable('organizations')) {
             DB::table('organizations')->delete();
         }
-        if (Schema::hasTable('users')) {
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'organization_id')) {
             DB::table('users')->whereNotNull('organization_id')->update(['organization_id' => null, 'updated_at' => now()]);
         }
         if (Schema::hasTable('categories')) {

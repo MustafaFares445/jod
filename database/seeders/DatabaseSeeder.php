@@ -13,7 +13,10 @@ class DatabaseSeeder extends Seeder
         $this->call(JodCompleteDemoSeeder::class);
         $this->call(SyrianSeedPreparationSeeder::class);
         $this->call(SyrianRealDemoSeeder::class);
+        $this->call(NaturalizeSyrianSeedContentSeeder::class);
         $this->call(PersonalizationDemoSeeder::class);
+        $this->call(StudentAssistanceSeedRefinementSeeder::class);
+        $this->call(SyrianRealGroupsSeeder::class);
         $this->call(OrganizationRolePermissionSyncSeeder::class);
     }
 }
