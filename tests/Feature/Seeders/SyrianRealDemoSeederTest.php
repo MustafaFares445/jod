@@ -5,8 +5,15 @@ declare(strict_types=1);
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
+
+test('Syrian seed cleanup column names match the current publisher schemas', function () {
+    expect(Schema::hasColumn('publisher_follows', 'target_type'))->toBeTrue()
+        ->and(Schema::hasColumn('hidden_publishers', 'publisher_type'))->toBeTrue()
+        ->and(Schema::hasColumn('hidden_publishers', 'target_type'))->toBeFalse();
+});
 
 test('Syrian demo seed provides broad realistic content across backend types', function () {
     $this->seed(DatabaseSeeder::class);
