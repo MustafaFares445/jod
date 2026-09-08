@@ -15,7 +15,7 @@ class VideoPreviewGenerator
 {
     public function generate(Media $media, string $expectedSourcePath): void
     {
-        if (! $this->isOrganizationVideo($media) || $media->path !== $expectedSourcePath) {
+        if (! $this->isSupportedVideo($media) || $media->path !== $expectedSourcePath) {
             return;
         }
 
@@ -64,8 +64,12 @@ class VideoPreviewGenerator
                 return;
             }
 
+            $modelType = $current->model_type instanceof MediaModel
+                ? $current->model_type->value
+                : (string) $current->model_type;
             $previewDisk = 'public';
-            $previewPath = self::previewPathFor(
+            $previewPath = self::previewPathForModel(
+                $modelType,
                 (string) $current->model_id,
                 (string) $current->id,
                 $expectedSourcePath,
@@ -159,17 +163,26 @@ class VideoPreviewGenerator
 
     public static function previewPathFor(string $modelId, string $mediaId, string $sourcePath): string
     {
-        $version = substr(sha1($sourcePath), 0, 16);
-
-        return "media/organization/{$modelId}/videos/previews/{$mediaId}-{$version}.mp4";
+        return self::previewPathForModel(MediaModel::ORGANIZATION->value, $modelId, $mediaId, $sourcePath);
     }
 
-    private function isOrganizationVideo(Media $media): bool
+    public static function previewPathForModel(string $modelType, string $modelId, string $mediaId, string $sourcePath): string
+    {
+        $version = substr(sha1($sourcePath), 0, 16);
+        $safeModelType = in_array($modelType, [MediaModel::ORGANIZATION->value, MediaModel::POST->value], true)
+            ? $modelType
+            : 'media';
+
+        return "media/{$safeModelType}/{$modelId}/videos/previews/{$mediaId}-{$version}.mp4";
+    }
+
+    private function isSupportedVideo(Media $media): bool
     {
         $modelType = $media->model_type instanceof MediaModel
             ? $media->model_type->value
             : (string) $media->model_type;
 
-        return $modelType === MediaModel::ORGANIZATION->value && $media->prop === 'videos';
+        return in_array($modelType, [MediaModel::ORGANIZATION->value, MediaModel::POST->value], true)
+            && $media->prop === 'videos';
     }
 }
