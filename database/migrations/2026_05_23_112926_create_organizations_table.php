@@ -30,9 +30,11 @@ return new class extends Migration
                 $table->string('owner_phone')->nullable();
                 $table->string('website')->nullable();
                 $table->json('social_media')->nullable();
-                $table->enum('status', ['active', 'inactive', 'pending'])->default('active');
-                $table->enum('verification_status', ['verified', 'unverified', 'pending'])->default('unverified');
+                $table->enum('status', ['active', 'inactive', 'pending', 'rejected'])->default('active');
+                $table->enum('verification_status', ['verified', 'unverified', 'pending', 'rejected'])->default('unverified');
                 $table->timestamp('accepted_at')->nullable();
+                $table->text('rejection_reason')->nullable();
+                $table->timestamp('rejected_at')->nullable();
                 $table->unsignedBigInteger('campaigns_count')->default(0);
                 $table->unsignedBigInteger('posts_count')->default(0);
                 $table->unsignedBigInteger('active_volunteers_count')->default(0);

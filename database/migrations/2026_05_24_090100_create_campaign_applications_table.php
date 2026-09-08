@@ -26,6 +26,8 @@ return new class extends Migration
             $table->text('internal_notes')->nullable();
             $table->string('request_type')->nullable();
             $table->string('created_by')->nullable();
+            $table->text('withdrawal_reason')->nullable();
+            $table->text('rejection_reason')->nullable();
             $table->softDeletes();
             $table->timestamps();
 

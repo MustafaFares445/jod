@@ -44,6 +44,8 @@ class OrganizationResource extends JsonResource
             'bankName' => $this->bank_name,
             'iban' => $this->iban,
             'acceptedAt' => $this->accepted_at?->toIso8601String(),
+            'rejectionReason' => $this->rejection_reason,
+            'rejectedAt' => $this->rejected_at?->toIso8601String(),
         ];
     }
 }

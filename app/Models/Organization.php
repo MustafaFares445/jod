@@ -37,6 +37,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'status',
     'verification_status',
     'accepted_at',
+    'rejection_reason',
+    'rejected_at',
     'campaigns_count',
     'posts_count',
     'active_volunteers_count',
@@ -57,6 +59,7 @@ class Organization extends Model
             'social_media' => 'array',
             'establishment_date' => 'date',
             'accepted_at' => 'datetime',
+            'rejected_at' => 'datetime',
             'last_active_at' => 'datetime',
         ];
     }

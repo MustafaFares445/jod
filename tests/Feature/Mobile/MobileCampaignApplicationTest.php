@@ -98,9 +98,10 @@ class MobileCampaignApplicationTest extends TestCase
             ->assertOk()
             ->json('data.id');
 
-        $this->deleteJson("/api/mobile/me/applications/{$applicationId}")
+        $this->deleteJson("/api/mobile/me/applications/{$applicationId}", ['reason' => 'My availability changed.'])
             ->assertOk()
-            ->assertJsonPath('data.status', 'withdrawn');
+            ->assertJsonPath('data.status', 'withdrawn')
+            ->assertJsonPath('data.withdrawalReason', 'My availability changed.');
 
         $this->assertSame(0, (int) $campaign->refresh()->applicants_count);
 
@@ -178,9 +179,10 @@ class MobileCampaignApplicationTest extends TestCase
             ->assertJsonPath('data.cta.targetId', $post->id)
             ->assertJsonPath('data.cta.state', 'submitted');
 
-        $this->deleteJson("/api/mobile/me/applications/{$applicationId}")
+        $this->deleteJson("/api/mobile/me/applications/{$applicationId}", ['reason' => 'My availability changed.'])
             ->assertOk()
-            ->assertJsonPath('data.status', 'withdrawn');
+            ->assertJsonPath('data.status', 'withdrawn')
+            ->assertJsonPath('data.withdrawalReason', 'My availability changed.');
         $this->assertSame(0, (int) $post->refresh()->applications_count);
         $this->getJson("/api/mobile/discovery/posts/{$post->id}")
             ->assertOk()

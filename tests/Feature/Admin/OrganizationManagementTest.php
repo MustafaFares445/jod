@@ -122,6 +122,32 @@ test('updates status verification and accepts', function () {
         ->assertJsonPath('data.status', 'active')
         ->assertJsonPath('data.verificationStatus', 'verified');
 });
+test('rejects pending organization with a required reason', function () {
+    $organization = Organization::query()->create([
+        'name' => 'Review Org',
+        'email' => 'review@example.com',
+        'status' => 'pending',
+        'verification_status' => 'pending',
+    ]);
+
+    $this->postJson("/api/v1/admin/organizations/{$organization->id}/reject", [])
+        ->assertUnprocessable();
+
+    $this->postJson("/api/v1/admin/organizations/{$organization->id}/reject", [
+        'rejectionReason' => 'Registration document is incomplete.',
+    ])->assertOk()
+        ->assertJsonPath('data.status', 'rejected')
+        ->assertJsonPath('data.verificationStatus', 'rejected')
+        ->assertJsonPath('data.rejectionReason', 'Registration document is incomplete.');
+
+    $this->assertDatabaseHas('organizations', [
+        'id' => $organization->id,
+        'status' => 'rejected',
+        'verification_status' => 'rejected',
+        'rejection_reason' => 'Registration document is incomplete.',
+    ]);
+});
+
 test('deletes organization softly', function () {
     $organization = Organization::query()->create([
         'name' => 'Delete Org',

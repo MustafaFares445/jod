@@ -6,7 +6,6 @@ namespace App\Providers;
 
 use App\Models\Article;
 use App\Models\AuditLog;
-use App\Models\Badge;
 use App\Models\Campaign;
 use App\Models\CampaignApplication;
 use App\Models\Category;
@@ -22,7 +21,6 @@ use App\Models\Report;
 use App\Models\User;
 use App\Policies\ArticlePolicy;
 use App\Policies\AuditLogPolicy;
-use App\Policies\BadgePolicy;
 use App\Policies\CampaignApplicationPolicy;
 use App\Policies\CampaignPolicy;
 use App\Policies\CategoryPolicy;
@@ -52,7 +50,6 @@ class AuthServiceProvider extends ServiceProvider
         HelpOffer::class => HelpOfferPolicy::class,
         CampaignApplication::class => CampaignApplicationPolicy::class,
         Article::class => ArticlePolicy::class,
-        Badge::class => BadgePolicy::class,
         Category::class => CategoryPolicy::class,
         AuditLog::class => AuditLogPolicy::class,
         PlatformSetting::class => SettingsPolicy::class,

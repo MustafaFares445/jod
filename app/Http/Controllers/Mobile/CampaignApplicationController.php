@@ -65,7 +65,8 @@ class CampaignApplicationController extends Controller
 
     public function destroy(Request $request, string $application): JsonResponse
     {
-        $model = $this->service->withdraw($this->user($request), $application);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:1000']]);
+        $model = $this->service->withdraw($this->user($request), $application, (string) $data['reason']);
 
         if ($model === null) {
             return MobileApiResponse::error('not_found', 'The requested application could not be found.', null, 404);

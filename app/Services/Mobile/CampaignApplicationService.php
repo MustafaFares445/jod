@@ -104,6 +104,8 @@ class CampaignApplicationService
                 'internal_notes' => null,
                 'request_type' => 'volunteer',
                 'created_by' => $user->id,
+                'withdrawal_reason' => null,
+                'rejection_reason' => null,
             ];
 
             if ($application === null) {
@@ -212,6 +214,8 @@ class CampaignApplicationService
                 'internal_notes' => null,
                 'request_type' => 'volunteer',
                 'created_by' => $user->id,
+                'withdrawal_reason' => null,
+                'rejection_reason' => null,
             ];
 
             if ($application === null) {
@@ -245,9 +249,9 @@ class CampaignApplicationService
         });
     }
 
-    public function withdraw(User $user, string $applicationId): ?CampaignApplication
+    public function withdraw(User $user, string $applicationId, string $reason): ?CampaignApplication
     {
-        return DB::transaction(function () use ($user, $applicationId): ?CampaignApplication {
+        return DB::transaction(function () use ($user, $applicationId, $reason): ?CampaignApplication {
             $snapshot = CampaignApplication::query()
                 ->where('created_by', $user->id)
                 ->where('source', 'mobile_app')
@@ -284,7 +288,11 @@ class CampaignApplicationService
             }
 
             $wasActive = true;
-            $application->update(['applicant_status' => 'withdrawn']);
+            $application->update([
+                'applicant_status' => 'withdrawn',
+                'withdrawal_reason' => $reason,
+                'rejection_reason' => null,
+            ]);
 
             if ($campaign !== null) {
                 $this->syncApplicantCount($campaign);
@@ -294,7 +302,7 @@ class CampaignApplicationService
                         (string) $campaign->organization_id,
                         NotificationEventType::ApplicationWithdrawn,
                         'تم سحب طلب تطوع',
-                        "قام {$user->name} بسحب طلب التطوع في حملة {$campaign->title}.",
+                        "قام {$user->name} بسحب طلب التطوع في حملة {$campaign->title}. السبب: {$reason}",
                         'applicant',
                         'normal',
                         $user->name,
@@ -311,7 +319,7 @@ class CampaignApplicationService
                         (string) $post->organization_id,
                         NotificationEventType::ApplicationWithdrawn,
                         'تم سحب طلب تطوع',
-                        "قام {$user->name} بسحب طلب التطوع في فرصة {$title}.",
+                        "قام {$user->name} بسحب طلب التطوع في فرصة {$title}. السبب: {$reason}",
                         'applicant',
                         'normal',
                         $user->name,

@@ -34,7 +34,6 @@ class NotificationHistoryRequest extends FormRequest
                 'help',
                 'applicant',
                 'staff',
-                'badge',
                 'group',
             ])],
             'priority' => ['sometimes', 'string', Rule::in(['normal', 'high'])],

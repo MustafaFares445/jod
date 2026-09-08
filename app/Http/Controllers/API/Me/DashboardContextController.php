@@ -52,6 +52,8 @@ class DashboardContextController extends Controller
                     'name' => $user->organization->name,
                     'status' => $user->organization->status,
                     'verificationStatus' => $user->organization->verification_status,
+                    'rejectionReason' => $user->organization->rejection_reason,
+                    'rejectedAt' => $user->organization->rejected_at?->toIso8601String(),
                     'image' => $user->organization->logoMedia?->publicUrl(),
                 ],
                 'staffRole' => $membership?->role === null ? null : [

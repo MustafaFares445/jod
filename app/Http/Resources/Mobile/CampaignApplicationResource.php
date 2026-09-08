@@ -23,6 +23,8 @@ class CampaignApplicationResource extends JsonResource
             'status' => (string) $this->applicant_status,
             'phone' => $this->phone,
             'city' => $this->city,
+            'withdrawalReason' => $this->withdrawal_reason,
+            'rejectionReason' => $this->rejection_reason,
             'submittedAt' => $this->applied_at?->toIso8601String(),
             'updatedAt' => $this->updated_at?->toIso8601String(),
         ];

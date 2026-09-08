@@ -30,6 +30,8 @@ class ApplicantResource extends JsonResource
             'applicantStatus' => $status,
             'requestType' => $this->request_type,
             'source' => $this->source,
+            'withdrawalReason' => $this->withdrawal_reason,
+            'rejectionReason' => $this->rejection_reason,
             'can' => [
                 'accept' => in_array($status, ['pending', 'under_review'], true),
                 'contact' => in_array($status, ['accepted', 'approved'], true),

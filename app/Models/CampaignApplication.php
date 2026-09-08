@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'organization_id', 'group_id', 'campaign_id', 'name', 'email', 'phone', 'campaign_title',
     'applicant_status', 'applied_at', 'city', 'source', 'campaign_ref',
-    'assigned_to', 'internal_notes', 'request_type', 'created_by',
+    'assigned_to', 'internal_notes', 'request_type', 'created_by', 'withdrawal_reason', 'rejection_reason',
 ])]
 class CampaignApplication extends Model
 {

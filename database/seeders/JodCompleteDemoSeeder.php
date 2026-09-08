@@ -342,12 +342,6 @@ final class JodCompleteDemoSeeder extends Seeder
             unset($attrs['timeline_note']);
             $this->upsert('reports', ['id' => $attrs['id']], $attrs);
         }
-
-        foreach ($data['badges'] as $row) {
-            $attrs = $this->snakeRow($row, ['key']);
-            $attrs['id'] = $this->id($row['key']);
-            $this->upsert('badges', ['id' => $attrs['id']], $attrs);
-        }
     }
 
     private function seedMedia(array $rows, bool $video): void

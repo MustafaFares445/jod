@@ -223,6 +223,7 @@ class OrganizationController extends Controller
         $this->authorize('accept', $organization);
 
         $wasAccepted = $organization->accepted_at !== null;
+        $organization->forceFill(['rejection_reason' => null, 'rejected_at' => null])->save();
         $this->applyAccountStatus($organization, 'active', notify: false);
 
         if (! $wasAccepted) {
@@ -238,6 +239,41 @@ class OrganizationController extends Controller
                 auth()->id() !== null ? (string) auth()->id() : null,
             );
         }
+
+        return OrganizationResource::make($organization->refresh()->load('logoMedia'));
+    }
+
+    public function reject(Request $request, Organization $organization): OrganizationResource
+    {
+        $this->authorize('accept', $organization);
+        $data = $request->validate(['rejectionReason' => ['required', 'string', 'min:3', 'max:1000']]);
+
+        if (! in_array((string) $organization->status, ['pending', 'rejected'], true)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'status' => ['Only organizations under review can be rejected.'],
+            ]);
+        }
+
+        $reason = (string) $data['rejectionReason'];
+        $organization->update([
+            'status' => 'rejected',
+            'verification_status' => 'rejected',
+            'rejection_reason' => $reason,
+            'rejected_at' => now(),
+            'accepted_at' => null,
+        ]);
+
+        $this->notifications->notifyOrganization(
+            (string) $organization->id,
+            NotificationEventType::OrganizationRejected,
+            'تم رفض طلب تسجيل المؤسسة',
+            "تم رفض طلب تسجيل {$organization->name}. السبب: {$reason}",
+            'account',
+            'high',
+            $organization->name,
+            '/pending-approval',
+            auth()->id() !== null ? (string) auth()->id() : null,
+        );
 
         return OrganizationResource::make($organization->refresh()->load('logoMedia'));
     }
@@ -282,6 +318,7 @@ class OrganizationController extends Controller
         return match ($status) {
             'active' => 'verified',
             'pending' => 'pending',
+            'rejected' => 'rejected',
             default => 'unverified',
         };
     }

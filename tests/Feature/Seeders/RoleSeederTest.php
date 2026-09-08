@@ -39,7 +39,6 @@ class JodCompleteDemoDatasetTest extends TestCase
         $this->assertCount(20, $data['saved_posts']);
         $this->assertCount(28, $data['notifications']);
         $this->assertCount(6, $data['reports']);
-        $this->assertCount(5, $data['badges']);
 
         $this->assertNotContains('student', array_column($data['categories'], 'name'));
         $this->assertContains('student', array_column($data['campaigns'], 'audience'));

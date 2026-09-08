@@ -161,7 +161,7 @@ class ApplicantService
         );
     }
 
-    public function reject(CampaignApplication $application, string $organizationId): CampaignApplication
+    public function reject(CampaignApplication $application, string $organizationId, string $reason): CampaignApplication
     {
         return $this->transition(
             $application,
@@ -170,7 +170,8 @@ class ApplicantService
             'rejected',
             NotificationEventType::ApplicationRejected,
             'تم رفض طلب التطوع',
-            'لم توافق المنظمة على طلب التطوع أو تم إيقافه قبل بدء التنفيذ.',
+            "لم توافق المنظمة على طلب التطوع أو تم إيقافه قبل بدء التنفيذ. السبب: {$reason}",
+            ['rejection_reason' => $reason, 'withdrawal_reason' => null],
         );
     }
 
@@ -183,6 +184,7 @@ class ApplicantService
         NotificationEventType $eventType,
         string $title,
         string $message,
+        array $attributes = [],
     ): CampaignApplication {
         if ((string) $application->organization_id !== $organizationId) {
             abort(404);
@@ -199,7 +201,7 @@ class ApplicantService
             ]);
         }
 
-        $application->update(['applicant_status' => $nextStatus]);
+        $application->update(array_merge(['applicant_status' => $nextStatus], $attributes));
         $this->syncApplicationTargetCount($application);
 
         if (filled($application->created_by)) {

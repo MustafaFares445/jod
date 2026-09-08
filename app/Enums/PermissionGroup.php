@@ -15,7 +15,6 @@ enum PermissionGroup: string
     case GROUP = 'groups';
     case REPORT = 'reports';
     case NOTIFICATION = 'notifications';
-    case BADGE = 'badges';
     case ARTICLE = 'articles';
     case CATEGORY = 'categories';
     case CAPABILITY = 'capabilities';
@@ -117,12 +116,6 @@ enum PermissionGroup: string
                     PermissionAction::DELETE,
                     PermissionAction::RESEND,
                 ],
-            ),
-            self::BADGE => new PermissionGroupDefinition(
-                label: 'الشارات',
-                module: PermissionModule::ADMIN,
-                description: 'إدارة شارات المكافآت.',
-                order: 80,
             ),
             self::ARTICLE => new PermissionGroupDefinition(
                 label: 'المقالات',

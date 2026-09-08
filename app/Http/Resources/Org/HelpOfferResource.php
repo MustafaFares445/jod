@@ -31,6 +31,7 @@ class HelpOfferResource extends JsonResource
             'contactMethod' => $canSeeContact ? $this->contact_method : null,
             'contactValue' => $canSeeContact ? ($this->contact_value ?? $this->phone) : null,
             'phone' => $canSeeContact ? $this->phone : null,
+            'cancelReason' => $this->cancel_reason,
             'rejectionReason' => $this->rejection_reason,
             'createdAt' => $this->created_at?->toIso8601String(),
             'acceptedAt' => $this->accepted_at?->toIso8601String(),

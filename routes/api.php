@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\API\Admin\ArticleController;
 use App\Http\Controllers\API\Admin\AuditLogController;
-use App\Http\Controllers\API\Admin\BadgeController;
 use App\Http\Controllers\API\Admin\CategoryController;
 use App\Http\Controllers\API\Admin\CapabilityController;
 use App\Http\Controllers\API\Admin\HelpRequestLifecycleController;
@@ -81,6 +80,7 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('organizations/{organization}/status', OrganizationController::class.'@updateStatus');
         Route::patch('organizations/{organization}/verification', OrganizationController::class.'@updateVerification');
         Route::post('organizations/{organization}/accept', OrganizationController::class.'@accept');
+        Route::post('organizations/{organization}/reject', OrganizationController::class.'@reject');
 
         Route::get('organizations/{organization}/videos', [App\Http\Controllers\API\Admin\OrganizationVideoController::class, 'index']);
         Route::get('organizations/{organization}/videos/{video}', [App\Http\Controllers\API\Admin\OrganizationVideoController::class, 'show']);
@@ -104,9 +104,6 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::apiResource('notifications', NotificationController::class);
         Route::patch('notifications/{notification}/read-state', NotificationController::class.'@updateReadState');
         Route::post('notifications/{notification}/resend', NotificationController::class.'@resend');
-
-        Route::apiResource('badges', BadgeController::class);
-        Route::patch('badges/{badge}/status', BadgeController::class.'@updateStatus');
 
         Route::apiResource('articles', ArticleController::class);
         Route::apiResource('categories', CategoryController::class);

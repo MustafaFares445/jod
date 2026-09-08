@@ -10,6 +10,7 @@ use App\Http\Requests\Org\ApplicantRequest;
 use App\Http\Resources\ApplicantResource;
 use App\Models\CampaignApplication;
 use App\Services\ApplicantService;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
@@ -78,10 +79,11 @@ class ApplicantController extends Controller
         return ApplicantResource::make($this->service->complete($applicant, $this->organizationId()));
     }
 
-    public function reject(CampaignApplication $applicant): ApplicantResource
+    public function reject(Request $request, CampaignApplication $applicant): ApplicantResource
     {
         $this->authorize('update', $applicant);
-        return ApplicantResource::make($this->service->reject($applicant, $this->organizationId()));
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:1000']]);
+        return ApplicantResource::make($this->service->reject($applicant, $this->organizationId(), (string) $data['reason']));
     }
 
     public function destroy(CampaignApplication $applicant): Response
