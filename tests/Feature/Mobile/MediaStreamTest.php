@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Enums\MediaModel;
 use App\Models\Media;
 use App\Models\Organization;
+use App\Models\Post;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -134,6 +136,27 @@ test('mobile media video stream only exposes videos from active organizations', 
         ->assertJsonPath('error.code', 'not_found');
 });
 
+test('mobile media video stream exposes videos attached to published posts', function (): void {
+    [$video, $contents] = media_stream_test_post_video('published');
+
+    $response = $this->get("/api/mobile/discovery/media/{$video->id}/stream");
+
+    $response
+        ->assertOk()
+        ->assertHeader('Content-Type', 'video/webm')
+        ->assertHeader('Content-Length', (string) strlen($contents));
+
+    expect($response->streamedContent())->toBe($contents);
+});
+
+test('mobile media video stream hides videos attached to unpublished posts', function (): void {
+    [$video] = media_stream_test_post_video('draft');
+
+    $this->getJson("/api/mobile/discovery/media/{$video->id}/stream")
+        ->assertNotFound()
+        ->assertJsonPath('error.code', 'not_found');
+});
+
 /**
  * @return array{0: Media, 1: string}
  */
@@ -158,6 +181,37 @@ function media_stream_test_video(string $organizationStatus = 'active'): array
         'path' => $path,
         'original_name' => 'video.mp4',
         'mime_type' => 'video/mp4',
+        'size' => strlen($contents),
+        'position' => 0,
+    ]);
+
+    return [$video, $contents];
+}
+
+/**
+ * @return array{0: Media, 1: string}
+ */
+function media_stream_test_post_video(string $status = 'published'): array
+{
+    $user = User::factory()->create();
+    $post = Post::factory()->create([
+        'author_id' => $user->id,
+        'status' => $status,
+    ]);
+
+    $contents = 'post-video';
+    $path = "posts/{$post->id}/video.webm";
+    Storage::disk('public')->put($path, $contents);
+
+    $video = Media::query()->create([
+        'model_type' => MediaModel::POST->value,
+        'model_id' => $post->id,
+        'post_id' => $post->id,
+        'prop' => 'videos',
+        'disk' => 'public',
+        'path' => $path,
+        'original_name' => 'video.webm',
+        'mime_type' => 'video/webm',
         'size' => strlen($contents),
         'position' => 0,
     ]);

@@ -8,6 +8,7 @@ use App\Enums\MediaModel;
 use App\Http\Controllers\Controller;
 use App\Models\Media;
 use App\Models\Organization;
+use App\Models\Post;
 use App\Support\Mobile\MobileApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,9 +69,23 @@ class MediaStreamController extends Controller
     {
         return Media::query()
             ->whereKey($video)
-            ->where('model_type', MediaModel::ORGANIZATION->value)
             ->where('prop', 'videos')
-            ->whereIn('model_id', Organization::query()->where('status', 'active')->select('id'))
+            ->where(function ($query): void {
+                $query->where(function ($organizationVideo): void {
+                    $organizationVideo
+                        ->where('model_type', MediaModel::ORGANIZATION->value)
+                        ->whereIn('model_id', Organization::query()
+                            ->where('status', 'active')
+                            ->select('id'));
+                })->orWhere(function ($postVideo): void {
+                    $postVideo
+                        ->where('model_type', MediaModel::POST->value)
+                        ->whereIn('model_id', Post::query()
+                            ->where('status', 'published')
+                            ->whereNull('deleted_at')
+                            ->select('id'));
+                });
+            })
             ->first();
     }
 
