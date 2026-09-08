@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 class VideoPreviewGenerator
 {
@@ -19,7 +20,7 @@ class VideoPreviewGenerator
             return;
         }
 
-        if (! config('video.preview.enabled', true)) {
+        if (! config('video.preview.enabled', true) || ! $this->isFfmpegAvailable()) {
             $media->update([
                 'preview_status' => 'disabled',
                 'preview_error' => null,
@@ -117,6 +118,26 @@ class VideoPreviewGenerator
             }
         } finally {
             $localDisk->deleteDirectory($workingDirectory);
+        }
+    }
+
+    public function isFfmpegAvailable(): bool
+    {
+        if (! config('video.preview.enabled', true)) {
+            return false;
+        }
+
+        $binary = trim((string) config('video.ffmpeg_binary', 'ffmpeg'));
+        if ($binary === '') {
+            return false;
+        }
+
+        try {
+            $result = Process::timeout(5)->run(escapeshellarg($binary).' -version');
+
+            return $result->successful();
+        } catch (Throwable) {
+            return false;
         }
     }
 
