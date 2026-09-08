@@ -84,6 +84,46 @@ test('visible Syrian seed content does not expose seed metadata or provenance la
         ->and(DB::table('posts')->where('type', 'campaign_update')->where('content', 'like', '%تواصل الفرق تنفيذ الأنشطة%')->exists())->toBeTrue();
 });
 
+test('student assistance feed only contains student-relevant seeded content', function () {
+    $this->seed(DatabaseSeeder::class);
+
+    $studentPosts = DB::table('posts')->where('audience', 'student')->get();
+    expect($studentPosts->count())->toBeGreaterThanOrEqual(12);
+
+    expect(DB::table('posts')
+        ->where('title', 'انضم إلى فريق التواصل في سند الشباب')
+        ->where('audience', 'general')
+        ->exists())->toBeTrue();
+
+    expect(DB::table('posts')
+        ->where('title', 'طالب جامعي يحتاج حاسوباً محمولاً للدراسة')
+        ->where('audience', 'student')
+        ->where('type', 'help_request')
+        ->exists())->toBeTrue()
+        ->and(DB::table('posts')
+            ->where('title', 'إرشاد للتقديم على المنح الجامعية')
+            ->where('audience', 'student')
+            ->where('type', 'service_offer')
+            ->exists())->toBeTrue()
+        ->and(DB::table('posts')
+            ->where('title', 'ساهم في سند طالب يتيم')
+            ->where('audience', 'student')
+            ->where('type', 'donation_campaign')
+            ->exists())->toBeTrue();
+
+    foreach (['نوع التوثيق', 'documented', 'بيانات JOD', 'هذا سجل تجريبي'] as $forbidden) {
+        expect(DB::table('posts')->where('audience', 'student')->where('content', 'like', '%'.$forbidden.'%')->exists())->toBeFalse();
+    }
+
+    $studentPostIds = DB::table('posts')->where('audience', 'student')->pluck('id');
+    expect(DB::table('media')
+        ->whereIn('model_id', $studentPostIds)
+        ->where(function ($query): void {
+            $query->where('mime_type', 'image/svg+xml')->orWhere('path', 'like', '%.svg');
+        })
+        ->exists())->toBeFalse();
+});
+
 test('Syrian demo media uses official campaign images or deterministic local fallbacks only', function () {
     $this->seed(DatabaseSeeder::class);
 
