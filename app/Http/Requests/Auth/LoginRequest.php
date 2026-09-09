@@ -25,4 +25,16 @@ class LoginRequest extends FormRequest
             'appVersion' => ['nullable', 'string', 'max:64'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'البريد الإلكتروني مطلوب.',
+            'email.email' => 'صيغة البريد الإلكتروني غير صحيحة.',
+            'password.required' => 'كلمة المرور مطلوبة.',
+            'password.min' => 'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
+            'userType.required' => 'نوع الحساب مطلوب.',
+            'userType.in' => 'نوع الحساب المحدد غير صالح.',
+        ];
+    }
 }

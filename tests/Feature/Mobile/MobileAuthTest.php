@@ -6,12 +6,13 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Notifications\AccountVerificationCodeNotification;
 use App\Services\Auth\TokenService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\PersonalAccessToken;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 test('mobile registration rejects non Syrian mobile numbers', function () {
     $this->postJson('/api/mobile/auth/register', [
@@ -37,7 +38,7 @@ test('mobile registration creates a pending account and sends verification code 
 
     $response->assertOk()
         ->assertJsonPath('success', true)
-        ->assertJsonPath('message', 'Registration started. Verify your account to continue.')
+        ->assertJsonPath('message', 'تم إنشاء الحساب مبدئياً. يرجى التحقق من الحساب للمتابعة.')
         ->assertJsonPath('data.verificationRequired', true)
         ->assertJsonPath('data.verificationCodeSent', true)
         ->assertJsonPath('data.verificationChannel', 'email')
@@ -80,7 +81,7 @@ test('retrying registration for the same pending account resends instead of crea
 
     $this->postJson('/api/mobile/auth/register', $payload)
         ->assertOk()
-        ->assertJsonPath('message', 'Verification code resent successfully.')
+        ->assertJsonPath('message', 'تمت إعادة إرسال رمز التحقق بنجاح.')
         ->assertJsonPath('data.verificationRequired', true);
 
     expect(User::query()->where('email', $payload['email'])->count())->toBe(1);
@@ -158,7 +159,7 @@ test('mobile account verification activates account and issues rotating token pa
     ]);
 
     $response->assertOk()
-        ->assertJsonPath('message', 'Account verified successfully.')
+        ->assertJsonPath('message', 'تم التحقق من الحساب بنجاح.')
         ->assertJsonPath('data.verificationRequired', false)
         ->assertJsonPath('data.user.verified', true)
         ->assertJsonPath('data.user.status', 'active')
@@ -242,7 +243,7 @@ test('mobile login issues rotating token pair with mobile envelope', function ()
 
     $response->assertOk();
     $response->assertJsonPath('success', true);
-    $response->assertJsonPath('message', 'Logged in successfully.');
+    $response->assertJsonPath('message', 'تم تسجيل الدخول بنجاح.');
     $response->assertJsonPath('data.tokenType', 'Bearer');
     $response->assertJsonPath('data.user.id', $user->id);
     $response->assertJsonPath('error', null);
@@ -344,7 +345,7 @@ test('mobile refresh rotates once and revokes previous session pair', function (
 
     $response->assertOk()
         ->assertJsonPath('success', true)
-        ->assertJsonPath('message', 'Token refreshed successfully.')
+        ->assertJsonPath('message', 'تم تحديث جلسة تسجيل الدخول بنجاح.')
         ->assertJsonPath('data.tokenType', 'Bearer');
     expect($response->json('data.token'))->not->toBeEmpty();
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
@@ -466,7 +467,7 @@ test('mobile logout revokes current access and refresh tokens', function () {
 
     $response->assertOk();
     $response->assertJsonPath('success', true);
-    $response->assertJsonPath('message', 'Logged out successfully.');
+    $response->assertJsonPath('message', 'تم تسجيل الخروج بنجاح.');
 
     $this->assertDatabaseMissing('personal_access_tokens', ['id' => $tokenId]);
     $this->assertDatabaseMissing('personal_access_tokens', ['id' => $refreshTokenId]);

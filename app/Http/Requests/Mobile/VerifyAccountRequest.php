@@ -20,4 +20,14 @@ class VerifyAccountRequest extends FormRequest
             'code' => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'login.required' => 'البريد الإلكتروني أو رقم الموبايل مطلوب.',
+            'code.required' => 'رمز التحقق مطلوب.',
+            'code.size' => 'رمز التحقق يجب أن يتكون من 6 أرقام.',
+            'code.regex' => 'رمز التحقق يجب أن يتكون من 6 أرقام.',
+        ];
+    }
 }

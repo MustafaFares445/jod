@@ -22,4 +22,13 @@ class RefreshTokenRequest extends FormRequest
             'refreshToken' => ['required', 'string', 'max:2048'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'refreshToken.required' => 'رمز تحديث الجلسة مطلوب.',
+            'refreshToken.string' => 'رمز تحديث الجلسة غير صالح.',
+            'refreshToken.max' => 'رمز تحديث الجلسة غير صالح.',
+        ];
+    }
 }

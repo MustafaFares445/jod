@@ -51,7 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return MobileApiResponse::error('unauthenticated', 'Unauthenticated.', null, 401);
+            return MobileApiResponse::error('unauthenticated', 'يجب تسجيل الدخول للمتابعة.', null, 401);
         });
 
         $exceptions->render(static function (ValidationException $exception, Request $request): ?JsonResponse {
@@ -59,7 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return MobileApiResponse::error('validation_error', $exception->getMessage(), $exception->errors(), 422);
+            return MobileApiResponse::error('validation_error', 'يرجى التحقق من البيانات المدخلة.', $exception->errors(), 422);
         });
 
         $exceptions->render(static function (AccessDeniedHttpException $exception, Request $request): ?JsonResponse {
@@ -67,7 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return MobileApiResponse::error('forbidden', 'This action is unauthorized.', null, 403);
+            return MobileApiResponse::error('forbidden', 'ليس لديك صلاحية لتنفيذ هذا الإجراء.', null, 403);
         });
 
         $exceptions->render(static function (NotFoundHttpException $exception, Request $request): ?JsonResponse {
@@ -75,6 +75,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 return null;
             }
 
-            return MobileApiResponse::error('not_found', 'The requested resource could not be found.', null, 404);
+            return MobileApiResponse::error('not_found', 'تعذر العثور على العنصر المطلوب.', null, 404);
         });
     })->create();

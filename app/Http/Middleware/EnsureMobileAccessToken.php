@@ -31,7 +31,7 @@ final class EnsureMobileAccessToken
         if (! $hasAccessAbility || ! $hasValidBearerToken) {
             return MobileApiResponse::error(
                 'access_token_required',
-                'A mobile access token is required.',
+                'رمز وصول خاص بالتطبيق مطلوب لتنفيذ هذا الإجراء.',
                 null,
                 403,
             );
@@ -42,7 +42,7 @@ final class EnsureMobileAccessToken
 
             return MobileApiResponse::error(
                 'account_inactive',
-                'This account is not active.',
+                'هذا الحساب غير مفعّل.',
                 null,
                 403,
             );

@@ -12,6 +12,7 @@ use App\Services\Auth\TokenService;
 use App\Services\Permissions\OrganizationPermissionSyncService;
 use App\Services\Permissions\PermissionCatalogService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
 
 class CompanyAuthController extends Controller
 {
@@ -24,7 +25,7 @@ class CompanyAuthController extends Controller
 
     public function register(CompanyRegisterRequest $request): JsonResponse
     {
-        /** @var \Illuminate\Http\UploadedFile $logo */
+        /** @var UploadedFile $logo */
         $logo = $request->file('logo');
         $user = $this->companyRegistrationService->register($request->validated(), $logo);
 
@@ -35,6 +36,6 @@ class CompanyAuthController extends Controller
             ...$this->tokenService->issueTokenPair($user),
             'user' => UserResource::make($user)->resolve(),
             'permissions' => $this->permissionCatalogService->forUser($user),
-        ], 'Company registered successfully', 201);
+        ], 'تم تسجيل المنظمة بنجاح', 201);
     }
 }

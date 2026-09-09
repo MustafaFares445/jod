@@ -37,19 +37,19 @@ class AuthController extends Controller
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
-            return $this->errorResponse('The provided credentials are incorrect.', 401);
+            return $this->errorResponse('بيانات تسجيل الدخول غير صحيحة.', 401);
         }
 
         if (! $this->matchesRequestedUserType($user, $validated['userType'])) {
-            return $this->errorResponse('The provided credentials are incorrect.', 401);
+            return $this->errorResponse('بيانات تسجيل الدخول غير صحيحة.', 401);
         }
 
         if ($user->status !== 'active') {
-            return $this->errorResponse('This account is not active.', 403);
+            return $this->errorResponse('هذا الحساب غير مفعّل.', 403);
         }
 
         if ($validated['userType'] === 'companies' && ! $user->organization?->isActiveAndVerified()) {
-            return $this->errorResponse('This organization account must be active and verified before login.', 403);
+            return $this->errorResponse('يجب أن يكون حساب المنظمة مفعّلاً وموثقاً قبل تسجيل الدخول.', 403);
         }
 
         $user->forceFill([
@@ -73,7 +73,7 @@ class AuthController extends Controller
             ...$this->tokenService->issueTokenPair($user),
             'user' => UserResource::make($user)->resolve(),
             'permissions' => $this->permissionCatalogService->forUser($user),
-        ], 'Logged in successfully');
+        ], 'تم تسجيل الدخول بنجاح');
     }
 
     private function matchesRequestedUserType(User $user, string $userType): bool
@@ -92,10 +92,10 @@ class AuthController extends Controller
         );
 
         if ($tokens === null) {
-            return $this->errorResponse('The refresh token is invalid or expired.', 401);
+            return $this->errorResponse('رمز تحديث الجلسة غير صالح أو منتهي الصلاحية.', 401);
         }
 
-        return $this->successResponse($tokens, 'Token refreshed successfully');
+        return $this->successResponse($tokens, 'تم تحديث جلسة تسجيل الدخول بنجاح');
     }
 
     public function logout(Request $request): JsonResponse
@@ -107,6 +107,6 @@ class AuthController extends Controller
             $this->tokenService->revokeTokenSession($user, $currentToken);
         }
 
-        return $this->successResponse(message: 'Logged out successfully');
+        return $this->successResponse(message: 'تم تسجيل الخروج بنجاح');
     }
 }

@@ -11,9 +11,10 @@ use App\Models\User;
 use App\Services\Auth\TokenService;
 use App\Support\Permissions\PermissionNameResolver;
 use Database\Seeders\Permissions\PermissionsSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 if (! function_exists('authLoginPayload')) {
     function authLoginPayload(array $overrides = []): array
@@ -45,7 +46,7 @@ test('login issues access and refresh tokens and returns dashboard permissions',
     ]));
 
     $response->assertOk();
-    $response->assertJsonPath('message', 'Logged in successfully');
+    $response->assertJsonPath('message', 'تم تسجيل الدخول بنجاح');
     $response->assertJsonPath('data.tokenType', 'Bearer');
     $response->assertJsonPath('data.expiresIn', 3600);
     $response->assertJsonPath('data.refreshExpiresIn', 2592000);
@@ -133,7 +134,7 @@ test('dashboard login accepts company user on shared endpoint', function () {
     ]));
 
     $response->assertOk();
-    $response->assertJsonPath('message', 'Logged in successfully');
+    $response->assertJsonPath('message', 'تم تسجيل الدخول بنجاح');
     $response->assertJsonPath('data.user.id', $user->id);
     expect($response->json('data.token'))->not->toBeEmpty();
     expect($response->json('data.refreshToken'))->not->toBeEmpty();
@@ -151,7 +152,7 @@ test('dashboard login rejects inactive users and organizations that are not acti
         'email' => $inactiveUser->email,
         'password' => 'password',
         'userType' => 'admin',
-    ]))->assertForbidden()->assertJsonPath('message', 'This account is not active.');
+    ]))->assertForbidden()->assertJsonPath('message', 'هذا الحساب غير مفعّل.');
 
     $organization = Organization::factory()->create([
         'status' => 'inactive',
@@ -169,7 +170,7 @@ test('dashboard login rejects inactive users and organizations that are not acti
         'email' => $companyUser->email,
         'password' => 'password',
         'userType' => 'companies',
-    ]))->assertForbidden()->assertJsonPath('message', 'This organization account must be active and verified before login.');
+    ]))->assertForbidden()->assertJsonPath('message', 'يجب أن يكون حساب المنظمة مفعّلاً وموثقاً قبل تسجيل الدخول.');
 });
 
 test('dashboard login rejects cross type requests', function () {
@@ -195,7 +196,7 @@ test('dashboard login rejects cross type requests', function () {
         'userType' => 'companies',
     ]))
         ->assertUnauthorized()
-        ->assertJsonPath('message', 'The provided credentials are incorrect.');
+        ->assertJsonPath('message', 'بيانات تسجيل الدخول غير صحيحة.');
 
     $this->postJson('/api/v1/auth/login', authLoginPayload([
         'email' => 'company@example.com',
@@ -203,7 +204,7 @@ test('dashboard login rejects cross type requests', function () {
         'userType' => 'admin',
     ]))
         ->assertUnauthorized()
-        ->assertJsonPath('message', 'The provided credentials are incorrect.');
+        ->assertJsonPath('message', 'بيانات تسجيل الدخول غير صحيحة.');
 });
 
 test('old company login endpoint is not registered', function () {
@@ -228,7 +229,7 @@ test('login rejects invalid credentials', function () {
     ]));
 
     $response->assertUnauthorized();
-    $response->assertJsonPath('message', 'The provided credentials are incorrect.');
+    $response->assertJsonPath('message', 'بيانات تسجيل الدخول غير صحيحة.');
 });
 
 test('login rejects invalid payloads', function (array $payload, string $expectedField) {
@@ -261,7 +262,7 @@ test('refresh rotates the token pair and revokes the previous tokens', function 
     ]);
 
     $response->assertOk();
-    $response->assertJsonPath('message', 'Token refreshed successfully');
+    $response->assertJsonPath('message', 'تم تحديث جلسة تسجيل الدخول بنجاح');
     $response->assertJsonPath('data.tokenType', 'Bearer');
     $this->assertNotSame($oldAccessToken, $response->json('data.token'));
     $this->assertNotSame($oldRefreshToken, $response->json('data.refreshToken'));
@@ -295,7 +296,7 @@ test('refresh token cannot access protected api routes', function () {
     $this->withHeader('Authorization', 'Bearer '.$loginResponse->json('data.refreshToken'))
         ->getJson('/api/v1/me')
         ->assertForbidden()
-        ->assertJsonPath('message', 'An access token is required.');
+        ->assertJsonPath('message', 'رمز وصول صالح مطلوب لتنفيذ هذا الإجراء.');
 });
 
 test('refresh rejects invalid or expired tokens', function () {
@@ -303,7 +304,7 @@ test('refresh rejects invalid or expired tokens', function () {
         'refreshToken' => 'invalid-token',
     ])
         ->assertUnauthorized()
-        ->assertJsonPath('message', 'The refresh token is invalid or expired.');
+        ->assertJsonPath('message', 'رمز تحديث الجلسة غير صالح أو منتهي الصلاحية.');
 
     $user = User::factory()->create();
     $expiredRefreshToken = $user->createToken(
@@ -316,7 +317,7 @@ test('refresh rejects invalid or expired tokens', function () {
         'refreshToken' => $expiredRefreshToken,
     ])
         ->assertUnauthorized()
-        ->assertJsonPath('message', 'The refresh token is invalid or expired.');
+        ->assertJsonPath('message', 'رمز تحديث الجلسة غير صالح أو منتهي الصلاحية.');
 });
 
 test('refresh validates the request payload', function () {
@@ -345,7 +346,7 @@ test('logout revokes the current access and refresh token pair', function () {
         ->postJson('/api/v1/auth/logout');
 
     $response->assertOk();
-    $response->assertJsonPath('message', 'Logged out successfully');
+    $response->assertJsonPath('message', 'تم تسجيل الخروج بنجاح');
 
     $this->assertDatabaseMissing('personal_access_tokens', [
         'id' => $tokenId,

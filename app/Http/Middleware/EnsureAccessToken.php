@@ -24,13 +24,13 @@ class EnsureAccessToken
             && ! is_string($currentToken->name);
 
         if (! $isTransientTestToken && ! $user?->tokenCan(TokenService::ACCESS_ABILITY)) {
-            return $this->errorResponse('An access token is required.', 403);
+            return $this->errorResponse('رمز وصول صالح مطلوب لتنفيذ هذا الإجراء.', 403);
         }
 
         if ($user !== null && $user->status !== 'active') {
             $user->tokens()->delete();
 
-            return $this->errorResponse('This account is not active.', 403);
+            return $this->errorResponse('هذا الحساب غير مفعّل.', 403);
         }
 
         return $next($request);

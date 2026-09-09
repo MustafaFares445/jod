@@ -59,7 +59,7 @@ class AuthController extends Controller
         if ($emailUser !== null && $phoneUser !== null && $emailUser->id !== $phoneUser->id) {
             return MobileApiResponse::error(
                 'account_identity_conflict',
-                'The provided email and phone belong to different accounts.',
+                'البريد الإلكتروني ورقم الموبايل المدخلان مرتبطان بحسابين مختلفين.',
                 null,
                 409,
             );
@@ -74,7 +74,7 @@ class AuthController extends Controller
             if (! $sameIdentity || $existingUser->email_verified_at !== null) {
                 return MobileApiResponse::error(
                     'account_already_exists',
-                    'An account already exists with the provided email or phone.',
+                    'يوجد حساب مسجل مسبقاً باستخدام البريد الإلكتروني أو رقم الموبايل المدخل.',
                     null,
                     409,
                 );
@@ -83,7 +83,7 @@ class AuthController extends Controller
             if (! in_array($existingUser->status, ['active', 'pending_verification'], true)) {
                 return MobileApiResponse::error(
                     'account_inactive',
-                    'This account is not active.',
+                    'هذا الحساب غير مفعّل.',
                     null,
                     403,
                 );
@@ -94,7 +94,7 @@ class AuthController extends Controller
             if (! $verification['sent']) {
                 return MobileApiResponse::error(
                     'verification_throttled',
-                    'A verification code was sent recently. Please wait before requesting another.',
+                    'تم إرسال رمز تحقق مؤخراً. يرجى الانتظار قليلاً قبل طلب رمز جديد.',
                     ['retryAfter' => $verification['retryAfter']],
                     429,
                 );
@@ -107,7 +107,7 @@ class AuthController extends Controller
                 'expiresIn' => $verification['expiresIn'],
                 'resendAvailableIn' => $verification['retryAfter'],
                 'user' => UserResource::make($existingUser->loadMissing(['organization', 'avatarMedia']))->resolve($request),
-            ], 'Verification code resent successfully.');
+            ], 'تمت إعادة إرسال رمز التحقق بنجاح.');
         }
 
         $user = User::query()->create([
@@ -129,7 +129,7 @@ class AuthController extends Controller
             'expiresIn' => $verification['expiresIn'],
             'resendAvailableIn' => $verification['retryAfter'],
             'user' => UserResource::make($user)->resolve($request),
-        ], 'Registration started. Verify your account to continue.');
+        ], 'تم إنشاء الحساب مبدئياً. يرجى التحقق من الحساب للمتابعة.');
     }
 
     /**
@@ -146,17 +146,17 @@ class AuthController extends Controller
         $user = $this->resolveUserByLogin($validated['login']);
 
         if ($user === null) {
-            return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
+            return MobileApiResponse::error('not_found', 'لا يوجد حساب مطابق للبريد الإلكتروني أو رقم الموبايل المدخل.', null, 404);
         }
 
         if (! in_array($user->status, ['active', 'pending_verification'], true)) {
-            return MobileApiResponse::error('account_inactive', 'This account is not active.', null, 403);
+            return MobileApiResponse::error('account_inactive', 'هذا الحساب غير مفعّل.', null, 403);
         }
 
         if ($user->email_verified_at !== null) {
             return MobileApiResponse::error(
                 'account_already_verified',
-                'This account is already verified. Please log in.',
+                'تم التحقق من هذا الحساب مسبقاً. يمكنك تسجيل الدخول.',
                 null,
                 409,
             );
@@ -167,7 +167,7 @@ class AuthController extends Controller
         if ($result === 'too_many_attempts') {
             return MobileApiResponse::error(
                 'verification_attempts_exceeded',
-                'Too many invalid verification attempts. Request a new code.',
+                'تم تجاوز عدد محاولات التحقق المسموح بها. اطلب رمز تحقق جديداً.',
                 null,
                 429,
             );
@@ -176,7 +176,7 @@ class AuthController extends Controller
         if (in_array($result, ['missing', 'expired'], true)) {
             return MobileApiResponse::error(
                 'verification_code_expired',
-                'The verification code is missing or expired. Request a new code.',
+                'رمز التحقق غير موجود أو منتهي الصلاحية. اطلب رمزاً جديداً.',
                 null,
                 422,
             );
@@ -185,7 +185,7 @@ class AuthController extends Controller
         if ($result !== 'verified') {
             return MobileApiResponse::error(
                 'invalid_verification_code',
-                'The provided verification code is invalid.',
+                'رمز التحقق المدخل غير صحيح.',
                 null,
                 422,
             );
@@ -202,7 +202,7 @@ class AuthController extends Controller
         if ($user->organization_id !== null && ! $user->organization?->isActiveAndVerified()) {
             return MobileApiResponse::error(
                 'organization_inactive',
-                'The account was verified, but this organization must be active and verified before login.',
+                'تم التحقق من الحساب، لكن يجب تفعيل المنظمة وتوثيقها قبل تسجيل الدخول.',
                 null,
                 403,
             );
@@ -212,7 +212,7 @@ class AuthController extends Controller
             ...$this->tokenService->issueTokenPair($user),
             'verificationRequired' => false,
             'user' => UserResource::make($user)->resolve($request),
-        ], 'Account verified successfully.');
+        ], 'تم التحقق من الحساب بنجاح.');
     }
 
     /**
@@ -227,17 +227,17 @@ class AuthController extends Controller
         $user = $this->resolveUserByLogin($request->validated('login'));
 
         if ($user === null) {
-            return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
+            return MobileApiResponse::error('not_found', 'لا يوجد حساب مطابق للبريد الإلكتروني أو رقم الموبايل المدخل.', null, 404);
         }
 
         if (! in_array($user->status, ['active', 'pending_verification'], true)) {
-            return MobileApiResponse::error('account_inactive', 'This account is not active.', null, 403);
+            return MobileApiResponse::error('account_inactive', 'هذا الحساب غير مفعّل.', null, 403);
         }
 
         if ($user->email_verified_at !== null) {
             return MobileApiResponse::error(
                 'account_already_verified',
-                'This account is already verified. Please log in.',
+                'تم التحقق من هذا الحساب مسبقاً. يمكنك تسجيل الدخول.',
                 null,
                 409,
             );
@@ -248,7 +248,7 @@ class AuthController extends Controller
         if (! $verification['sent']) {
             return MobileApiResponse::error(
                 'verification_throttled',
-                'A verification code was sent recently. Please wait before requesting another.',
+                'تم إرسال رمز تحقق مؤخراً. يرجى الانتظار قليلاً قبل طلب رمز جديد.',
                 ['retryAfter' => $verification['retryAfter']],
                 429,
             );
@@ -260,7 +260,7 @@ class AuthController extends Controller
             'verificationChannel' => 'email',
             'expiresIn' => $verification['expiresIn'],
             'resendAvailableIn' => $verification['retryAfter'],
-        ], 'Verification code resent successfully.');
+        ], 'تمت إعادة إرسال رمز التحقق بنجاح.');
     }
 
     /**
@@ -298,7 +298,7 @@ class AuthController extends Controller
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return MobileApiResponse::error(
                 'invalid_credentials',
-                'The provided credentials are incorrect.',
+                'بيانات تسجيل الدخول غير صحيحة.',
                 null,
                 401,
             );
@@ -307,7 +307,7 @@ class AuthController extends Controller
         if (! in_array($user->status, ['active', 'pending_verification'], true)) {
             return MobileApiResponse::error(
                 'account_inactive',
-                'This account is not active.',
+                'هذا الحساب غير مفعّل.',
                 null,
                 403,
             );
@@ -316,7 +316,7 @@ class AuthController extends Controller
         if ($user->email_verified_at === null) {
             return MobileApiResponse::error(
                 'verification_required',
-                'Account verification is required before login.',
+                'يجب التحقق من الحساب قبل تسجيل الدخول.',
                 [
                     'verificationRequired' => true,
                     'verificationChannel' => 'email',
@@ -328,7 +328,7 @@ class AuthController extends Controller
         if ($user->status !== 'active') {
             return MobileApiResponse::error(
                 'account_inactive',
-                'This account is not active.',
+                'هذا الحساب غير مفعّل.',
                 null,
                 403,
             );
@@ -337,7 +337,7 @@ class AuthController extends Controller
         if ($user->organization_id !== null && ! $user->organization?->isActiveAndVerified()) {
             return MobileApiResponse::error(
                 'organization_inactive',
-                'This organization account must be active and verified before login.',
+                'يجب أن يكون حساب المنظمة مفعّلاً وموثقاً قبل تسجيل الدخول.',
                 null,
                 403,
             );
@@ -360,7 +360,7 @@ class AuthController extends Controller
         return MobileApiResponse::success([
             ...$this->tokenService->issueTokenPair($user),
             'user' => UserResource::make($user)->resolve($request),
-        ], 'Logged in successfully.');
+        ], 'تم تسجيل الدخول بنجاح.');
     }
 
     /**
@@ -381,13 +381,13 @@ class AuthController extends Controller
         if ($tokens === null) {
             return MobileApiResponse::error(
                 'invalid_refresh_token',
-                'The refresh token is invalid or expired.',
+                'رمز تحديث الجلسة غير صالح أو منتهي الصلاحية.',
                 null,
                 401,
             );
         }
 
-        return MobileApiResponse::success($tokens, 'Token refreshed successfully.');
+        return MobileApiResponse::success($tokens, 'تم تحديث جلسة تسجيل الدخول بنجاح.');
     }
 
     /**
@@ -402,7 +402,7 @@ class AuthController extends Controller
         $user = $this->resolveUserByLogin($request->validated('login'));
 
         if (! $user) {
-            return MobileApiResponse::error('not_found', 'No mobile account matches the provided login.', null, 404);
+            return MobileApiResponse::error('not_found', 'لا يوجد حساب مطابق للبريد الإلكتروني أو رقم الموبايل المدخل.', null, 404);
         }
 
         $code = $this->generateResetCode();
@@ -414,7 +414,7 @@ class AuthController extends Controller
 
         return MobileApiResponse::success([
             'resetCodeSent' => true,
-        ], 'Reset code generated successfully.');
+        ], 'تم إنشاء رمز إعادة تعيين كلمة المرور بنجاح.');
     }
 
     /**
@@ -431,12 +431,12 @@ class AuthController extends Controller
         $user = $this->resolveUserByLogin($validated['login']);
 
         if (! $user || ! $this->isValidResetCode($user->email, $validated['code'])) {
-            return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
+            return MobileApiResponse::error('invalid_reset_code', 'رمز إعادة تعيين كلمة المرور غير صحيح أو منتهي الصلاحية.', null, 422);
         }
 
         return MobileApiResponse::success([
             'resetCodeVerified' => true,
-        ], 'Reset code verified successfully.');
+        ], 'تم التحقق من رمز إعادة تعيين كلمة المرور بنجاح.');
     }
 
     /**
@@ -457,7 +457,7 @@ class AuthController extends Controller
         $user = $this->resolveUserByLogin($validated['login']);
 
         if (! $user || ! $this->isValidResetCode($user->email, $validated['code'])) {
-            return MobileApiResponse::error('invalid_reset_code', 'The provided reset code is invalid or expired.', null, 422);
+            return MobileApiResponse::error('invalid_reset_code', 'رمز إعادة تعيين كلمة المرور غير صحيح أو منتهي الصلاحية.', null, 422);
         }
 
         DB::transaction(function () use ($user, $validated): void {
@@ -471,7 +471,7 @@ class AuthController extends Controller
 
         return MobileApiResponse::success([
             'resetPasswordUpdated' => true,
-        ], 'Password reset successfully.');
+        ], 'تمت إعادة تعيين كلمة المرور بنجاح.');
     }
 
     /**
@@ -490,7 +490,7 @@ class AuthController extends Controller
             $this->tokenService->revokeTokenSession($user, $currentToken);
         }
 
-        return MobileApiResponse::success(null, 'Logged out successfully.');
+        return MobileApiResponse::success(null, 'تم تسجيل الخروج بنجاح.');
     }
 
     private function resolveUserByLogin(string $login): ?User

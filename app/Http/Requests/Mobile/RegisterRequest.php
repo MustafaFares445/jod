@@ -27,8 +27,15 @@ class RegisterRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required' => 'الاسم مطلوب.',
+            'email.required' => 'البريد الإلكتروني مطلوب.',
+            'email.email' => 'صيغة البريد الإلكتروني غير صحيحة.',
             'phone.required' => 'رقم الموبايل مطلوب.',
             'phone.regex' => 'رقم الموبايل يجب أن يكون رقماً سورياً بصيغة +9639XXXXXXXX.',
+            'password.required' => 'كلمة المرور مطلوبة.',
+            'password.min' => 'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
+            'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
+            'password_confirmation.required' => 'تأكيد كلمة المرور مطلوب.',
         ];
     }
 }

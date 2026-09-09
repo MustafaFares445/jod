@@ -44,4 +44,18 @@ class LoginRequest extends FormRequest
             'appVersion' => ['nullable', 'string', 'max:64'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'email.email' => 'صيغة البريد الإلكتروني غير صحيحة.',
+            'email.required_without' => 'أدخل البريد الإلكتروني أو رقم الموبايل.',
+            'email.prohibited' => 'استخدم البريد الإلكتروني أو رقم الموبايل فقط، وليس كليهما.',
+            'phone.required_without' => 'أدخل البريد الإلكتروني أو رقم الموبايل.',
+            'phone.prohibited' => 'استخدم البريد الإلكتروني أو رقم الموبايل فقط، وليس كليهما.',
+            'password.required' => 'كلمة المرور مطلوبة.',
+            'password.min' => 'كلمة المرور يجب أن تتكون من 8 أحرف على الأقل.',
+            'fcmPlatform.in' => 'نوع نظام الجهاز غير صالح.',
+        ];
+    }
 }
