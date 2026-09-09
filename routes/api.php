@@ -22,6 +22,7 @@ use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\FirebasePushTestController;
 use App\Http\Controllers\API\Me\DashboardContextController;
 use App\Http\Controllers\API\Me\PermissionsController;
+use App\Http\Controllers\API\Me\PushDeviceController;
 use App\Http\Controllers\API\Me\ProfileController;
 use App\Http\Controllers\API\Org\ApplicantController;
 use App\Http\Controllers\API\Org\BriefController;
@@ -59,6 +60,8 @@ Route::middleware(['auth:sanctum', 'access-token'])->group(function () {
         Route::patch('/password', [ProfileController::class, 'updatePassword']);
         Route::get('/permissions', PermissionsController::class);
         Route::get('/dashboard-context', DashboardContextController::class);
+        Route::post('/push-device', [PushDeviceController::class, 'store']);
+        Route::delete('/push-device', [PushDeviceController::class, 'destroy']);
     });
 
     Route::prefix('v1/admin')->group(function () {

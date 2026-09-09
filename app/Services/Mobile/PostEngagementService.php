@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Mobile;
 
 use App\Enums\NotificationEventType;
+use App\Models\Campaign;
 use App\Models\Post;
 use App\Models\PostLike;
 use App\Models\Report;
@@ -31,6 +32,28 @@ class PostEngagementService
             if ($like->wasRecentlyCreated) {
                 $post->increment('reactions_count');
                 $post->refresh();
+
+                $organizationId = filled($post->organization_id)
+                    ? (string) $post->organization_id
+                    : (filled($post->campaign_id)
+                        ? (string) (Campaign::query()->whereKey($post->campaign_id)->value('organization_id') ?? '')
+                        : '');
+
+                if ($organizationId !== '') {
+                    $title = filled($post->title) ? (string) $post->title : 'منشور';
+                    $this->notifications->notifyOrganization(
+                        $organizationId,
+                        NotificationEventType::PostLiked,
+                        'إعجاب جديد على منشور',
+                        "أعجب {$user->name} بمنشور {$title}.",
+                        'post',
+                        'normal',
+                        $title,
+                        '/org/posts/'.$post->id,
+                        (string) $user->id,
+                        (string) $user->id,
+                    );
+                }
             }
 
             return $this->likeState($post, true);

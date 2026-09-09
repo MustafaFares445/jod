@@ -33,6 +33,7 @@ enum NotificationEventType: string
     case CampaignPublished = 'campaign.published';
     case CampaignRejected = 'campaign.rejected';
     case CampaignSuspended = 'campaign.suspended';
+    case CampaignLiked = 'campaign.liked';
 
     case ApplicationSubmitted = 'application.submitted';
     case ApplicationAccepted = 'application.accepted';
@@ -44,6 +45,7 @@ enum NotificationEventType: string
     case PostSubmitted = 'post.submitted';
     case PostPublished = 'post.published';
     case PostBlocked = 'post.blocked';
+    case PostLiked = 'post.liked';
     case MediaPublished = 'media.published';
 
     case ReportSubmitted = 'report.submitted';
@@ -83,10 +85,10 @@ enum NotificationEventType: string
             self::HelpOfferReceiverConfirmed, self::HelpOfferCompleted, self::HelpOfferCancelled,
             self::HelpRequestFulfilled, self::HelpRequestReopened => 'help',
             self::CampaignSubmitted, self::CampaignGoalReached, self::CampaignClosingSoon, self::CampaignClosed,
-            self::CampaignPublished, self::CampaignRejected, self::CampaignSuspended => 'campaign',
+            self::CampaignPublished, self::CampaignRejected, self::CampaignSuspended, self::CampaignLiked => 'campaign',
             self::ApplicationSubmitted, self::ApplicationAccepted, self::ApplicationContactStarted,
             self::ApplicationCompleted, self::ApplicationRejected, self::ApplicationWithdrawn => 'applicant',
-            self::PostSubmitted, self::PostPublished, self::PostBlocked => 'post',
+            self::PostSubmitted, self::PostPublished, self::PostBlocked, self::PostLiked => 'post',
             self::ReportSubmitted, self::ReportInProgress, self::ReportClosed => 'report',
             self::OrganizationSubmitted, self::OrganizationApproved, self::OrganizationRejected => 'account',
             self::GroupSubmitted, self::GroupApproved, self::GroupRejected,

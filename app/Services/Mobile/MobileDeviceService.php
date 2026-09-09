@@ -43,6 +43,15 @@ class MobileDeviceService
         });
     }
 
+    public function unregisterByToken(User $user, string $pushToken, ?string $platform = null): bool
+    {
+        return (bool) MobileDevice::query()
+            ->where('user_id', $user->id)
+            ->where('push_token', $pushToken)
+            ->when(filled($platform), fn ($query) => $query->where('platform', $platform))
+            ->delete();
+    }
+
     public function unregister(User $user, string $deviceId): bool
     {
         $device = MobileDevice::query()
