@@ -266,7 +266,7 @@ final class PrimaryUserContributionSeeder extends Seeder
             ['new', 'other', 'معلومات غير واضحة في المنشور', 'أرسلت البلاغ لأن بعض تفاصيل المنشور تحتاج إلى توضيح قبل الاعتماد عليها.'],
             ['in_progress', 'abuse', 'محتوى غير لائق في المنشور', 'يتضمن المنشور عبارات غير مناسبة وأفضل أن تتم مراجعته من الإدارة.'],
             ['closed', 'fraud', 'تفاصيل تبرع تحتاج إلى تحقق', 'توجد معلومات مالية غير مكتملة وأرغب في أن تتحقق الإدارة منها.'],
-            ['resolved', 'other', 'بيانات قديمة في المنشور', 'يبدو أن بعض المعلومات لم تعد محدثة وقد تسبب التباساً للمستخدمين.'],
+            ['closed', 'other', 'بيانات قديمة في المنشور', 'يبدو أن بعض المعلومات لم تعد محدثة وقد تسبب التباساً للمستخدمين.'],
         ];
 
         foreach ($posts->values() as $index => $post) {
@@ -286,7 +286,7 @@ final class PrimaryUserContributionSeeder extends Seeder
                 'assignee_id' => $status === 'new' ? null : $adminId,
                 'evidence' => json_encode(['source' => 'mobile', 'details' => $description], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 'timeline' => json_encode([['action' => 'created', 'actorId' => $userId, 'at' => now()->subDays(8 - $index)->toIso8601String()]], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                'closed_at' => in_array($status, ['closed', 'resolved'], true) ? now()->subDays(2) : null,
+                'closed_at' => $status === 'closed' ? now()->subDays(2) : null,
                 'created_at' => now()->subDays(8 - $index),
             ]);
         }
