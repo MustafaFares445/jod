@@ -33,6 +33,8 @@ final class PrimaryUserJourneySeeder extends Seeder
             PrimaryUserCommunitySeeder::class,
         ]);
 
+        $this->normalizeNotificationReadStates($userId);
+
         DB::table('users')->where('id', $userId)->update([
             'last_active_at' => now()->subMinutes(12),
             'updated_at' => now(),
@@ -90,5 +92,24 @@ final class PrimaryUserJourneySeeder extends Seeder
         DB::table('users')->updateOrInsert(['id' => $userId], $attributes);
 
         return $userId;
+    }
+
+    private function normalizeNotificationReadStates(string $userId): void
+    {
+        if (! Schema::hasTable('notifications')) {
+            return;
+        }
+
+        DB::table('notifications')
+            ->where('recipient_id', $userId)
+            ->where('mailbox', 'inbox')
+            ->whereNull('read_at')
+            ->update(['status' => 'unread', 'updated_at' => now()]);
+
+        DB::table('notifications')
+            ->where('recipient_id', $userId)
+            ->where('mailbox', 'inbox')
+            ->whereNotNull('read_at')
+            ->update(['status' => 'read', 'updated_at' => now()]);
     }
 }
