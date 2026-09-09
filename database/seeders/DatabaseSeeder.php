@@ -28,5 +28,6 @@ class DatabaseSeeder extends Seeder
         $this->call(SeedOperationalIdentifiersSeeder::class);
         $this->call(SeedDataPresentationSeeder::class);
         $this->call(RestoreAdminAccessSeeder::class);
+        $this->call(PrimaryUserJourneySeeder::class);
     }
 }
