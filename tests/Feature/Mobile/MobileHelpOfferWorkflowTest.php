@@ -77,6 +77,45 @@ test('help offer requires bilateral agreement and auto fulfills after both compl
     expect($post->refresh()->help_status->value)->toBe('fulfilled');
 });
 
+test('help request discovery exposes offer availability consistently', function () {
+    $owner = User::factory()->create();
+    $helper = User::factory()->create();
+    $post = Post::factory()->published()->create([
+        'author_id' => $owner->id,
+        'type' => 'help_request',
+        'help_status' => 'open',
+        'expires_at' => now()->addDay(),
+    ]);
+
+    $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+        ->assertOk()
+        ->assertJsonPath('data.helpStatus', 'open')
+        ->assertJsonPath('data.cta.state', 'open')
+        ->assertJsonPath('data.canOfferHelp', false)
+        ->assertJsonPath('data.helpOfferAvailability', 'login_required');
+
+    Sanctum::actingAs($helper);
+    $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+        ->assertOk()
+        ->assertJsonPath('data.canOfferHelp', true)
+        ->assertJsonPath('data.helpOfferAvailability', 'available');
+
+    Sanctum::actingAs($owner);
+    $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+        ->assertOk()
+        ->assertJsonPath('data.canOfferHelp', false)
+        ->assertJsonPath('data.helpOfferAvailability', 'not_eligible');
+
+    $post->forceFill(['expires_at' => now()->subMinute()])->save();
+    Sanctum::actingAs($helper);
+    $this->getJson("/api/mobile/discovery/posts/{$post->id}")
+        ->assertOk()
+        ->assertJsonPath('data.helpStatus', 'expired')
+        ->assertJsonPath('data.cta.state', 'closed')
+        ->assertJsonPath('data.canOfferHelp', false)
+        ->assertJsonPath('data.helpOfferAvailability', 'expired');
+});
+
 test('help offers reject self help duplicates and fulfilled requests', function () {
     $owner = User::factory()->create();
     $helper = User::factory()->create();

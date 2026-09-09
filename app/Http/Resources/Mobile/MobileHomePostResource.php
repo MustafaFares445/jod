@@ -6,9 +6,11 @@ namespace App\Http\Resources\Mobile;
 
 use App\Enums\HelpOfferStatus;
 use App\Enums\HelpRequestStatus;
+use App\Models\HelpOffer;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class MobileHomePostResource extends JsonResource
@@ -76,8 +78,16 @@ class MobileHomePostResource extends JsonResource
 
     private function helpRequestState(Request $request): array
     {
-        $viewerId = $request->user('sanctum')?->id;
+        $viewer = $request->user('sanctum');
+        $viewerId = $viewer?->id;
         $helpStatus = $this->help_status?->value ?? $this->help_status ?? HelpRequestStatus::Open->value;
+        $helpStatusEnum = HelpRequestStatus::tryFrom((string) $helpStatus);
+        $isExpired = $this->expires_at !== null && $this->expires_at->isPast();
+        if ($isExpired && ($helpStatusEnum === null || ! $helpStatusEnum->isTerminal())) {
+            $helpStatus = HelpRequestStatus::Expired->value;
+            $helpStatusEnum = HelpRequestStatus::Expired;
+        }
+
         $activeStatuses = [HelpOfferStatus::Pending->value, HelpOfferStatus::Accepted->value, HelpOfferStatus::Contacting->value, HelpOfferStatus::Agreed->value];
         $activeOffersCount = $this->helpOffers()->whereIn('status', $activeStatuses)->count();
         $myOffer = null;
@@ -85,18 +95,29 @@ class MobileHomePostResource extends JsonResource
             $offer = $this->helpOffers()->where('helper_user_id', $viewerId)->whereIn('status', $activeStatuses)->latest('created_at')->first();
             if ($offer !== null) $myOffer = ['id' => (string) $offer->id, 'status' => $offer->status?->value ?? (string) $offer->status];
         }
-        $helpStatusEnum = HelpRequestStatus::tryFrom((string) $helpStatus);
 
         $hasFinalAgreement = filled($this->selected_help_offer_id);
+        $policyAllowsOffer = $viewer !== null
+            && filled($this->author_id)
+            && Gate::forUser($viewer)->allows('create', [HelpOffer::class, $this->resource]);
+
+        $availability = match (true) {
+            $helpStatusEnum === HelpRequestStatus::Fulfilled => 'fulfilled',
+            $helpStatusEnum === HelpRequestStatus::PartiallyFulfilled => 'partially_fulfilled',
+            $helpStatusEnum === HelpRequestStatus::NotFulfilled => 'not_fulfilled',
+            $helpStatusEnum === HelpRequestStatus::Expired || $isExpired => 'expired',
+            $myOffer !== null => 'existing_offer',
+            $hasFinalAgreement => 'final_agreement',
+            $viewer === null => 'login_required',
+            ! $policyAllowsOffer => 'not_eligible',
+            default => 'available',
+        };
+
         return [
             'helpStatus' => $helpStatus,
             'hasFinalAgreement' => $hasFinalAgreement,
-            'canOfferHelp' => $viewerId !== null
-                && (string) $viewerId !== (string) $this->author_id
-                && $helpStatusEnum !== null
-                && ! $helpStatusEnum->isTerminal()
-                && ! $hasFinalAgreement
-                && $myOffer === null,
+            'canOfferHelp' => $availability === 'available',
+            'helpOfferAvailability' => $availability,
             'activeOffersCount' => $activeOffersCount,
             'myOffer' => $myOffer,
         ];
@@ -170,7 +191,8 @@ class MobileHomePostResource extends JsonResource
     {
         if ($ctaType === 'contact' && $this->type === 'help_request') {
             $helpStatus = HelpRequestStatus::tryFrom((string) ($this->help_status?->value ?? $this->help_status ?? HelpRequestStatus::Open->value));
-            return $helpStatus?->isTerminal() === true ? 'closed' : 'open';
+            $isExpired = $this->expires_at !== null && $this->expires_at->isPast();
+            return $helpStatus?->isTerminal() === true || $isExpired || filled($this->selected_help_offer_id) ? 'closed' : 'open';
         }
         if (! in_array($ctaType, ['apply', 'donate'], true)) return null;
 
