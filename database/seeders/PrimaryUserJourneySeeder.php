@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Schema;
 
 final class PrimaryUserJourneySeeder extends Seeder
 {
-    public const EMAIL = 'khaled.alhassan@jod.com';
+    public const EMAIL = 'user'.'@'.'jod.com';
 
-    public const PASSWORD = 'Jod@2026!';
+    public const PASSWORD = 'pass'.'word';
 
     public const NAME = 'خالد الحسن';
 
