@@ -18,6 +18,7 @@ use App\Http\Controllers\API\Admin\PostController as AdminPostController;
 use App\Http\Controllers\API\Admin\ReportController;
 use App\Http\Controllers\API\Admin\SettingsController;
 use App\Http\Controllers\API\Admin\UserController;
+use App\Http\Controllers\API\AppDownloadController;
 use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\FirebasePushTestController;
 use App\Http\Controllers\API\Me\DashboardContextController;
@@ -32,6 +33,9 @@ use App\Http\Controllers\API\Org\PostController;
 use App\Http\Controllers\API\Org\RoleController;
 use App\Http\Controllers\API\Org\StaffController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('v1/app/download', AppDownloadController::class)
+    ->name('app.download');
 
 Route::prefix('mobile')
     ->name('mobile.')
