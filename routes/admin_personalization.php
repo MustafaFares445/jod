@@ -7,7 +7,6 @@ use App\Http\Controllers\API\Admin\CategoryKeywordController;
 use App\Http\Controllers\API\Admin\HelpMatchingController;
 use App\Http\Controllers\API\Admin\HelpRequestLifecycleController;
 use App\Http\Controllers\API\Admin\RecommendationAnalyticsController;
-use App\Http\Controllers\API\Admin\RecommendationConfigurationController;
 use App\Http\Controllers\API\Admin\RecommendationInspectorController;
 use App\Http\Controllers\API\Admin\UserPersonalizationController;
 use Illuminate\Support\Facades\Route;
@@ -26,9 +25,6 @@ Route::patch('posts/{post}/fulfillment', [HelpRequestLifecycleController::class,
 
 Route::get('recommendations/analytics', RecommendationAnalyticsController::class);
 Route::get('recommendations/users/{user}/preview', RecommendationInspectorController::class);
-Route::get('recommendations/config', [RecommendationConfigurationController::class, 'show']);
-Route::patch('recommendations/config', [RecommendationConfigurationController::class, 'update']);
-Route::delete('recommendations/config', [RecommendationConfigurationController::class, 'reset']);
 
 Route::get('help-matching', [HelpMatchingController::class, 'index']);
 Route::get('help-matching/{post}', [HelpMatchingController::class, 'show']);

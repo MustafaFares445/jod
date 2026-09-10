@@ -6,9 +6,9 @@ use App\Enums\PermissionAction;
 use App\Enums\PermissionGroup;
 use App\Support\Permissions\PermissionNameResolver;
 
-it('registers recommendation view and update permissions for phase four', function () {
+it('keeps recommendation admin access read only and diagnostic', function () {
     expect(PermissionNameResolver::resolve(PermissionGroup::RECOMMENDATION, PermissionAction::VIEW))
         ->toBe('recommendations.view');
-    expect(PermissionNameResolver::resolve(PermissionGroup::RECOMMENDATION, PermissionAction::UPDATE))
-        ->toBe('recommendations.update');
+    expect(PermissionNameResolver::resolve(PermissionGroup::RECOMMENDATION, PermissionAction::DIAGNOSTICS))
+        ->toBe('recommendations.diagnostics');
 });

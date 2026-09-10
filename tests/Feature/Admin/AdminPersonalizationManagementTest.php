@@ -30,7 +30,6 @@ beforeEach(function () {
         [PermissionGroup::PERSONALIZATION, PermissionAction::VIEW],
         [PermissionGroup::RECOMMENDATION, PermissionAction::VIEW],
         [PermissionGroup::RECOMMENDATION, PermissionAction::DIAGNOSTICS],
-        [PermissionGroup::RECOMMENDATION, PermissionAction::CONFIGURE],
         [PermissionGroup::HELP_MATCHING, PermissionAction::VIEW],
         [PermissionGroup::HELP_REQUEST, PermissionAction::MANAGE_URGENCY],
         [PermissionGroup::HELP_REQUEST, PermissionAction::MANAGE_OUTCOMES],
@@ -219,18 +218,22 @@ test('recommendation inspector exposes scoring components from production rankin
     expect($response->json('data.recommendations.0.components.same_city'))->toBe(25);
 });
 
-test('admin can update and reset live recommendation settings', function () {
-    $this->patchJson('/api/v1/admin/recommendations/config', [
-        'weights' => ['same_city' => 40],
-        'candidateLimit' => 350,
-        'popularityCap' => 7,
-    ])->assertOk()
-        ->assertJsonPath('data.effective.weights.same_city', 40)
-        ->assertJsonPath('data.effective.candidate_limit', 350)
-        ->assertJsonPath('data.effective.popularity_cap', 7);
+test('admin recommendation weight editing is disabled', function () {
+    $defaultSameCity = config('recommendations.weights.same_city');
 
-    $this->deleteJson('/api/v1/admin/recommendations/config')
-        ->assertOk()
-        ->assertJsonPath('data.effective.weights.same_city', 25)
-        ->assertJsonPath('data.effective.candidate_limit', 200);
+    $this->getJson('/api/v1/admin/recommendations/config')->assertNotFound();
+    $this->patchJson('/api/v1/admin/recommendations/config', [
+        'weights' => ['same_city' => 999],
+    ])->assertNotFound();
+    $this->deleteJson('/api/v1/admin/recommendations/config')->assertNotFound();
+
+    $this->getJson('/api/v1/admin/recommendations/settings')->assertNotFound();
+    $this->patchJson('/api/v1/admin/recommendations/settings', [
+        'weights' => ['same_city' => 999],
+        'explorationRatio' => 0.5,
+    ])->assertNotFound();
+
+    expect(config('recommendations.weights.same_city'))->toBe($defaultSameCity);
+    $this->assertDatabaseMissing('platform_settings', ['key' => 'recommendation_overrides']);
+    $this->assertDatabaseMissing('platform_settings', ['key' => 'recommendations.settings']);
 });
